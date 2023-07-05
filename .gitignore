@@ -1,2 +1,7 @@
+# .NET build folders
 **/obj
 **/bin
+
+# Certificate files
+**.crt
+**.pfx
