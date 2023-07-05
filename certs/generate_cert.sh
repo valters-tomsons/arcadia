@@ -23,13 +23,13 @@ openssl rsa -in $cdir/$C_NAME.key.pem -out $cdir/$C_NAME.key.pem -passin pass:12
 openssl req -new -key $cdir/$C_NAME.key.pem -out $cdir/$C_NAME.csr -subj "/CN=bfbc-ps3.fesl.ea.com/OU=Global Online Studio/O=Electronic Arts, Inc./ST=California/C=US"
 
 # Create the certificate
-openssl x509 -req -in $cdir/$C_NAME.csr -CA $cdir/$CA_NAME.crt -CAkey $cdir/$CA_NAME.key.pem -CAcreateserial -out $cdir/$C_NAME.crt -days 10000 -md5
+openssl x509 -req -in $cdir/$C_NAME.csr -CA $cdir/$CA_NAME.crt -CAkey $cdir/$CA_NAME.key.pem -CAcreateserial -out $cdir/$C_NAME.crt -days 10000 -sha1
 
 # ------------Certificate created, now export it to .der format so we can modify it------------
 openssl x509 -outform der -in $cdir/$C_NAME.crt -out $cdir/$C_NAME.der
 
 echo "Patching certificate..."
-xxd -p "$cdir/$C_NAME.der" | sed 's/2a864886f70d010104/2a864886f70d010101/g' | xxd -r -p > "$cdir/$MOD_NAME.der"
+xxd -p "$cdir/$C_NAME.der" | sed 's/2a864886f70d010105/2a864886f70d010101/g' | xxd -r -p > "$cdir/$MOD_NAME.der"
 
 # ------------Certificate modified, now export it to .pfx format so we can use it------------
 
