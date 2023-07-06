@@ -30,7 +30,7 @@ openssl x509 -req -in $cdir/$C_NAME.csr -CA $cdir/$CA_NAME.crt -CAkey $cdir/$CA_
 openssl x509 -outform der -in $cdir/$C_NAME.crt -out $cdir/$C_NAME.der
 
 echo "Patching certificate..."
-xxd -p "$cdir/$C_NAME.der" | sed 's/2a864886f70d010105/2a864886f70d010101/g' | xxd -r -p > "$cdir/$MOD_NAME.der"
+xxd -p "$cdir/$C_NAME.der" | sed '0,/2a864886f70d010105/s//2a864886f70d010101/g' | xxd -r -p > "$cdir/$MOD_NAME.der"
 
 # ------------Certificate modified, now export it to .pfx format so we can use it------------
 
