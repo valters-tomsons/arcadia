@@ -1,4 +1,5 @@
 #!/bin/bash
+# Original script from: https://github.com/Aim4kill/Bug_OldProtoSSL
 
 CA_NAME="OTG3"
 
