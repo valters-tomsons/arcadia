@@ -7,6 +7,8 @@ cdir=$(mktemp --directory)
 C_NAME="md5_ea_cert"
 MOD_NAME="fesl_vuln"
 
+echo "Creating certificate, temporary directory: $cdir"
+
 # Create private key for the Certificate Authority
 openssl genrsa -aes128 -out $cdir/$CA_NAME.key.pem -passout pass:123456 1024
 openssl rsa -in $cdir/$CA_NAME.key.pem -out $cdir/$CA_NAME.key.pem -passin pass:123456
