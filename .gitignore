@@ -5,3 +5,4 @@
 # Certificate files
 **.crt
 **.pfx
+**.pem
