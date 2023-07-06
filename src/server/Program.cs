@@ -3,28 +3,29 @@ using Org.BouncyCastle.Crypto.Tls;
 using Org.BouncyCastle.Security;
 using server;
 
-const int tcpPort = 18800;
-
 var secureRandom = new SecureRandom();
 
-var serverZero = new TcpListener(System.Net.IPAddress.Any, tcpPort);
-serverZero.Start();
+var (feslCertKey, feslCert) = FeslCertGenerator.GenerateVulnerableCert(secureRandom);
+
+const int tcpPort = 18800;
+var tcpListener = new TcpListener(System.Net.IPAddress.Any, tcpPort);
+tcpListener.Start();
 
 Console.WriteLine($"Listening on tcp:{tcpPort}");
 
 while(true)
 {
-    var tcpClient = await serverZero.AcceptTcpClientAsync();
-    Console.WriteLine("A client connected!");
-    Task.Run(() => HandleClient(tcpClient));
+    var tcpClient = await tcpListener.AcceptTcpClientAsync();
+    Console.WriteLine("Connection incoming!");
+    HandleClient(tcpClient);
 }
 
 void HandleClient(TcpClient tcpClient)
 {
     using var networkStream = tcpClient.GetStream();
 
+    var clientServer = new ServerZero(feslCert, feslCertKey);
     var clientServerProtocol = new TlsServerProtocol(networkStream, secureRandom);
-    var clientServer = new ServerZero();
 
     try
     {
@@ -41,5 +42,5 @@ void HandleClient(TcpClient tcpClient)
         return;
     }
 
-    Console.WriteLine("Client accepted!");
+    Console.WriteLine("Client handshake successful!");
 }
