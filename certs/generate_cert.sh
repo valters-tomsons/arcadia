@@ -38,7 +38,7 @@ xxd -p "$cdir/$C_NAME.der" | sed 's/2a864886f70d010105/2a864886f70d010101/g' | x
 openssl x509 -inform der -in $cdir/$MOD_NAME.der -out $cdir/$MOD_NAME.crt
 
 # Export it as .pfx file (you will have to type .pfx password)
-openssl pkcs12 -export -out $cdir/$MOD_NAME.pfx -inkey $cdir/$C_NAME.key.pem -in $cdir/$MOD_NAME.crt
+openssl pkcs12 -export -out $cdir/$MOD_NAME.pfx -inkey $cdir/$C_NAME.key.pem -in $cdir/$MOD_NAME.crt -passout pass:123456
 
 mv $cdir/$MOD_NAME.pfx ./$MOD_NAME.pfx
 mv $cdir/$MOD_NAME.crt ./$MOD_NAME.crt
