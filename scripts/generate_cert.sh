@@ -29,18 +29,18 @@ openssl req -new -key $cdir/$C_NAME.key.pem -out $cdir/$C_NAME.csr -subj "/CN=bf
 openssl x509 -req -in $cdir/$C_NAME.csr -CA $cdir/$CA_NAME.crt -CAkey $cdir/$CA_NAME.key.pem -CAcreateserial -out $cdir/$C_NAME.crt -days 10000 -sha1
 
 # ------------Certificate created, now export it to .der format so we can modify it------------
-openssl x509 -outform der -in $cdir/$C_NAME.crt -out $cdir/$C_NAME.der
+# openssl x509 -outform der -in $cdir/$C_NAME.crt -out $cdir/$C_NAME.der
 
-echo "Patching certificate..."
-xxd -p "$cdir/$C_NAME.der" | sed '0,/2a864886f70d010105/s//2a864886f70d010101/g' | xxd -r -p > "$cdir/$MOD_NAME.der"
+# echo "Patching certificate..."
+# xxd -p "$cdir/$C_NAME.der" | sed '0,/2a864886f70d010105/s//2a864886f70d010101/g' | xxd -r -p > "$cdir/$MOD_NAME.der"
 
 # ------------Certificate modified, now export it to .pfx format so we can use it------------
 
 # Convert .der back to .crt
-openssl x509 -inform der -in $cdir/$MOD_NAME.der -out $cdir/$MOD_NAME.crt
+# openssl x509 -inform der -in $cdir/$MOD_NAME.der -out $cdir/$MOD_NAME.crt
 
 # Export it as .pfx file (you will have to type .pfx password)
-openssl pkcs12 -export -out $cdir/$MOD_NAME.pfx -inkey $cdir/$C_NAME.key.pem -in $cdir/$MOD_NAME.crt -passout pass:123456
+openssl pkcs12 -export -out $cdir/$MOD_NAME.pfx -inkey $cdir/$C_NAME.key.pem -in $cdir/$C_NAME.crt -passout pass:123456
 
 mv $cdir/$MOD_NAME.pfx ./$MOD_NAME.pfx
 mv $cdir/$MOD_NAME.crt ./$MOD_NAME.crt
