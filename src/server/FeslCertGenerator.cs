@@ -21,17 +21,17 @@ public static class FeslCertGenerator
         rsaKeyPairGen.Init(new KeyGenerationParameters(crypto.SecureRandom, 1024));
 
         var caKeyPair = rsaKeyPairGen.GenerateKeyPair();
-        var caCertificate = GenerateCertificate("CN=OTG3 Certificate Authority,OU=Online Technology Group,O=Electronic Arts Inc.,L=Redwood City,ST=California,C=US", caKeyPair, caKeyPair.Private);
+        var caCertificate = GenerateCertificate("CN=OTG3 Certificate Authority, C=US, ST=California, L=Redwood City, O=\"Electronic Arts, Inc.\", OU=Online Technology Group, emailAddress=dirtysock-contact@ea.com", caKeyPair, caKeyPair.Private);
 
         var cKeyPair = rsaKeyPairGen.GenerateKeyPair();
-        var cCertificate = GenerateCertificate("CN=bfbc-ps3.fesl.ea.com,OU=Global Online Studio,O=Electronic Arts Inc.,ST=California,C=US", cKeyPair, caKeyPair.Private, caCertificate);
+        var cCertificate = GenerateCertificate("C=US, ST=California, O=\"Electronic Arts, Inc.\", OU=Online Technology Group, CN=fesl.ea.com, emailAddress=fesl@ea.com", cKeyPair, caKeyPair.Private, caCertificate);
 
         var patched_cCertificate = PatchCertificateSignaturePattern(cCertificate);
 
         var store = new Pkcs12StoreBuilder().Build();
         var certEntry = new X509CertificateEntry(patched_cCertificate);
-        store.SetCertificateEntry("bfbc-ps3.fesl.ea.com", certEntry);
-        store.SetKeyEntry("bfbc-ps3.fesl.ea.com", new AsymmetricKeyEntry(cKeyPair.Private), new[] { certEntry });
+        store.SetCertificateEntry("fesl.ea.com", certEntry);
+        store.SetKeyEntry("fesl.ea.com", new AsymmetricKeyEntry(cKeyPair.Private), new[] { certEntry });
 
         var chain = new TlsCertificate[] { new BcTlsCertificate(crypto, certEntry.Certificate.GetEncoded()) };
         var finalCertificate = new Certificate(chain);
@@ -57,12 +57,12 @@ public static class FeslCertGenerator
 
     private static X509Certificate PatchCertificateSignaturePattern(X509Certificate cCertificate)
     {
-        var derCert = DotNetUtilities.ToX509Certificate(cCertificate);
-        var derDump = derCert.GetRawCertData();
+        var cert = DotNetUtilities.ToX509Certificate(cCertificate);
+        var certDer = cert.GetRawCertData();
 
         var signaturePattern = new byte[] { 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x05 };
-        var signature1Offset = ByteSearch.FindPattern(derDump, signaturePattern);
-        var signature2Offset = ByteSearch.FindPattern(derDump, signaturePattern, signature1Offset + 1);
+        var signature1Offset = ByteSearch.FindPattern(certDer, signaturePattern);
+        var signature2Offset = ByteSearch.FindPattern(certDer, signaturePattern, signature1Offset + 1);
 
         if (signature1Offset == -1 || signature2Offset == -1)
         {
@@ -70,9 +70,9 @@ public static class FeslCertGenerator
         }
 
         var byteOffset = signature2Offset + 8;
-        derDump[byteOffset] = 0x01;
+        certDer[byteOffset] = 0x01;
 
-        using var derStream = new MemoryStream(derDump);
+        using var derStream = new MemoryStream(certDer);
         var parser = new X509CertificateParser();
         return parser.ReadCertificate(derStream);
     }
