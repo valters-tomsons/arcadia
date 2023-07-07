@@ -14,37 +14,31 @@ namespace server;
 
 public static class FeslCertGenerator
 {
+    private const string CertFileName = "fesl_vuln.pfx";
+
     public static (AsymmetricKeyParameter, Certificate) GenerateVulnerableCert(SecureRandom secureRandom)
     {
+        if (File.Exists(CertFileName)) File.Delete(CertFileName);
+
         var rsaKeyPairGen = new RsaKeyPairGenerator();
         rsaKeyPairGen.Init(new KeyGenerationParameters(secureRandom, 1024));
         var caKeyPair = rsaKeyPairGen.GenerateKeyPair();
 
         var caCertificate = GenerateCertificate("CN=OTG3 Certificate Authority,OU=Online Technology Group,O=Electronic Arts/ Inc.,L=Redwood City,ST=California,C=US", caKeyPair, caKeyPair.Private);
-        WritePem("certs/ca.key.pem", caKeyPair.Private);
-        WritePem("certs/ca.crt", caCertificate);
-
         var cKeyPair = rsaKeyPairGen.GenerateKeyPair();
         var cCertificate = GenerateCertificate("CN=bfbc-ps3.fesl.ea.com,OU=Global Online Studio,O=Electronic Arts/ Inc.,ST=California,C=US", cKeyPair, caKeyPair.Private, caCertificate);
-        WritePem("certs/c.key.pem", cKeyPair.Private);
 
-        var pCertificate = PatchPemForOldProtoSSL(cCertificate);
-        WritePem("certs/c.crt", pCertificate);
+        var patched_cCertificate = PatchCertificateSignaturePattern(cCertificate);
 
         var store = new Pkcs12Store();
-        var certEntry = new X509CertificateEntry(pCertificate);
-        store.SetCertificateEntry("bfbc-ps3.fesl.ea.com", certEntry);
+        var certEntry = new X509CertificateEntry(patched_cCertificate);
+        store.SetCertificateEntry("ea.com", certEntry);
+        store.SetKeyEntry("ea.com", new AsymmetricKeyEntry(cKeyPair.Private), new[] { certEntry });
 
-        store.SetKeyEntry("bfbc-ps3.fesl.ea.com", new AsymmetricKeyEntry(cKeyPair.Private), new[] { certEntry });
+        X509CertificateStructure[] chain = new[] { certEntry.Certificate.CertificateStructure };
+        var finalCertificate = new Certificate(chain);
 
-        const string certFileName = "fesl_vuln.pfx";
-
-        using (var fileStream = new FileStream(certFileName, FileMode.Create, FileAccess.ReadWrite))
-        {
-            store.Save(fileStream, "123456".ToCharArray(), new SecureRandom());
-        }
-
-        return (cKeyPair.Private, ParseCertificate(certFileName));
+        return (cKeyPair.Private, finalCertificate);
     }
 
     private static X509Certificate GenerateCertificate(string subjectName, AsymmetricCipherKeyPair subjectKeyPair, AsymmetricKeyParameter issuerPrivKey, X509Certificate? issuerCert = null)
@@ -59,30 +53,22 @@ public static class FeslCertGenerator
         certGen.SetNotAfter(DateTime.UtcNow.Date.AddYears(10));
         certGen.SetSubjectDN(new X509Name(subjectName));
         certGen.SetPublicKey(subjectKeyPair.Public);
-        var signatureFactory = new Asn1SignatureFactory("SHA1WITHRSA", issuerPrivKey);
+        var signatureFactory = new Asn1SignatureFactory("MD5WITHRSA", issuerPrivKey);
         return certGen.Generate(signatureFactory);
     }
 
-    private static void WritePem(string filename, object obj)
-    {
-        using var writer = new StreamWriter(filename);
-        var pemWriter = new PemWriter(writer);
-        pemWriter.WriteObject(obj);
-        pemWriter.Writer.Flush();
-    }
-
-    private static X509Certificate PatchPemForOldProtoSSL(X509Certificate cCertificate)
+    private static X509Certificate PatchCertificateSignaturePattern(X509Certificate cCertificate)
     {
         var derCert = DotNetUtilities.ToX509Certificate(cCertificate);
         var derDump = derCert.GetRawCertData();
 
-        var shaSignaturePattern = new byte[] { 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x05 };
-        var signature1Offset = ByteSearch.FindPattern(derDump, shaSignaturePattern);
-        var signature2Offset = ByteSearch.FindPattern(derDump, shaSignaturePattern, signature1Offset + 1);
+        var signaturePattern = new byte[] { 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x04 };
+        var signature1Offset = ByteSearch.FindPattern(derDump, signaturePattern);
+        var signature2Offset = ByteSearch.FindPattern(derDump, signaturePattern, signature1Offset + 1);
 
-        if (signature2Offset == -1)
+        if (signature1Offset == -1 || signature2Offset == -1)
         {
-            throw new Exception("Failed to find valid SHA signature for patching!");
+            throw new Exception("Failed to find valid signature for patching!");
         }
 
         var byteOffset = signature2Offset + 8;
@@ -91,19 +77,5 @@ public static class FeslCertGenerator
         using var derStream = new MemoryStream(derDump);
         var parser = new X509CertificateParser();
         return parser.ReadCertificate(derStream);
-    }
-
-    private static Certificate ParseCertificate(string pfxPath)
-    {
-        const string pfxPassword = "123456";
-
-        using var pfxFileStream = new FileStream(pfxPath, FileMode.Open, FileAccess.Read);
-        var pkcs12Store = new Pkcs12Store(pfxFileStream, pfxPassword.ToCharArray());
-
-        string alias = pkcs12Store.Aliases.Cast<string>().First() ?? throw new Exception("Failed to find certificate alias!");
-
-        X509CertificateEntry certificateEntry = pkcs12Store.GetCertificate(alias);
-        X509CertificateStructure[] chain = new[] { certificateEntry.Certificate.CertificateStructure };
-        return new Certificate(chain);
     }
 }
