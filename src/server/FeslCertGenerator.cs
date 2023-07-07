@@ -4,7 +4,6 @@ using Org.BouncyCastle.Crypto.Generators;
 using Org.BouncyCastle.Crypto.Operators;
 using Org.BouncyCastle.Crypto.Tls;
 using Org.BouncyCastle.Math;
-using Org.BouncyCastle.OpenSsl;
 using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.Utilities;
@@ -22,9 +21,10 @@ public static class FeslCertGenerator
 
         var rsaKeyPairGen = new RsaKeyPairGenerator();
         rsaKeyPairGen.Init(new KeyGenerationParameters(secureRandom, 1024));
-        var caKeyPair = rsaKeyPairGen.GenerateKeyPair();
 
+        var caKeyPair = rsaKeyPairGen.GenerateKeyPair();
         var caCertificate = GenerateCertificate("CN=OTG3 Certificate Authority,OU=Online Technology Group,O=Electronic Arts/ Inc.,L=Redwood City,ST=California,C=US", caKeyPair, caKeyPair.Private);
+
         var cKeyPair = rsaKeyPairGen.GenerateKeyPair();
         var cCertificate = GenerateCertificate("CN=bfbc-ps3.fesl.ea.com,OU=Global Online Studio,O=Electronic Arts/ Inc.,ST=California,C=US", cKeyPair, caKeyPair.Private, caCertificate);
 
