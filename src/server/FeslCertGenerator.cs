@@ -2,10 +2,12 @@ using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Generators;
 using Org.BouncyCastle.Crypto.Operators;
-using Org.BouncyCastle.Crypto.Tls;
 using Org.BouncyCastle.Math;
 using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
+using Org.BouncyCastle.Tls;
+using Org.BouncyCastle.Tls.Crypto;
+using Org.BouncyCastle.Tls.Crypto.Impl.BC;
 using Org.BouncyCastle.Utilities;
 using Org.BouncyCastle.X509;
 
@@ -13,29 +15,25 @@ namespace server;
 
 public static class FeslCertGenerator
 {
-    private const string CertFileName = "fesl_vuln.pfx";
-
-    public static (AsymmetricKeyParameter, Certificate) GenerateVulnerableCert(SecureRandom secureRandom)
+    public static (AsymmetricKeyParameter, Certificate) GenerateVulnerableCert(BcTlsCrypto crypto)
     {
-        if (File.Exists(CertFileName)) File.Delete(CertFileName);
-
         var rsaKeyPairGen = new RsaKeyPairGenerator();
-        rsaKeyPairGen.Init(new KeyGenerationParameters(secureRandom, 1024));
+        rsaKeyPairGen.Init(new KeyGenerationParameters(crypto.SecureRandom, 1024));
 
         var caKeyPair = rsaKeyPairGen.GenerateKeyPair();
-        var caCertificate = GenerateCertificate("CN=OTG3 Certificate Authority,OU=Online Technology Group,O=Electronic Arts/ Inc.,L=Redwood City,ST=California,C=US", caKeyPair, caKeyPair.Private);
+        var caCertificate = GenerateCertificate("CN=OTG3 Certificate Authority,OU=Online Technology Group,O=Electronic Arts Inc.,L=Redwood City,ST=California,C=US", caKeyPair, caKeyPair.Private);
 
         var cKeyPair = rsaKeyPairGen.GenerateKeyPair();
-        var cCertificate = GenerateCertificate("CN=bfbc-ps3.fesl.ea.com,OU=Global Online Studio,O=Electronic Arts/ Inc.,ST=California,C=US", cKeyPair, caKeyPair.Private, caCertificate);
+        var cCertificate = GenerateCertificate("CN=bfbc-ps3.fesl.ea.com,OU=Global Online Studio,O=Electronic Arts Inc.,ST=California,C=US", cKeyPair, caKeyPair.Private, caCertificate);
 
         var patched_cCertificate = PatchCertificateSignaturePattern(cCertificate);
 
-        var store = new Pkcs12Store();
+        var store = new Pkcs12StoreBuilder().Build();
         var certEntry = new X509CertificateEntry(patched_cCertificate);
-        store.SetCertificateEntry("ea.com", certEntry);
-        store.SetKeyEntry("ea.com", new AsymmetricKeyEntry(cKeyPair.Private), new[] { certEntry });
+        store.SetCertificateEntry("bfbc-ps3.fesl.ea.com", certEntry);
+        store.SetKeyEntry("bfbc-ps3.fesl.ea.com", new AsymmetricKeyEntry(cKeyPair.Private), new[] { certEntry });
 
-        X509CertificateStructure[] chain = new[] { certEntry.Certificate.CertificateStructure };
+        var chain = new TlsCertificate[] { new BcTlsCertificate(crypto, certEntry.Certificate.GetEncoded()) };
         var finalCertificate = new Certificate(chain);
 
         return (cKeyPair.Private, finalCertificate);
