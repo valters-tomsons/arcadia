@@ -51,7 +51,7 @@ public static class FeslCertGenerator
         certGen.SetNotAfter(DateTime.UtcNow.Date.AddYears(10));
         certGen.SetSubjectDN(new X509Name(subjectName));
         certGen.SetPublicKey(subjectKeyPair.Public);
-        var signatureFactory = new Asn1SignatureFactory("MD5WITHRSA", issuerPrivKey);
+        var signatureFactory = new Asn1SignatureFactory("SHA1WITHRSA", issuerPrivKey);
         return certGen.Generate(signatureFactory);
     }
 
@@ -60,7 +60,7 @@ public static class FeslCertGenerator
         var derCert = DotNetUtilities.ToX509Certificate(cCertificate);
         var derDump = derCert.GetRawCertData();
 
-        var signaturePattern = new byte[] { 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x04 };
+        var signaturePattern = new byte[] { 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x05 };
         var signature1Offset = ByteSearch.FindPattern(derDump, signaturePattern);
         var signature2Offset = ByteSearch.FindPattern(derDump, signaturePattern, signature1Offset + 1);
 
