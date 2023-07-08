@@ -13,8 +13,15 @@ using Org.BouncyCastle.X509;
 
 namespace server;
 
+/// <summary>
+/// This class generates a vulnerable certificate for FESL-BC1-PS3.
+/// <para> It is based on the following article: https://github.com/Aim4kill/Bug_OldProtoSSL </para>
+/// </summary>
 public static class FeslCertGenerator
 {
+    private const string CipherAlgorithm = "SHA1WITHRSA";
+    private const string CertDomain  = "fesl.ea.com";
+
     public static (AsymmetricKeyParameter, Certificate) GenerateVulnerableCert(BcTlsCrypto crypto)
     {
         var rsaKeyPairGen = new RsaKeyPairGenerator();
@@ -30,8 +37,8 @@ public static class FeslCertGenerator
 
         var store = new Pkcs12StoreBuilder().Build();
         var certEntry = new X509CertificateEntry(patched_cCertificate);
-        store.SetCertificateEntry("fesl.ea.com", certEntry);
-        store.SetKeyEntry("fesl.ea.com", new AsymmetricKeyEntry(cKeyPair.Private), new[] { certEntry });
+        store.SetCertificateEntry(CertDomain, certEntry);
+        store.SetKeyEntry(CertDomain, new AsymmetricKeyEntry(cKeyPair.Private), new[] { certEntry });
 
         var chain = new TlsCertificate[] { new BcTlsCertificate(crypto, certEntry.Certificate.GetEncoded()) };
         var finalCertificate = new Certificate(chain);
@@ -51,7 +58,7 @@ public static class FeslCertGenerator
         certGen.SetNotAfter(DateTime.UtcNow.Date.AddYears(10));
         certGen.SetSubjectDN(new X509Name(subjectName));
         certGen.SetPublicKey(subjectKeyPair.Public);
-        var signatureFactory = new Asn1SignatureFactory("SHA1WITHRSA", issuerPrivKey);
+        var signatureFactory = new Asn1SignatureFactory(CipherAlgorithm, issuerPrivKey);
         return certGen.Generate(signatureFactory);
     }
 
@@ -60,7 +67,10 @@ public static class FeslCertGenerator
         var cert = DotNetUtilities.ToX509Certificate(cCertificate);
         var certDer = cert.GetRawCertData();
 
+        // Pattern to find the SHA-1 signature in the DER encoded certificate
         var signaturePattern = new byte[] { 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x05 };
+
+        // There must be two signatures in the DER encoded certificate
         var signature1Offset = ByteSearch.FindPattern(certDer, signaturePattern);
         var signature2Offset = ByteSearch.FindPattern(certDer, signaturePattern, signature1Offset + 1);
 
@@ -69,6 +79,7 @@ public static class FeslCertGenerator
             throw new Exception("Failed to find valid signature for patching!");
         }
 
+        // Patch the second signature to TLS_NULL_WITH_NULL_NULL
         var byteOffset = signature2Offset + 8;
         certDer[byteOffset] = 0x01;
 
