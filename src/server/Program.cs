@@ -17,7 +17,7 @@ Console.WriteLine($"Listening on tcp:{tcpPort}");
 
 while(true)
 {
-    var tcpClient = await tcpListener.AcceptTcpClientAsync();
+    using var tcpClient = await tcpListener.AcceptTcpClientAsync();
     Console.WriteLine("Connection incoming!");
     HandleClient(tcpClient);
 }
@@ -37,12 +37,14 @@ void HandleClient(TcpClient tcpClient)
     {
         Console.WriteLine($"Failed to accept connection: {e.Message}");
 
-        clientServer.Cancel();
+        clientServerProtocol.Flush();
         clientServerProtocol.Close();
-        tcpClient.Close();
+        clientServer.Cancel();
 
         return;
     }
 
-    Console.WriteLine("Client handshake successful!");
+    Console.WriteLine("SSL Handshake successful!");
+    Console.WriteLine("Didn't expect to get this far!");
+    Console.WriteLine("What do I do now?");
 }
