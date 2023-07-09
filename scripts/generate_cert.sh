@@ -1,6 +1,8 @@
 #!/bin/bash
 # Original script from: https://github.com/Aim4kill/Bug_OldProtoSSL
 
+# THIS SCRIPT GENERATES NON-PATCHED CERTIFICATE!!!
+
 CA_NAME="OTG3"
 
 cdir=$(mktemp --directory)
