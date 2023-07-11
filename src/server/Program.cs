@@ -9,11 +9,12 @@ var crypto = new BcTlsCrypto(secureRandom);
 
 var (feslCertKey, feslCert) = FeslCertGenerator.GenerateVulnerableCert(crypto);
 
-const int tcpPort = 18800;
-var tcpListener = new TcpListener(System.Net.IPAddress.Any, tcpPort);
+var feslTcpPort = Constants.Beach_FeslPort;
+
+var tcpListener = new TcpListener(System.Net.IPAddress.Any, feslTcpPort);
 tcpListener.Start();
 
-Console.WriteLine($"Listening on tcp:{tcpPort}");
+Console.WriteLine($"Listening on tcp:{feslTcpPort}");
 
 while(true)
 {
