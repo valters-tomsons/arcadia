@@ -6,3 +6,6 @@
 **.crt
 **.pfx
 **.pem
+
+# SSL key log
+**/sslkeylog.log

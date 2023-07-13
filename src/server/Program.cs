@@ -16,7 +16,7 @@ tcpListener.Start();
 
 Console.WriteLine($"Listening on tcp:{feslTcpPort}");
 
-var feslCrypto = new FeslTlsCrypto();
+var feslCrypto = new FeslTlsCrypto(true);
 
 while(true)
 {
