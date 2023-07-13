@@ -4,50 +4,46 @@ using Org.BouncyCastle.Tls;
 using Org.BouncyCastle.Tls.Crypto.Impl.BC;
 using server;
 
-var secureRandom = new SecureRandom();
-var certCrypto = new BcTlsCrypto(secureRandom);
+var certGenCrypto = new BcTlsCrypto(new SecureRandom());
+var (feslCertKey, feslPubCert) = FeslCertGenerator.GenerateVulnerableCert(certGenCrypto);
 
-var (feslCertKey, feslCert) = FeslCertGenerator.GenerateVulnerableCert(certCrypto);
+var feslTcpListener = new TcpListener(System.Net.IPAddress.Any, Constants.Beach_FeslPort);
 
-var feslTcpPort = Constants.Beach_FeslPort;
-
-var tcpListener = new TcpListener(System.Net.IPAddress.Any, feslTcpPort);
-tcpListener.Start();
-
-Console.WriteLine($"Listening on tcp:{feslTcpPort}");
-
-var feslCrypto = new FeslTlsCrypto(true);
+feslTcpListener.Start();
+Console.WriteLine($"Listening on tcp:{Constants.Beach_FeslPort}");
 
 while(true)
 {
-    using var tcpClient = await tcpListener.AcceptTcpClientAsync();
-    Console.WriteLine("Connection incoming!");
-    HandleClient(tcpClient);
+    using var tcpClient = await feslTcpListener.AcceptTcpClientAsync();
+    Console.WriteLine($"Opening connection from: {tcpClient.Client.RemoteEndPoint}");
+    HandleClientConnection(tcpClient);
 }
 
-void HandleClient(TcpClient tcpClient)
+async void HandleClientConnection(TcpClient tcpClient)
 {
     using var networkStream = tcpClient.GetStream();
 
-    var clientServer = new FeslTcpServer(feslCrypto, feslCert, feslCertKey);
-    var clientServerProtocol = new TlsServerProtocol(networkStream);
+    var connCrypto = new FeslTlsCrypto(true);
+    var connTcp = new FeslTcpServer(connCrypto, feslPubCert, feslCertKey);
+    var connProtocol = new TlsServerProtocol(networkStream);
 
     try
     {
-        clientServerProtocol.Accept(clientServer);
+        connProtocol.Accept(connTcp);
+        Console.WriteLine("SSL Handshake successful!");
     }
     catch (Exception e)
     {
         Console.WriteLine($"Failed to accept connection: {e.Message}");
 
-        clientServerProtocol.Flush();
-        clientServerProtocol.Close();
-        clientServer.Cancel();
+        connProtocol.Flush();
+        connProtocol.Close();
+        connTcp.Cancel();
 
         return;
     }
 
-    Console.WriteLine("SSL Handshake successful!");
-    Console.WriteLine("Didn't expect to get this far!");
-    Console.WriteLine("What do I do now?");
+    Console.WriteLine("Terminating connection in 2 seconds...");
+    await Task.Delay(2000);
+    Console.WriteLine("Terminating...");
 }
