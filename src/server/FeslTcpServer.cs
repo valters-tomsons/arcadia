@@ -65,8 +65,25 @@ public class FeslTcpServer : DefaultTlsServer
 }
 public class FeslTlsCrypto : BcTlsCrypto
 {
+    private readonly bool _writeSslKeyLog;
+
+    public FeslTlsCrypto(bool writeSslKeyLog = false)
+    {
+        _writeSslKeyLog = writeSslKeyLog;
+    }
+
     public override TlsCipher CreateCipher(TlsCryptoParameters cryptoParams, int encryptionAlgorithm, int macAlgorithm)
     {
+        if (_writeSslKeyLog)
+        {
+            var secret = BCUtils.ReflectMasterSecret(cryptoParams.SecurityParameters.MasterSecret) ?? throw new Exception("Failed to reflect master secret");
+            var clientRandom = Convert.ToHexString(cryptoParams.SecurityParameters.ClientRandom);
+            var masterSecret = Convert.ToHexString(secret);
+
+            using StreamWriter sw = File.AppendText("sslkeylog.log");
+            sw.WriteLine("CLIENT_RANDOM " + clientRandom + " " + masterSecret);
+        }
+
         return encryptionAlgorithm switch
         {
             EncryptionAlgorithm.RC4_128 => CreateCipher_RC4(cryptoParams, 16, macAlgorithm),
