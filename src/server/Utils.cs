@@ -1,4 +1,20 @@
+using System.Reflection;
+using Org.BouncyCastle.Tls.Crypto;
+using Org.BouncyCastle.Tls.Crypto.Impl.BC;
+
 namespace server;
+
+public static class BCUtils
+{
+    public static byte[]? ReflectMasterSecret(TlsSecret secret)
+    {
+        // We need to use reflection to access the master secret from BC
+        // because using Extract() destroys the key for subsequent calls
+        const BindingFlags bindingFlags = BindingFlags.NonPublic | BindingFlags.Instance;
+        var field = typeof(BcTlsSecret).GetField("m_data", bindingFlags);
+        return (byte[]?)field?.GetValue(secret);
+    }
+}
 
 public static class ByteSearch
 {
