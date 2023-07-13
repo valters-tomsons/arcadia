@@ -5,9 +5,9 @@ using Org.BouncyCastle.Tls.Crypto.Impl.BC;
 using server;
 
 var secureRandom = new SecureRandom();
-var crypto = new BcTlsCrypto(secureRandom);
+var certCrypto = new BcTlsCrypto(secureRandom);
 
-var (feslCertKey, feslCert) = FeslCertGenerator.GenerateVulnerableCert(crypto);
+var (feslCertKey, feslCert) = FeslCertGenerator.GenerateVulnerableCert(certCrypto);
 
 var feslTcpPort = Constants.Beach_FeslPort;
 
@@ -15,6 +15,8 @@ var tcpListener = new TcpListener(System.Net.IPAddress.Any, feslTcpPort);
 tcpListener.Start();
 
 Console.WriteLine($"Listening on tcp:{feslTcpPort}");
+
+var feslCrypto = new FeslTlsCrypto();
 
 while(true)
 {
@@ -27,7 +29,7 @@ void HandleClient(TcpClient tcpClient)
 {
     using var networkStream = tcpClient.GetStream();
 
-    var clientServer = new FeslTcpServer(crypto, feslCert, feslCertKey);
+    var clientServer = new FeslTcpServer(feslCrypto, feslCert, feslCertKey);
     var clientServerProtocol = new TlsServerProtocol(networkStream);
 
     try
