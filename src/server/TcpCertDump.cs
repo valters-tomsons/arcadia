@@ -8,8 +8,8 @@ public static class TcpCertDump
 {
     public static void DumpFESL(TlsCrypto crypto)
     {
-        const string serverHost = "bfbc-ps3.fesl.ea.com";
-        const int serverPort = 18800;
+        const string serverHost = "beach-ps3.fesl.ea.com";
+        const int serverPort = Constants.Beach_FeslPort;
 
         using var tcpClient = new TcpClient(serverHost, serverPort);
         using var networkStream = tcpClient.GetStream();
