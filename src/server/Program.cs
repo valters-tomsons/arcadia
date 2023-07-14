@@ -32,13 +32,14 @@ Console.WriteLine($"Listening on tcp:{config.Port}");
 while(true)
 {
     using var tcpClient = await feslTcpListener.AcceptTcpClientAsync();
-    Console.WriteLine($"Opening connection from: {tcpClient.Client.RemoteEndPoint}");
+    var clientEndpoint = tcpClient.Client.RemoteEndPoint!.ToString()!;
+    Console.WriteLine($"Opening connection from: {clientEndpoint}");
 
     // TODO: Run this in a separate thread.
-    HandleClientConnection(tcpClient);
+    HandleClientConnection(tcpClient, clientEndpoint);
 }
 
-void HandleClientConnection(TcpClient tcpClient)
+void HandleClientConnection(TcpClient tcpClient, string clientEndpoint)
 {
     using var networkStream = tcpClient.GetStream();
 
@@ -72,7 +73,7 @@ void HandleClientConnection(TcpClient tcpClient)
         }
         catch
         {
-            Console.WriteLine("Closing connection!");
+            Console.WriteLine($"Connection has been closed with {clientEndpoint}");
             break;
         }
 
