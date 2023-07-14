@@ -16,6 +16,12 @@ if (config.MirrorUpstreamCert)
 }
 
 var (feslCertKey, feslPubCert) = ProtoSslCertGenerator.GenerateVulnerableCert(IssuerDN, SubjectDN);
+if(config.DumpPatchedCert)
+{
+    Console.WriteLine("Dumping patched certificate...");
+    Utils.DumpCertificate(feslCertKey, feslPubCert, config.UpstreamHost);
+}
+
 var feslTcpListener = new TcpListener(System.Net.IPAddress.Any, config.Port);
 var feslCrypto = new Rc4TlsCrypto(true);
 
