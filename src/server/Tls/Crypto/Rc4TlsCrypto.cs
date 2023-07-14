@@ -8,9 +8,16 @@ public class Rc4TlsCrypto : BcTlsCrypto
 {
     private readonly bool _writeSslKeyLog;
 
+    private const string SslKeyLogFileName = "sslkeylog.log";
+
     public Rc4TlsCrypto(bool writeSslKeyLog = false)
     {
         _writeSslKeyLog = writeSslKeyLog;
+
+        if (_writeSslKeyLog)
+        {
+            Console.WriteLine($"SSL key logging enabled: '{SslKeyLogFileName}'");
+        }
     }
 
     public override TlsCipher CreateCipher(TlsCryptoParameters cryptoParams, int encryptionAlgorithm, int macAlgorithm)

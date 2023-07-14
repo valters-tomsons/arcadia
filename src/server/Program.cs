@@ -10,6 +10,7 @@ var config = Utils.BuildConfig();
 var (IssuerDN, SubjectDN) = TlsCertDump.DumpPubFeslCert(config.UpstreamHost);
 var (feslCertKey, feslPubCert) = ProtoSslCertGenerator.GenerateVulnerableCert(IssuerDN, SubjectDN);
 var feslTcpListener = new TcpListener(System.Net.IPAddress.Any, config.Port);
+var feslCrypto = new Rc4TlsCrypto(true);
 
 feslTcpListener.Start();
 Console.WriteLine($"Listening on tcp:{config.Port}");
@@ -27,8 +28,7 @@ async void HandleClientConnection(TcpClient tcpClient)
 {
     using var networkStream = tcpClient.GetStream();
 
-    var connCrypto = new Rc4TlsCrypto(true);
-    var connTls = new Ssl3TlsServer(connCrypto, feslPubCert, feslCertKey);
+    var connTls = new Ssl3TlsServer(feslCrypto, feslPubCert, feslCertKey);
     var connProtocol = new TlsServerProtocol(networkStream);
 
     try
