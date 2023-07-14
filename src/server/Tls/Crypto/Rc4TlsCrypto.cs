@@ -17,7 +17,7 @@ public class Rc4TlsCrypto : BcTlsCrypto
     {
         if (_writeSslKeyLog)
         {
-            var secret = BCUtils.ReflectMasterSecret(cryptoParams.SecurityParameters.MasterSecret) ?? throw new Exception("Failed to reflect master secret");
+            var secret = Utils.ReflectMasterSecretFromBCTls(cryptoParams.SecurityParameters.MasterSecret) ?? throw new Exception("Failed to reflect master secret");
             var clientRandom = Convert.ToHexString(cryptoParams.SecurityParameters.ClientRandom);
             var masterSecret = Convert.ToHexString(secret);
 

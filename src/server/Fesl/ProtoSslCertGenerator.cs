@@ -75,8 +75,8 @@ public static class ProtoSslCertGenerator
         var signaturePattern = new byte[] { 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x05 };
 
         // There must be two signatures in the DER encoded certificate
-        var signature1Offset = ByteSearch.FindPattern(certDer, signaturePattern);
-        var signature2Offset = ByteSearch.FindPattern(certDer, signaturePattern, signature1Offset + 1);
+        var signature1Offset = Utils.FindBytePattern(certDer, signaturePattern);
+        var signature2Offset = Utils.FindBytePattern(certDer, signaturePattern, signature1Offset + 1);
 
         if (signature1Offset == -1 || signature2Offset == -1)
         {

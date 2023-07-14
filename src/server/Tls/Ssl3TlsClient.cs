@@ -1,27 +1,11 @@
-using System.Net.Sockets;
 using Org.BouncyCastle.Tls;
 using Org.BouncyCastle.Tls.Crypto;
 
-namespace server;
+namespace server.Tls;
 
-public static class TcpCertDump
+public class Ssl3TlsClient : DefaultTlsClient
 {
-    public static void DumpFESL(TlsCrypto crypto)
-    {
-        const string serverHost = "beach-ps3.fesl.ea.com";
-        const int serverPort = Constants.Beach_FeslPort;
-
-        using var tcpClient = new TcpClient(serverHost, serverPort);
-        using var networkStream = tcpClient.GetStream();
-        var tlsClientProtocol = new TlsClientProtocol(networkStream);
-
-        tlsClientProtocol.Connect(new DumperTlsClient(crypto));
-    }
-}
-
-class DumperTlsClient : DefaultTlsClient
-{
-    public DumperTlsClient(TlsCrypto crypto) : base(crypto)
+    public Ssl3TlsClient(TlsCrypto crypto) : base(crypto)
     {
     }
 
@@ -47,11 +31,11 @@ class DumperTlsClient : DefaultTlsClient
 
     public override TlsAuthentication GetAuthentication()
     {
-        return new ServerCertificateDump();
+        return new TlsAuthDumper();
     }
 }
 
-public class ServerCertificateDump : TlsAuthentication
+public class TlsAuthDumper : TlsAuthentication
 {
     public TlsCredentials GetClientCredentials(CertificateRequest certificateRequest)
     {
@@ -62,7 +46,7 @@ public class ServerCertificateDump : TlsAuthentication
     {
         var certificates = serverCertificate.Certificate.GetCertificateList();
 
-        for(var i = 0; i < certificates.Length; i++)
+        for (var i = 0; i < certificates.Length; i++)
         {
             var certificate = certificates[i];
             var certificateFilePath = $"server_certificate_{i}.crt";
