@@ -1,10 +1,5 @@
-fesl.ea.com
 bfbc-ps3.fesl.ea:18800
+beach-ps3.fesl.ea:18231
 
 fesl-alpha
 fesl-dev
-
-PS3DirtyConnect
-OPTION_DIRTYSOCK_NO_AUTO_INIT
-OPTION_DIRTYSOCK_NO_AUTO_IDLE
-OPTION_DIRTYSOCK_NO_CAPTURE_DEBUG_OUTPUT
