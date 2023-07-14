@@ -7,7 +7,14 @@ using server.Tls.Crypto;
 
 var config = Utils.BuildConfig();
 
-var (IssuerDN, SubjectDN) = TlsCertDump.DumpPubFeslCert(config.UpstreamHost);
+var IssuerDN = string.Empty;
+var SubjectDN = string.Empty;
+if (config.MirrorUpstreamCert)
+{
+    Console.WriteLine($"Upstream cert mirroring enabled: {config.UpstreamHost}");
+    (IssuerDN, SubjectDN) = TlsCertDump.DumpPubFeslCert(config.UpstreamHost);
+}
+
 var (feslCertKey, feslPubCert) = ProtoSslCertGenerator.GenerateVulnerableCert(IssuerDN, SubjectDN);
 var feslTcpListener = new TcpListener(System.Net.IPAddress.Any, config.Port);
 var feslCrypto = new Rc4TlsCrypto(true);
