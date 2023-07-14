@@ -5,9 +5,9 @@ using server.Tls;
 
 namespace server;
 
-public static class TcpCertDump
+public static class TlsCertDump
 {
-    public static void FeslDumpPubCert(TlsCrypto crypto)
+    public static void DumpPubFeslCert(TlsCrypto crypto)
     {
         const string serverHost = "beach-ps3.fesl.ea.com";
         const int serverPort = Constants.Beach_FeslPort;
