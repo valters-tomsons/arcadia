@@ -1,4 +1,5 @@
 using System.Reflection;
+using Microsoft.Extensions.Configuration;
 using Org.BouncyCastle.Tls.Crypto;
 using Org.BouncyCastle.Tls.Crypto.Impl.BC;
 
@@ -6,6 +7,16 @@ namespace server;
 
 public static class Utils
 {
+    public static AppSettings BuildConfig()
+    {
+        var builder = new ConfigurationBuilder()
+        .SetBasePath(Directory.GetCurrentDirectory())
+        .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false);
+
+        var config = builder.Build();
+        return config.GetSection(nameof(AppSettings)).Get<AppSettings>() ?? new AppSettings();
+    }
+
     public static byte[]? ReflectMasterSecretFromBCTls(TlsSecret secret)
     {
         // We need to use reflection to access the master secret from BC

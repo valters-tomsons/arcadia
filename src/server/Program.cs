@@ -1,12 +1,11 @@
 ﻿using System.Net.Sockets;
-using Microsoft.Extensions.Configuration;
 using Org.BouncyCastle.Tls;
 using server;
 using server.Fesl;
 using server.Tls;
 using server.Tls.Crypto;
 
-var config = BuildConfig();
+var config = Utils.BuildConfig();
 
 var (feslCertKey, feslPubCert) = ProtoSslCertGenerator.GenerateVulnerableCert();
 var feslTcpListener = new TcpListener(System.Net.IPAddress.Any, config.Port);
@@ -48,14 +47,4 @@ async void HandleClientConnection(TcpClient tcpClient)
     Console.WriteLine("Terminating connection in 2 seconds...");
     await Task.Delay(2000);
     Console.WriteLine("Terminating...");
-}
-
-static AppSettings BuildConfig()
-{
-    var builder = new ConfigurationBuilder()
-    .SetBasePath(Directory.GetCurrentDirectory())
-    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false);
-
-    var config = builder.Build();
-    return config.GetSection(nameof(AppSettings)).Get<AppSettings>() ?? new AppSettings();
 }
