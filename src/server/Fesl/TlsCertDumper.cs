@@ -6,10 +6,11 @@ using Org.BouncyCastle.Tls;
 using Org.BouncyCastle.Tls.Crypto.Impl.BC;
 using Org.BouncyCastle.X509;
 using server.Tls;
+using server.Tls.Misc;
 
-namespace server;
+namespace server.Fesl;
 
-public static class TlsCertDump
+public static class TlsCertDumper
 {
     public static (string IssuerDN, string SubjectDN) DumpPubFeslCert(string serverHost, int port)
     {
@@ -27,6 +28,7 @@ public static class TlsCertDump
         try
         {
             tlsClientProtocol.Connect(tlsClient);
+            Console.WriteLine("SSL Handshake with backend server successful!");
         }
         catch
         {

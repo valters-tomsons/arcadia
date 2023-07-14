@@ -1,5 +1,4 @@
 using Org.BouncyCastle.Tls;
-using Org.BouncyCastle.Tls.Crypto;
 using Org.BouncyCastle.Tls.Crypto.Impl.BC;
 
 namespace server.Tls;
@@ -7,12 +6,10 @@ namespace server.Tls;
 public class Ssl3TlsClient : DefaultTlsClient
 {
     private readonly TlsAuthentication _tlsAuth;
-    private readonly BcTlsCrypto _crypto;
 
     public Ssl3TlsClient(BcTlsCrypto crypto, TlsAuthentication auth) : base(crypto)
     {
         _tlsAuth = auth;
-        _crypto = crypto;
     }
 
     private static readonly int[] _cipherSuites =
@@ -58,20 +55,5 @@ public class Ssl3TlsClient : DefaultTlsClient
         }
 
         base.NotifySecureRenegotiation(secureRenegotiation);
-    }
-}
-
-public class TlsAuthCertDumper : TlsAuthentication
-{
-    public TlsCertificate[]? ServerCertificates { get; private set; }
-
-    public TlsCredentials GetClientCredentials(CertificateRequest certificateRequest)
-    {
-        throw new NotImplementedException();
-    }
-
-    public void NotifyServerCertificate(TlsServerCertificate serverCertificate)
-    {
-        ServerCertificates = serverCertificate.Certificate.GetCertificateList();
     }
 }

@@ -13,7 +13,7 @@ var SubjectDN = string.Empty;
 if (config.MirrorUpstreamCert)
 {
     Console.WriteLine($"Upstream cert mirroring enabled: {config.UpstreamHost}");
-    (IssuerDN, SubjectDN) = TlsCertDump.DumpPubFeslCert(config.UpstreamHost, config.Port);
+    (IssuerDN, SubjectDN) = TlsCertDumper.DumpPubFeslCert(config.UpstreamHost, config.Port);
 }
 
 var (feslCertKey, feslPubCert) = ProtoSslCertGenerator.GenerateVulnerableCert(IssuerDN, SubjectDN);
@@ -48,7 +48,7 @@ void HandleClientConnection(TcpClient tcpClient)
     try
     {
         connProtocol.Accept(connTls);
-        Console.WriteLine("SSL Handshake successful!");
+        Console.WriteLine("SSL Handshake with game client successful!");
     }
     catch (Exception e)
     {
