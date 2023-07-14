@@ -1,4 +1,5 @@
 ﻿using System.Net.Sockets;
+using System.Text;
 using Org.BouncyCastle.Tls;
 using server;
 using server.Fesl;
@@ -12,7 +13,7 @@ var SubjectDN = string.Empty;
 if (config.MirrorUpstreamCert)
 {
     Console.WriteLine($"Upstream cert mirroring enabled: {config.UpstreamHost}");
-    (IssuerDN, SubjectDN) = TlsCertDump.DumpPubFeslCert(config.UpstreamHost);
+    (IssuerDN, SubjectDN) = TlsCertDump.DumpPubFeslCert(config.UpstreamHost, config.Port);
 }
 
 var (feslCertKey, feslPubCert) = ProtoSslCertGenerator.GenerateVulnerableCert(IssuerDN, SubjectDN);
@@ -37,7 +38,7 @@ while(true)
     HandleClientConnection(tcpClient);
 }
 
-async void HandleClientConnection(TcpClient tcpClient)
+void HandleClientConnection(TcpClient tcpClient)
 {
     using var networkStream = tcpClient.GetStream();
 
@@ -60,7 +61,12 @@ async void HandleClientConnection(TcpClient tcpClient)
         return;
     }
 
-    Console.WriteLine("Terminating connection in 2 seconds...");
-    await Task.Delay(2000);
-    Console.WriteLine("Terminating...");
+    var readBuffer = new byte[4096];
+    while (!connProtocol.IsConnected)
+    {
+        var read = connProtocol.ReadApplicationData(readBuffer, 0, readBuffer.Length);
+
+        Console.WriteLine($"Received {read} bytes from client.");
+        Console.WriteLine(Encoding.ASCII.GetString(readBuffer, 0, read));
+    }
 }

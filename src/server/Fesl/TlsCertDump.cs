@@ -11,20 +11,18 @@ namespace server;
 
 public static class TlsCertDump
 {
-    public static (string IssuerDN, string SubjectDN) DumpPubFeslCert(string serverHost)
+    public static (string IssuerDN, string SubjectDN) DumpPubFeslCert(string serverHost, int port)
     {
         var crypto = new BcTlsCrypto(new SecureRandom());
 
-        const int serverPort = Constants.Beach.FeslPort;
-
-        using var tcpClient = new TcpClient(serverHost, serverPort);
+        using var tcpClient = new TcpClient(serverHost, port);
         using var networkStream = tcpClient.GetStream();
         var tlsClientProtocol = new TlsClientProtocol(networkStream);
 
         var certDumper = new TlsAuthDumper();
         var tlsClient = new Ssl3TlsClient(crypto, certDumper);
 
-        Console.WriteLine($"Connecting to {serverHost}:{serverPort}...");
+        Console.WriteLine($"Connecting to {serverHost}:{port}...");
 
         try
         {
