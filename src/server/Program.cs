@@ -32,7 +32,7 @@ Console.WriteLine($"Listening on tcp:{config.Port}");
 
 while(true)
 {
-    using var tcpClient = await arcadiaTcpListener.AcceptTcpClientAsync();
+    var tcpClient = await arcadiaTcpListener.AcceptTcpClientAsync();
     var clientEndpoint = tcpClient.Client.RemoteEndPoint!.ToString()!;
     Console.WriteLine($"Opening connection from: {clientEndpoint}");
 
@@ -40,37 +40,47 @@ while(true)
     HandleClientConnection(tcpClient, clientEndpoint);
 }
 
-void HandleClientConnection(TcpClient tcpClient, string clientEndpoint)
+async void HandleClientConnection(TcpClient tcpClient, string clientEndpoint)
 {
-    using var networkStream = tcpClient.GetStream();
+    var networkStream = tcpClient.GetStream();
 
     var connTls = new Ssl3TlsServer(arcadiaTlsCrypto, feslPubCert, feslCertKey);
-    var connProtocol = new TlsServerProtocol(networkStream);
+    var arcadiaServerProtocol = new TlsServerProtocol(networkStream);
 
     try
     {
-        connProtocol.Accept(connTls);
+        arcadiaServerProtocol.Accept(connTls);
         Console.WriteLine("SSL Handshake with game client successful!");
     }
     catch (Exception e)
     {
         Console.WriteLine($"Failed to accept connection: {e.Message}");
 
-        connProtocol.Flush();
-        connProtocol.Close();
+        arcadiaServerProtocol.Flush();
+        arcadiaServerProtocol.Close();
         connTls.Cancel();
 
         return;
     }
 
+    if (config.EnableProxyMode)
+    {
+        Console.WriteLine("Proxy mode enabled!");
+
+        var proxy = new TlsClientProxy(arcadiaServerProtocol, arcadiaTlsCrypto);
+        await proxy.StartProxy(config);
+
+        return;
+    }
+
     var readBuffer = new byte[4096];
-    while (connProtocol.IsConnected)
+    while (arcadiaServerProtocol.IsConnected)
     {
         var read = 0;
 
         try
         {
-            read = connProtocol.ReadApplicationData(readBuffer, 0, readBuffer.Length);
+            read = arcadiaServerProtocol.ReadApplicationData(readBuffer, 0, readBuffer.Length);
         }
         catch
         {
