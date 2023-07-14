@@ -19,30 +19,43 @@ namespace server.Fesl;
 public static class ProtoSslCertGenerator
 {
     private const string CipherAlgorithm = "SHA1WITHRSA";
-    private const string CertDomain  = "fesl.ea.com";
 
     /// <summary>
     /// Generates a certificate for vulnerable ProtoSSL versions.
     /// </summary>
-    public static (AsymmetricKeyParameter, Certificate) GenerateVulnerableCert()
+    public static (AsymmetricKeyParameter, Certificate) GenerateVulnerableCert(string? issuer = null, string? subject = null)
     {
-        var crypto = new BcTlsCrypto(new SecureRandom());
+        if (string.IsNullOrWhiteSpace(issuer))
+        {
+            Console.WriteLine("No issuer specified, using default...");
+            issuer = "CN=OTG3 Certificate Authority, C=US, ST=California, L=Redwood City, O=\"Electronic Arts, Inc.\", OU=Online Technology Group, emailAddress=dirtysock-contact@ea.com";
+        }
 
+        if(string.IsNullOrWhiteSpace(subject))
+        {
+            Console.WriteLine("No subject specified, using default...");
+            subject = "C=US, ST=California, O=\"Electronic Arts, Inc.\", OU=Online Technology Group, CN=fesl.ea.com, emailAddress=fesl@ea.com";
+        }
+
+        var crypto = new BcTlsCrypto(new SecureRandom());
         var rsaKeyPairGen = new RsaKeyPairGenerator();
         rsaKeyPairGen.Init(new KeyGenerationParameters(crypto.SecureRandom, 1024));
 
         var caKeyPair = rsaKeyPairGen.GenerateKeyPair();
-        var caCertificate = GenerateCertificate("CN=OTG3 Certificate Authority, C=US, ST=California, L=Redwood City, O=\"Electronic Arts, Inc.\", OU=Online Technology Group, emailAddress=dirtysock-contact@ea.com", caKeyPair, caKeyPair.Private);
+        var caCertificate = GenerateCertificate(issuer, caKeyPair, caKeyPair.Private);
 
         var cKeyPair = rsaKeyPairGen.GenerateKeyPair();
-        var cCertificate = GenerateCertificate("C=US, ST=California, O=\"Electronic Arts, Inc.\", OU=Online Technology Group, CN=fesl.ea.com, emailAddress=fesl@ea.com", cKeyPair, caKeyPair.Private, caCertificate);
-
+        var cCertificate = GenerateCertificate(subject, cKeyPair, caKeyPair.Private, caCertificate);
         var patched_cCertificate = PatchCertificateSignaturePattern(cCertificate);
 
         var store = new Pkcs12StoreBuilder().Build();
         var certEntry = new X509CertificateEntry(patched_cCertificate);
-        store.SetCertificateEntry(CertDomain, certEntry);
-        store.SetKeyEntry(CertDomain, new AsymmetricKeyEntry(cKeyPair.Private), new[] { certEntry });
+
+        var certDomain = subject.Split("CN=")[1].Split(",")[0];
+        Console.WriteLine($"Certificate patched for: {certDomain}");
+
+        store.SetCertificateEntry(certDomain, certEntry);
+        store.SetKeyEntry(certDomain, new AsymmetricKeyEntry(cKeyPair.Private), new[] { certEntry });
 
         var chain = new TlsCertificate[] { new BcTlsCertificate(crypto, certEntry.Certificate.GetEncoded()) };
         var finalCertificate = new Certificate(chain);

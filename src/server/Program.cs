@@ -7,7 +7,8 @@ using server.Tls.Crypto;
 
 var config = Utils.BuildConfig();
 
-var (feslCertKey, feslPubCert) = ProtoSslCertGenerator.GenerateVulnerableCert();
+var (IssuerDN, SubjectDN) = TlsCertDump.DumpPubFeslCert(config.UpstreamHost);
+var (feslCertKey, feslPubCert) = ProtoSslCertGenerator.GenerateVulnerableCert(IssuerDN, SubjectDN);
 var feslTcpListener = new TcpListener(System.Net.IPAddress.Any, config.Port);
 
 feslTcpListener.Start();
@@ -17,6 +18,8 @@ while(true)
 {
     using var tcpClient = await feslTcpListener.AcceptTcpClientAsync();
     Console.WriteLine($"Opening connection from: {tcpClient.Client.RemoteEndPoint}");
+
+    // TODO: Run this in a separate thread.
     HandleClientConnection(tcpClient);
 }
 

@@ -5,8 +5,11 @@ namespace server.Tls;
 
 public class Ssl3TlsClient : DefaultTlsClient
 {
-    public Ssl3TlsClient(TlsCrypto crypto) : base(crypto)
+    private readonly TlsAuthentication _tlsAuth;
+
+    public Ssl3TlsClient(TlsCrypto crypto, TlsAuthentication auth) : base(crypto)
     {
+        _tlsAuth = auth;
     }
 
     public override ProtocolVersion[] GetProtocolVersions()
@@ -31,12 +34,14 @@ public class Ssl3TlsClient : DefaultTlsClient
 
     public override TlsAuthentication GetAuthentication()
     {
-        return new TlsAuthDumper();
+        return _tlsAuth;
     }
 }
 
 public class TlsAuthDumper : TlsAuthentication
 {
+    public TlsCertificate[]? ServerCertificates { get; private set; }
+
     public TlsCredentials GetClientCredentials(CertificateRequest certificateRequest)
     {
         throw new NotImplementedException();
@@ -44,14 +49,6 @@ public class TlsAuthDumper : TlsAuthentication
 
     public void NotifyServerCertificate(TlsServerCertificate serverCertificate)
     {
-        var certificates = serverCertificate.Certificate.GetCertificateList();
-
-        for (var i = 0; i < certificates.Length; i++)
-        {
-            var certificate = certificates[i];
-            var certificateFilePath = $"server_certificate_{i}.crt";
-            File.WriteAllBytes(certificateFilePath, certificate.GetEncoded());
-            Console.WriteLine($"Wrote certificate to {certificateFilePath}");
-        }
+        ServerCertificates = serverCertificate.Certificate.GetCertificateList();
     }
 }
