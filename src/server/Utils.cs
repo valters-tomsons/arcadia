@@ -61,6 +61,15 @@ public static class Utils
         }
     }
 
+    public static byte[][] SplitAt(byte[] source, int index)
+    {
+        byte[] first = new byte[index];
+        byte[] second = new byte[source.Length - index];
+        Array.Copy(source, 0, first, 0, index);
+        Array.Copy(source, index, second, 0, source.Length - index);
+        return new[] { first, second };
+    }
+
     /// <summary>
     /// Returns index of provided byte pattern in a buffer,
     /// returns -1 if not found

@@ -62,11 +62,29 @@ void HandleClientConnection(TcpClient tcpClient)
     }
 
     var readBuffer = new byte[4096];
-    while (!connProtocol.IsConnected)
+    while (connProtocol.IsConnected)
     {
-        var read = connProtocol.ReadApplicationData(readBuffer, 0, readBuffer.Length);
+        var read = 0;
+
+        try
+        {
+            read = connProtocol.ReadApplicationData(readBuffer, 0, readBuffer.Length);
+        }
+        catch
+        {
+            Console.WriteLine("Closing connection!");
+            break;
+        }
+
+        if (read == 0)
+        {
+            continue;
+        }
 
         Console.WriteLine($"Received {read} bytes from client.");
         Console.WriteLine(Encoding.ASCII.GetString(readBuffer, 0, read));
+
+        var packet = new FeslPacket(readBuffer[..read]);
+        Console.WriteLine($"Type: {packet.Type}");
     }
 }
