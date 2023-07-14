@@ -1,0 +1,40 @@
+# This workflow will build a .NET project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-net
+
+name: .NET
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 7.0.x
+    - name: Restore dependencies
+      run: dotnet restore
+    - name: Build
+      run: dotnet build --no-restore
+    - name: Publish Linux Release
+      run: dotnet publish -c Release -r linux-x64 -o ./linux-release
+    - name: Archive Linux Release
+      uses: ihiroky/archive-action@v1
+      with:
+        root_dir: ./linux-release
+        file_path: arcadia_canary_linux.tar.xz
+    - name: Publish Windows Release
+      run: dotnet publish -c Release -r linux-x64 -o ./windows-release
+    - name: Archive Windows Release
+      uses: ihiroky/archive-action@v1
+      with:
+        root_dir: ./windows-release
+        file_path: arcadia_canary_windows.tar.xz
