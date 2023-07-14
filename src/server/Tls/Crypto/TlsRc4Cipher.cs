@@ -5,7 +5,7 @@ using Org.BouncyCastle.Tls;
 using Org.BouncyCastle.Tls.Crypto;
 using Org.BouncyCastle.Tls.Crypto.Impl;
 
-namespace server.Tls.Crypto;
+namespace Arcadia.Tls.Crypto;
 
 /// <summary>
 /// A generic SSL 3.0 RC4 cipher

@@ -6,7 +6,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/src/server/bin/Debug/net7.0/server.dll",
+            "program": "${workspaceFolder}/src/server/bin/Debug/net7.0/Arcadia.dll",
             "args": [],
             "cwd": "${workspaceFolder}/src/server",
             "console": "internalConsole",

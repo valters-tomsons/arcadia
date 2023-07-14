@@ -1,7 +1,7 @@
 using Org.BouncyCastle.Tls;
 using Org.BouncyCastle.Tls.Crypto;
 
-namespace server.Tls.Misc;
+namespace Arcadia.Tls.Misc;
 
 public class TlsAuthCertDumper : TlsAuthentication
 {

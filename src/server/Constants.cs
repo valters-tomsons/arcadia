@@ -1,4 +1,4 @@
-namespace server.Constants;
+namespace Arcadia.Constants;
 
 public static class BadCompany
 {

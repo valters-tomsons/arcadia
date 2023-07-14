@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace server.Fesl;
+namespace Arcadia.Fesl;
 
 public class FeslPacket
 {

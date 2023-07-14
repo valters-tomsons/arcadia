@@ -11,7 +11,7 @@ using Org.BouncyCastle.Tls.Crypto.Impl.BC;
 using Org.BouncyCastle.Utilities;
 using Org.BouncyCastle.X509;
 
-namespace server.Fesl;
+namespace Arcadia.Fesl;
 
 /// <summary>
 /// Based on the following article: https://github.com/Aim4kill/Bug_OldProtoSSL

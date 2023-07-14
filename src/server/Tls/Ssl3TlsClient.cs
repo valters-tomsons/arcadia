@@ -1,7 +1,7 @@
 using Org.BouncyCastle.Tls;
 using Org.BouncyCastle.Tls.Crypto.Impl.BC;
 
-namespace server.Tls;
+namespace Arcadia.Tls;
 
 public class Ssl3TlsClient : DefaultTlsClient
 {
@@ -14,7 +14,8 @@ public class Ssl3TlsClient : DefaultTlsClient
 
     private static readonly int[] _cipherSuites =
     {
-        CipherSuite.TLS_RSA_WITH_RC4_128_SHA
+        CipherSuite.TLS_RSA_WITH_RC4_128_SHA,
+        CipherSuite.TLS_RSA_WITH_RC4_128_MD5
     };
 
     private static readonly ProtocolVersion[] _supportedVersions =

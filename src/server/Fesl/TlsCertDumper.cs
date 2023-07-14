@@ -5,10 +5,10 @@ using Org.BouncyCastle.Security;
 using Org.BouncyCastle.Tls;
 using Org.BouncyCastle.Tls.Crypto.Impl.BC;
 using Org.BouncyCastle.X509;
-using server.Tls;
-using server.Tls.Misc;
+using Arcadia.Tls;
+using Arcadia.Tls.Misc;
 
-namespace server.Fesl;
+namespace Arcadia.Fesl;
 
 public static class TlsCertDumper
 {

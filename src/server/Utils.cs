@@ -7,7 +7,7 @@ using Org.BouncyCastle.Tls.Crypto;
 using Org.BouncyCastle.Tls.Crypto.Impl.BC;
 using Org.BouncyCastle.X509;
 
-namespace server;
+namespace Arcadia;
 
 public static class Utils
 {

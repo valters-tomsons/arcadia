@@ -1,6 +1,6 @@
-using server.Constants;
+using Arcadia.Constants;
 
-namespace server;
+namespace Arcadia;
 
 public record AppSettings
 {

@@ -2,7 +2,7 @@ using Org.BouncyCastle.Tls;
 using Org.BouncyCastle.Tls.Crypto;
 using Org.BouncyCastle.Tls.Crypto.Impl.BC;
 
-namespace server.Tls.Crypto;
+namespace Arcadia.Tls.Crypto;
 
 public class Rc4TlsCrypto : BcTlsCrypto
 {

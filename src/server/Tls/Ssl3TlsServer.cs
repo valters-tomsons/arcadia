@@ -2,7 +2,7 @@ using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Tls;
 using Org.BouncyCastle.Tls.Crypto.Impl.BC;
 
-namespace server.Tls;
+namespace Arcadia.Tls;
 
 public class Ssl3TlsServer : DefaultTlsServer
 {
