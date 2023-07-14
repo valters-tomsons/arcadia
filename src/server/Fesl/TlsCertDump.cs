@@ -15,7 +15,7 @@ public static class TlsCertDump
     {
         var crypto = new BcTlsCrypto(new SecureRandom());
 
-        const int serverPort = Constants.Beach_FeslPort;
+        const int serverPort = Constants.Beach.FeslPort;
 
         using var tcpClient = new TcpClient(serverHost, serverPort);
         using var networkStream = tcpClient.GetStream();
