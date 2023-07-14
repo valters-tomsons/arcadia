@@ -27,7 +27,9 @@ public static class TlsCertDumper
         try
         {
             tlsClientProtocol.Connect(tlsClient);
-            Console.WriteLine("SSL Handshake with backend server successful!");
+            Console.WriteLine("SSL Handshake with backend server successful!?!?");
+            Console.WriteLine("Closting conection");
+            tlsClientProtocol.Close();
         }
         catch
         {
@@ -35,9 +37,6 @@ public static class TlsCertDumper
         }
 
         var serverCert = certDumper.ServerCertificates?[0];
-
-        Console.WriteLine("Closting conection");
-        tlsClientProtocol.Close();
 
         if (serverCert == null)
         {

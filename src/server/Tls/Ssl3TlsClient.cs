@@ -6,16 +6,17 @@ namespace Arcadia.Tls;
 public class Ssl3TlsClient : DefaultTlsClient
 {
     private readonly TlsAuthentication _tlsAuth;
+    public readonly BcTlsCrypto _crypto;
 
     public Ssl3TlsClient(BcTlsCrypto crypto, TlsAuthentication auth) : base(crypto)
     {
+        _crypto = crypto;
         _tlsAuth = auth;
     }
 
     private static readonly int[] _cipherSuites =
     {
-        CipherSuite.TLS_RSA_WITH_RC4_128_SHA,
-        CipherSuite.TLS_RSA_WITH_RC4_128_MD5
+        CipherSuite.TLS_RSA_WITH_RC4_128_SHA
     };
 
     private static readonly ProtocolVersion[] _supportedVersions =
@@ -43,11 +44,6 @@ public class Ssl3TlsClient : DefaultTlsClient
         return _cipherSuites;
     }
 
-    public override TlsAuthentication GetAuthentication()
-    {
-        return _tlsAuth;
-    }
-
     public override void NotifySecureRenegotiation(bool secureRenegotiation)
     {
         if (!secureRenegotiation)
@@ -56,5 +52,10 @@ public class Ssl3TlsClient : DefaultTlsClient
         }
 
         base.NotifySecureRenegotiation(secureRenegotiation);
+    }
+
+    public override TlsAuthentication GetAuthentication()
+    {
+        return _tlsAuth;
     }
 }
