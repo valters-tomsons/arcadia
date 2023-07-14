@@ -5,6 +5,7 @@ using Arcadia;
 using Arcadia.Fesl;
 using Arcadia.Tls;
 using Arcadia.Tls.Crypto;
+using Arcadia.Tls.Misc;
 
 var config = Utils.BuildConfig();
 
@@ -23,15 +24,15 @@ if(config.DumpPatchedCert)
     Utils.DumpCertificate(feslCertKey, feslPubCert, config.UpstreamHost);
 }
 
-var feslTcpListener = new TcpListener(System.Net.IPAddress.Any, config.Port);
-var feslCrypto = new Rc4TlsCrypto(true);
+var arcadiaTcpListener = new TcpListener(System.Net.IPAddress.Any, config.Port);
+var arcadiaTlsCrypto = new Rc4TlsCrypto(true);
 
-feslTcpListener.Start();
+arcadiaTcpListener.Start();
 Console.WriteLine($"Listening on tcp:{config.Port}");
 
 while(true)
 {
-    using var tcpClient = await feslTcpListener.AcceptTcpClientAsync();
+    using var tcpClient = await arcadiaTcpListener.AcceptTcpClientAsync();
     var clientEndpoint = tcpClient.Client.RemoteEndPoint!.ToString()!;
     Console.WriteLine($"Opening connection from: {clientEndpoint}");
 
@@ -43,7 +44,7 @@ void HandleClientConnection(TcpClient tcpClient, string clientEndpoint)
 {
     using var networkStream = tcpClient.GetStream();
 
-    var connTls = new Ssl3TlsServer(feslCrypto, feslPubCert, feslCertKey);
+    var connTls = new Ssl3TlsServer(arcadiaTlsCrypto, feslPubCert, feslCertKey);
     var connProtocol = new TlsServerProtocol(networkStream);
 
     try
