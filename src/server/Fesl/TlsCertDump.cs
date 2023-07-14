@@ -19,7 +19,7 @@ public static class TlsCertDump
         using var networkStream = tcpClient.GetStream();
         var tlsClientProtocol = new TlsClientProtocol(networkStream);
 
-        var certDumper = new TlsAuthDumper();
+        var certDumper = new TlsAuthCertDumper();
         var tlsClient = new Ssl3TlsClient(crypto, certDumper);
 
         Console.WriteLine($"Connecting to {serverHost}:{port}...");

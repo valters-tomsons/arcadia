@@ -1,44 +1,67 @@
 using Org.BouncyCastle.Tls;
 using Org.BouncyCastle.Tls.Crypto;
+using Org.BouncyCastle.Tls.Crypto.Impl.BC;
 
 namespace server.Tls;
 
 public class Ssl3TlsClient : DefaultTlsClient
 {
     private readonly TlsAuthentication _tlsAuth;
+    private readonly BcTlsCrypto _crypto;
 
-    public Ssl3TlsClient(TlsCrypto crypto, TlsAuthentication auth) : base(crypto)
+    public Ssl3TlsClient(BcTlsCrypto crypto, TlsAuthentication auth) : base(crypto)
     {
         _tlsAuth = auth;
+        _crypto = crypto;
     }
+
+    private static readonly int[] _cipherSuites =
+    {
+        CipherSuite.TLS_RSA_WITH_RC4_128_SHA
+    };
+
+    private static readonly ProtocolVersion[] _supportedVersions =
+    {
+        ProtocolVersion.SSLv3
+    };
 
     public override ProtocolVersion[] GetProtocolVersions()
     {
-        return new[] { ProtocolVersion.SSLv3 };
+        return _supportedVersions;
     }
 
     protected override ProtocolVersion[] GetSupportedVersions()
     {
-        return new[] { ProtocolVersion.SSLv3 };
+        return _supportedVersions;
     }
 
     public override int[] GetCipherSuites()
     {
-        return new[] { CipherSuite.TLS_RSA_WITH_RC4_128_SHA, CipherSuite.TLS_RSA_WITH_RC4_128_SHA };
+        return _cipherSuites;
     }
 
     protected override int[] GetSupportedCipherSuites()
     {
-        return new[] { CipherSuite.TLS_RSA_WITH_RC4_128_SHA, CipherSuite.TLS_RSA_WITH_RC4_128_SHA };
+        return _cipherSuites;
     }
 
     public override TlsAuthentication GetAuthentication()
     {
         return _tlsAuth;
     }
+
+    public override void NotifySecureRenegotiation(bool secureRenegotiation)
+    {
+        if (!secureRenegotiation)
+        {
+            secureRenegotiation = true;
+        }
+
+        base.NotifySecureRenegotiation(secureRenegotiation);
+    }
 }
 
-public class TlsAuthDumper : TlsAuthentication
+public class TlsAuthCertDumper : TlsAuthentication
 {
     public TlsCertificate[]? ServerCertificates { get; private set; }
 
