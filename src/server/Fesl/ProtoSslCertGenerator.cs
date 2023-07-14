@@ -11,19 +11,23 @@ using Org.BouncyCastle.Tls.Crypto.Impl.BC;
 using Org.BouncyCastle.Utilities;
 using Org.BouncyCastle.X509;
 
-namespace server;
+namespace server.Fesl;
 
 /// <summary>
-/// This class generates a vulnerable certificate for FESL-BC1-PS3.
-/// <para> It is based on the following article: https://github.com/Aim4kill/Bug_OldProtoSSL </para>
+/// Based on the following article: https://github.com/Aim4kill/Bug_OldProtoSSL
 /// </summary>
-public static class FeslCertGenerator
+public static class ProtoSslCertGenerator
 {
     private const string CipherAlgorithm = "SHA1WITHRSA";
     private const string CertDomain  = "fesl.ea.com";
 
-    public static (AsymmetricKeyParameter, Certificate) GenerateVulnerableCert(BcTlsCrypto crypto)
+    /// <summary>
+    /// Generates a certificate for vulnerable ProtoSSL versions.
+    /// </summary>
+    public static (AsymmetricKeyParameter, Certificate) GenerateVulnerableCert()
     {
+        var crypto = new BcTlsCrypto(new SecureRandom());
+
         var rsaKeyPairGen = new RsaKeyPairGenerator();
         rsaKeyPairGen.Init(new KeyGenerationParameters(crypto.SecureRandom, 1024));
 

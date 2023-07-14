@@ -1,12 +1,11 @@
 ﻿using System.Net.Sockets;
-using Org.BouncyCastle.Security;
 using Org.BouncyCastle.Tls;
-using Org.BouncyCastle.Tls.Crypto.Impl.BC;
 using server;
+using server.Fesl;
+using server.Tls;
+using server.Tls.Crypto;
 
-var certGenCrypto = new BcTlsCrypto(new SecureRandom());
-var (feslCertKey, feslPubCert) = FeslCertGenerator.GenerateVulnerableCert(certGenCrypto);
-
+var (feslCertKey, feslPubCert) = ProtoSslCertGenerator.GenerateVulnerableCert();
 var feslTcpListener = new TcpListener(System.Net.IPAddress.Any, Constants.Beach_FeslPort);
 
 feslTcpListener.Start();
@@ -23,13 +22,13 @@ async void HandleClientConnection(TcpClient tcpClient)
 {
     using var networkStream = tcpClient.GetStream();
 
-    var connCrypto = new FeslTlsCrypto(true);
-    var connTcp = new FeslTcpServer(connCrypto, feslPubCert, feslCertKey);
+    var connCrypto = new Rc4TlsCrypto(true);
+    var connTls = new Ssl3TlsServer(connCrypto, feslPubCert, feslCertKey);
     var connProtocol = new TlsServerProtocol(networkStream);
 
     try
     {
-        connProtocol.Accept(connTcp);
+        connProtocol.Accept(connTls);
         Console.WriteLine("SSL Handshake successful!");
     }
     catch (Exception e)
@@ -38,7 +37,7 @@ async void HandleClientConnection(TcpClient tcpClient)
 
         connProtocol.Flush();
         connProtocol.Close();
-        connTcp.Cancel();
+        connTls.Cancel();
 
         return;
     }

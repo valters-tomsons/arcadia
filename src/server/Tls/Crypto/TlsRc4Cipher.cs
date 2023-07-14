@@ -5,12 +5,11 @@ using Org.BouncyCastle.Tls;
 using Org.BouncyCastle.Tls.Crypto;
 using Org.BouncyCastle.Tls.Crypto.Impl;
 
-namespace server;
+namespace server.Tls.Crypto;
 
 /// <summary>
 /// A generic SSL 3.0 RC4 cipher
 /// </summary>
-
 public class TlsRc4Cipher : TlsCipher
 {
     private readonly TlsSuiteHmac m_readMac, m_writeMac;
