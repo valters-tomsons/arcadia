@@ -11,7 +11,7 @@ public class FeslPacket
         var firstSplit = Utils.SplitAt(appData, 12);
         Checksum = firstSplit[0][4..];
 
-        Id = BitConverter.ToInt32(Checksum.AsSpan()[..4]);
+        Id = BitConverter.ToUInt32(Checksum.AsSpan()[..4]);
         Length = BitConverter.ToInt32(Checksum.AsSpan()[4..]);
 
         Data = firstSplit[1];
@@ -19,7 +19,7 @@ public class FeslPacket
 
     public string Type { get; init; } = null!;
     public byte[] Checksum { get; init; } = null!;
-    public int Id { get; init; }
+    public uint Id { get; init; }
     public int Length { get; init; }
     public byte[] Data { get; init; } = null!;
 }

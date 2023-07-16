@@ -73,6 +73,8 @@ async void HandleClientConnection(TcpClient tcpClient, string clientEndpoint)
         return;
     }
 
+    Console.WriteLine("Starting arcadia-FESL session");
+
     var readBuffer = new byte[4096];
     while (arcadiaServerProtocol.IsConnected)
     {
@@ -93,10 +95,9 @@ async void HandleClientConnection(TcpClient tcpClient, string clientEndpoint)
             continue;
         }
 
-        Console.WriteLine($"Received {read} bytes from client.");
-        Console.WriteLine(Encoding.ASCII.GetString(readBuffer, 0, read));
-
         var packet = new FeslPacket(readBuffer[..read]);
         Console.WriteLine($"Type: {packet.Type}");
+        Console.WriteLine($"Id: {packet.Id}");
+        Encoding.ASCII.GetString(packet.Data).Split('\n').ToList().ForEach(Console.WriteLine);
     }
 }
