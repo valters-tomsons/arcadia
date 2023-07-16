@@ -20,7 +20,6 @@ public class TlsClientProxy
     {
         InitializeUpstreamClient(config);
         await StartProxying();
-        Console.WriteLine("Proxy closed, closing connections");
     }
 
     private void InitializeUpstreamClient(AppSettings config)
@@ -94,7 +93,6 @@ public class TlsClientProxy
             Console.WriteLine($"Received {read} bytes from server");
 
             destination.WriteApplicationData(readBuffer, 0, read.Value);
-            destination.Flush();
         }
     }
 }
