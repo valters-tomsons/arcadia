@@ -1,5 +1,4 @@
 using System.Net.Sockets;
-using System.Text;
 using Org.BouncyCastle.Tls;
 using Org.BouncyCastle.Tls.Crypto.Impl.BC;
 
@@ -51,69 +50,51 @@ public class TlsClientProxy
     {
         var clientToFeslTask = Task.Run(() =>
         {
-            while (_arcadiaProtocol.IsConnected)
+            try
             {
-                ForwardClientToFesl();
+                while (_arcadiaProtocol.IsConnected)
+                {
+                    ProxyApplicationData(_arcadiaProtocol, _upstreamProtocol!);
+                }
             }
+            catch { }
+            return Task.CompletedTask;
         });
 
         var feslToClientTask = Task.Run(() =>
         {
-            while(_upstreamProtocol?.IsConnected == true)
+            try
             {
-                ForwardFeslToClient();
+                while (_arcadiaProtocol.IsConnected)
+                {
+                    ProxyApplicationData(_upstreamProtocol!, _arcadiaProtocol);
+                }
             }
+            catch { }
+            return Task.CompletedTask;
         });
 
         await Task.WhenAll(clientToFeslTask, feslToClientTask);
         Console.WriteLine("Proxy connection closed, exiting...");
     }
 
-    private void ForwardClientToFesl()
+    private static void ProxyApplicationData(TlsProtocol source, TlsProtocol destination)
     {
-        var readBuffer = new byte[1028];
-        int read = 0;
+        var readBuffer = new byte[1514];
+        int? read = 0;
 
         while (read == 0)
         {
-            read = _arcadiaProtocol.ReadApplicationData(readBuffer, 0, readBuffer.Length);
-
-            if (read < 5)
+            read = source.ReadApplicationData(readBuffer, 0, readBuffer.Length);
+            if (read < 1)
             {
                 continue;
             }
 
-            Console.WriteLine($"Received {read} bytes from client:");
-            Console.WriteLine(Encoding.ASCII.GetString(readBuffer, 0, read));
+            Console.WriteLine($"Received {read} bytes from server");
 
-            _upstreamProtocol?.WriteApplicationData(readBuffer, 0, read);
-            _upstreamProtocol?.Flush();
-
-            Console.WriteLine("Forwarded to FESL");
-        }
-    }
-
-    private void ForwardFeslToClient()
-    {
-        var readBuffer = new byte[1028];
-        int read = 0;
-
-        while (read == 0)
-        {
-            read = _upstreamProtocol.ReadApplicationData(readBuffer, 0, readBuffer.Length);
-
-            if (read < 5)
-            {
-                continue;
-            }
-
-            Console.WriteLine($"Received {read} bytes from server:");
-            Console.WriteLine(Encoding.ASCII.GetString(readBuffer, 0, read));
-
-            _arcadiaProtocol.WriteApplicationData(readBuffer, 0, read);
-            _arcadiaProtocol.Flush();
-
-            Console.WriteLine("Forwarded to client");
+            destination.WriteApplicationData(readBuffer, 0, read.Value);
+            destination.Flush();
         }
     }
 }
