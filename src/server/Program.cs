@@ -1,5 +1,4 @@
 ﻿using System.Net.Sockets;
-using System.Text;
 using Org.BouncyCastle.Tls;
 using Arcadia;
 using Arcadia.Fesl;
@@ -29,6 +28,11 @@ var arcadiaTlsCrypto = new Rc4TlsCrypto(true);
 
 arcadiaTcpListener.Start();
 Console.WriteLine($"Listening on tcp:{config.Port}");
+
+if (config.EnableProxyMode)
+{
+    Console.WriteLine("Proxy mode enabled!");
+}
 
 while(true)
 {
@@ -65,20 +69,18 @@ async void HandleClientConnection(TcpClient tcpClient, string clientEndpoint)
 
     if (config.EnableProxyMode)
     {
-        Console.WriteLine("Proxy mode enabled!");
-
         var proxy = new TlsClientProxy(arcadiaServerProtocol, arcadiaTlsCrypto);
         await proxy.StartProxy(config);
 
         return;
     }
 
-    Console.WriteLine("Starting arcadia-FESL session");
+    Console.WriteLine("Starting arcadia-emu FESL session");
 
     var readBuffer = new byte[4096];
     while (arcadiaServerProtocol.IsConnected)
     {
-        var read = 0;
+        int read;
 
         try
         {
@@ -97,7 +99,5 @@ async void HandleClientConnection(TcpClient tcpClient, string clientEndpoint)
 
         var packet = new FeslPacket(readBuffer[..read]);
         Console.WriteLine($"Type: {packet.Type}");
-        Console.WriteLine($"Id: {packet.Id}");
-        Encoding.ASCII.GetString(packet.Data).Split('\n').ToList().ForEach(Console.WriteLine);
     }
 }
