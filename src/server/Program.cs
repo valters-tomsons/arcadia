@@ -5,6 +5,7 @@ using Arcadia.Fesl;
 using Arcadia.Tls;
 using Arcadia.Tls.Crypto;
 using Arcadia.Tls.Misc;
+using System.Collections.Concurrent;
 
 var config = Utils.BuildConfig();
 
@@ -34,18 +35,19 @@ if (config.EnableProxyMode)
     Console.WriteLine("Proxy mode enabled!");
 }
 
+var activeConnections = new ConcurrentBag<Task>();
+
 while(true)
 {
     var tcpClient = await arcadiaTcpListener.AcceptTcpClientAsync();
     var clientEndpoint = tcpClient.Client.RemoteEndPoint!.ToString()!;
-    var hostIp = ((System.Net.IPEndPoint)tcpClient.Client.LocalEndPoint!).Address.ToString();
-    Console.WriteLine($"Opening connection from: {clientEndpoint}");
 
-    // TODO: Run this in a separate thread.
-    HandleClientConnection(tcpClient, clientEndpoint, hostIp);
+    Console.WriteLine($"Opening connection from: {clientEndpoint}");
+    var connection = Task.Run(async () => await HandleClientConnection(tcpClient, clientEndpoint));
+    activeConnections.Add(connection);
 }
 
-async void HandleClientConnection(TcpClient tcpClient, string clientEndpoint, string serverIp)
+async Task HandleClientConnection(TcpClient tcpClient, string clientEndpoint)
 {
     var networkStream = tcpClient.GetStream();
 
@@ -77,6 +79,6 @@ async void HandleClientConnection(TcpClient tcpClient, string clientEndpoint, st
     }
 
     Console.WriteLine("Starting arcadia-emu FESL session");
-    var serverHandler = new ArcadiaFesl(arcadiaServerProtocol, clientEndpoint, serverIp);
-    serverHandler.HandleClientConnection();
+    var serverHandler = new ArcadiaFesl(arcadiaServerProtocol, clientEndpoint);
+    await serverHandler.HandleClientConnection();
 }

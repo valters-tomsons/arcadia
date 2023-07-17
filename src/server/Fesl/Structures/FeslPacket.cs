@@ -19,15 +19,35 @@ public readonly struct FeslPacket
         DataDict = Utils.ParseFeslPacketToDict(Data);
     }
 
-    public FeslPacket(string type, uint id)
+    public FeslPacket(string type, uint id, Dictionary<string, object>? dataDict = null)
     {
         Type = type;
+        Id = id;
+        DataDict = dataDict ?? new Dictionary<string, object>();
+    }
+
+    public async Task<byte[]> ToPacket(uint ticketId)
+    {
+        var data = Utils.DataDictToPacketString(DataDict).ToString();
+        var checksum = PacketUtils.GenerateChecksum(data, Id + ticketId);
+
+        var typeBytes = Encoding.ASCII.GetBytes(Type);
+        var dataBytes = Encoding.ASCII.GetBytes(data);
+
+        using var response = new MemoryStream(typeBytes.Length + checksum.Length + dataBytes.Length);
+
+        await response.WriteAsync(typeBytes);
+        await response.WriteAsync(checksum);
+        await response.WriteAsync(dataBytes);
+        await response.FlushAsync();
+
+        return response.ToArray();
     }
 
     public string Type { get; }
-    public byte[] Checksum { get; }
     public uint Id { get; }
-    public uint Length { get; }
-    public byte[] Data { get; }
     public Dictionary<string, object> DataDict { get; }
+    public uint? Length { get; }
+    public byte[]? Data { get; }
+    public byte[]? Checksum { get; }
 }

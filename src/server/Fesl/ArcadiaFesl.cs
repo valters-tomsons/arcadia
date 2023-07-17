@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.Text;
 using Arcadia.Fesl.Structures;
-using Org.BouncyCastle.Security;
 using Org.BouncyCastle.Tls;
 
 namespace Arcadia.Fesl;
@@ -10,19 +9,15 @@ public class ArcadiaFesl
 {
     private readonly TlsServerProtocol _network;
     private readonly string _clientEndpoint;
-    private readonly string _serverAddress;
     private uint _ticketCounter;
 
-    private static readonly SecureRandom Random = new();
-
-    public ArcadiaFesl(TlsServerProtocol network, string clientEndpoint, string serverAddress)
+    public ArcadiaFesl(TlsServerProtocol network, string clientEndpoint)
     {
         _network = network;
         _clientEndpoint = clientEndpoint;
-        _serverAddress = serverAddress;
     }
 
-    public void HandleClientConnection()
+    public async Task HandleClientConnection()
     {
         var readBuffer = new byte[1514];
         while (_network.IsConnected)
@@ -49,15 +44,14 @@ public class ArcadiaFesl
 
             Console.WriteLine($"Type: {reqPacket.Type}");
             Console.WriteLine($"TXN: {reqTxn}");
-            _ = IsEncryptedData(reqPacket);
 
             if (reqPacket.Type == "fsys" && reqTxn == "Hello")
             {
-                HandleHello();
+                await HandleHello();
             }
             else if(reqPacket.Type == "acct" && reqTxn == "NuPS3Login")
             {
-                HandleLogin();
+                await HandleLogin();
             }
             else if(reqPacket.Type == "acct" && reqTxn == "NuGetTos")
             {
@@ -71,38 +65,31 @@ public class ArcadiaFesl
         throw new NotImplementedException("TOS not implemented yet!");
     }
 
-    private void HandleLogin()
+    private async Task HandleLogin()
     {
         var loginResponseData = new Dictionary<string, object>
         {
-            { "TXN", "NuPS3Login" },
             { "localizedMessage", "The user was not found" },
-            { "errorContainer.[]", "0" },
-            { "errorCode", "101" },
+            { "errorContainer.[]", 0 },
+            { "TXN", "NuPS3Login" },
+            { "errorCode", 101 }
         };
 
-        var data = Utils.DataDictToPacketString(loginResponseData);
-        var loginId = Interlocked.Increment(ref _ticketCounter);
-        var checksum = GenerateChecksum(data.ToString(), 0x80000000, loginId);
+        var loginId = _ticketCounter;
+        var loginPacket = new FeslPacket("acct", 0x80000000, loginResponseData);
+        var loginResponse = await loginPacket.ToPacket(loginId);
 
-        var response = new List<byte>();
-
-        response.AddRange(Encoding.ASCII.GetBytes("acct"));
-        response.AddRange(checksum);
-        response.AddRange(Encoding.ASCII.GetBytes(data.ToString()));
-
-        _network.WriteApplicationData(response.ToArray(), 0, response.Count);
-        Console.WriteLine(Encoding.ASCII.GetString(response.ToArray()));
+        _network.WriteApplicationData(loginResponse.AsSpan());
+        Console.WriteLine(Encoding.ASCII.GetString(loginResponse));
     }
 
-    private void HandleHello()
+    private async Task HandleHello()
     {
         var currentTime = DateTime.UtcNow.ToString("MMM-dd-yyyy HH:mm:ss 'UTC'", CultureInfo.InvariantCulture);
-
         var serverHelloData = new Dictionary<string, object>
                 {
                     { "domainPartition.domain", "ps3" },
-                    { "messengerIp", _serverAddress },
+                    { "messengerIp", "beach-ps3.fesl.ea.com" },
                     { "messengerPort", 0 },
                     { "domainPartition.subDomain", "BEACH" },
                     { "TXN", "Hello" },
@@ -112,90 +99,26 @@ public class ArcadiaFesl
                     { "theaterPort", 18236 }
                 };
 
-        var reqPlasmaId = Interlocked.Increment(ref _ticketCounter);
+        var helloId = Interlocked.Increment(ref _ticketCounter);
+        var helloPacket = new FeslPacket("fsys", 0x80000000, serverHelloData);
+        var helloResponse = await helloPacket.ToPacket(helloId);
 
-        var dataSb = Utils.DataDictToPacketString(serverHelloData);
-        var helloSumBytes = GenerateChecksum(dataSb.ToString(), 0x80000000, reqPlasmaId);
-
-        var helloResponse = new List<byte>();
-
-        helloResponse.AddRange(Encoding.ASCII.GetBytes("fsys"));
-        helloResponse.AddRange(helloSumBytes);
-        helloResponse.AddRange(Encoding.ASCII.GetBytes(dataSb.ToString()));
-
-        Console.WriteLine(Encoding.ASCII.GetString(helloResponse.ToArray()));
-
-        _network.WriteApplicationData(helloResponse.ToArray(), 0, helloResponse.Count);
+        _network.WriteApplicationData(helloResponse.AsSpan());
+        Console.WriteLine(Encoding.ASCII.GetString(helloResponse));
 
         var memCheckData = new Dictionary<string, object>
                 {
                     { "TXN", "MemCheck" },
                     { "memcheck.[]", "0" },
                     { "type", "0" },
-                    { "salt", GenerateSalt() },
+                    { "salt", PacketUtils.GenerateSalt() }
                 };
 
-        var memCheckDataSb = Utils.DataDictToPacketString(memCheckData);
-        var memSumBytes = GenerateChecksum(memCheckDataSb.ToString(), 0x80000000, reqPlasmaId + 1);
+        var memcheckId = Interlocked.Increment(ref _ticketCounter);
+        var memcheckPacket = new FeslPacket("fsys", 0x80000000, memCheckData);
+        var memcheckResponse = await memcheckPacket.ToPacket(memcheckId);
 
-        var memRequest = new List<byte>();
-        memRequest.AddRange(Encoding.ASCII.GetBytes("fsys"));
-        memRequest.AddRange(memSumBytes);
-        memRequest.AddRange(Encoding.ASCII.GetBytes(memCheckDataSb.ToString()));
-
-        _network.WriteApplicationData(memRequest.ToArray(), 0, memRequest.Count);
-        Console.WriteLine(Encoding.ASCII.GetString(memRequest.ToArray()));
-    }
-
-    private static string GenerateSalt()
-    {
-        var seed = Random.NextInt64(900000000, 999999999);
-        return seed.ToString();
-    }
-
-    private static byte[] GeneratePacketLength(string packetData)
-    {
-        var dataBytes = Encoding.ASCII.GetBytes(packetData);
-
-        int length = dataBytes.Length + 12;
-        byte[] bytes = BitConverter.GetBytes(length);
-
-        if (BitConverter.IsLittleEndian)
-            Array.Reverse(bytes);
-
-        return bytes;
-    }
-
-    private static byte[] GeneratePacketId(uint packetId)
-    {
-        byte[] bytes = BitConverter.GetBytes(packetId);
-
-        if (BitConverter.IsLittleEndian)
-            Array.Reverse(bytes);
-
-        return bytes;
-    }
-
-    public static byte[] GenerateChecksum(string data, uint packetId, uint plasmaPacketId)
-    {
-        byte[] packetIdBytes = GeneratePacketId(packetId + plasmaPacketId);
-        byte[] packetLengthBytes = GeneratePacketLength(data);
-
-        return packetIdBytes.Concat(packetLengthBytes).ToArray();
-    }
-
-    private static bool IsEncryptedData(FeslPacket packet)
-    {
-        try
-        {
-            var encryptedData = (string)packet.DataDict["data"];
-            var decodedData = encryptedData.Replace("%3d", "=");
-
-            Console.WriteLine($"Encrypted data detected: {decodedData}");
-            return true;
-        }
-        catch { }
-
-        return false;
+        _network.WriteApplicationData(memcheckResponse.AsSpan());
+        Console.WriteLine(Encoding.ASCII.GetString(memcheckResponse));
     }
 }
