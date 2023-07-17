@@ -55,14 +55,28 @@ public class ArcadiaFesl
             }
             else if(reqPacket.Type == "acct" && reqTxn == "NuGetTos")
             {
-                HandleGetTos();
+                await HandleGetTos();
             }
         }
     }
 
-    private void HandleGetTos()
+    private async Task HandleGetTos()
     {
-        throw new NotImplementedException("TOS not implemented yet!");
+        const string tos = "Welcome to Arcadia!\nBeware, here be dragons!";
+
+        var data = new Dictionary<string, object>
+        {
+            { "TXN", "NuGetTos" },
+            { "version", "20426_17.20426_17" },
+            { "tos", $"{System.Net.WebUtility.UrlEncode(tos).Replace('+', ' ')}" },
+        };
+
+        var id = Interlocked.Increment(ref _ticketCounter);
+        var packet = new FeslPacket("acct", 0x80000000, data);
+        var response = await packet.ToPacket(id);
+
+        _network.WriteApplicationData(response.AsSpan());
+        Console.WriteLine(Encoding.ASCII.GetString(response));
     }
 
     private async Task HandleLogin()
