@@ -51,7 +51,7 @@ public class ArcadiaFesl
             }
             else if(reqPacket.Type == "acct" && reqTxn == "NuPS3Login")
             {
-                await HandleLogin();
+                await HandleLogin(reqPacket);
             }
             else if(reqPacket.Type == "acct" && reqTxn == "NuGetTos")
             {
@@ -103,17 +103,36 @@ public class ArcadiaFesl
         Console.WriteLine(Encoding.ASCII.GetString(response));
     }
 
-    private async Task HandleLogin()
+    private async Task HandleLogin(FeslPacket request)
     {
-        var loginResponseData = new Dictionary<string, object>
-        {
-            { "localizedMessage", "The user was not found" },
-            { "errorContainer.[]", 0 },
-            { "TXN", "NuPS3Login" },
-            { "errorCode", 101 }
-        };
+        var encryptedSet = request.DataDict.TryGetValue("returnEncryptedInfo", out var returnEncryptedInfo);
+        Console.WriteLine($"returnEncryptedInfo: {returnEncryptedInfo} ({encryptedSet})");
 
+        var loginResponseData = new Dictionary<string, object>();
+
+        var tosAccepted = request.DataDict.TryGetValue("tosVersion", out var tosAcceptedValue);
         var loginId = _ticketCounter;
+
+        if (!tosAccepted || string.IsNullOrEmpty(tosAcceptedValue as string))
+        {
+            loginResponseData.Add("TXN", "NuPS3Login");
+            loginResponseData.Add( "localizedMessage", "The user was not found" );
+            loginResponseData.Add( "errorContainer.[]", 0 );
+            loginResponseData.Add( "errorCode", 101 );
+        }
+        else
+        {
+            const string keyTempl = "W5NyZzx{0}Cki6GQAAKDw.";
+            var lkey = string.Format(keyTempl, "123456789");
+
+            loginResponseData.Add("lkey", lkey);
+            loginResponseData.Add("TXN", "NuPS3Login");
+            loginResponseData.Add("userId", 1000000000000);
+            loginResponseData.Add("personaName", "faith");
+
+            loginId = Interlocked.Increment(ref _ticketCounter);
+        }
+
         var loginPacket = new FeslPacket("acct", 0x80000000, loginResponseData);
         var loginResponse = await loginPacket.ToPacket(loginId);
 
