@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text;
 using Microsoft.Extensions.Configuration;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.OpenSsl;
@@ -68,6 +69,25 @@ public static class Utils
         Array.Copy(source, 0, first, 0, index);
         Array.Copy(source, index, second, 0, source.Length - index);
         return new[] { first, second };
+    }
+
+    public static Dictionary<string, object> ParseFeslPacketToDict(byte[] data)
+    {
+        var dataString = Encoding.ASCII.GetString(data);
+        var dataSplit = dataString.Split('\n').Where(x => !x.Equals("\0")).ToArray();
+
+        var dataDict = new Dictionary<string, object>();
+        for (var i = 0; i < dataSplit.Length; i++)
+        {
+            var entrySplit = dataSplit[i].Split('=', StringSplitOptions.TrimEntries);
+
+            var parameter = entrySplit[0];
+            var value = entrySplit[1].Replace("\"", "");
+
+            dataDict.Add(parameter, value);
+        }
+
+        return dataDict;
     }
 
     /// <summary>
