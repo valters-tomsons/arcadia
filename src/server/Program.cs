@@ -38,13 +38,14 @@ while(true)
 {
     var tcpClient = await arcadiaTcpListener.AcceptTcpClientAsync();
     var clientEndpoint = tcpClient.Client.RemoteEndPoint!.ToString()!;
+    var hostIp = ((System.Net.IPEndPoint)tcpClient.Client.LocalEndPoint!).Address.ToString();
     Console.WriteLine($"Opening connection from: {clientEndpoint}");
 
     // TODO: Run this in a separate thread.
-    HandleClientConnection(tcpClient, clientEndpoint);
+    HandleClientConnection(tcpClient, clientEndpoint, hostIp);
 }
 
-async void HandleClientConnection(TcpClient tcpClient, string clientEndpoint)
+async void HandleClientConnection(TcpClient tcpClient, string clientEndpoint, string serverIp)
 {
     var networkStream = tcpClient.GetStream();
 
@@ -76,28 +77,6 @@ async void HandleClientConnection(TcpClient tcpClient, string clientEndpoint)
     }
 
     Console.WriteLine("Starting arcadia-emu FESL session");
-
-    var readBuffer = new byte[4096];
-    while (arcadiaServerProtocol.IsConnected)
-    {
-        int read;
-
-        try
-        {
-            read = arcadiaServerProtocol.ReadApplicationData(readBuffer, 0, readBuffer.Length);
-        }
-        catch
-        {
-            Console.WriteLine($"Connection has been closed with {clientEndpoint}");
-            break;
-        }
-
-        if (read == 0)
-        {
-            continue;
-        }
-
-        var packet = new FeslPacket(readBuffer[..read]);
-        Console.WriteLine($"Type: {packet.Type}");
-    }
+    var serverHandler = new ArcadiaFesl(arcadiaServerProtocol, clientEndpoint, serverIp);
+    serverHandler.HandleClientConnection();
 }

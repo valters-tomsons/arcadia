@@ -90,6 +90,34 @@ public static class Utils
         return dataDict;
     }
 
+    public static StringBuilder DataDictToPacketString(Dictionary<string, object> packetData)
+    {
+        var dataBuilder = new StringBuilder();
+
+        for (var i = 0; i < packetData.Count; i++)
+        {
+            var line = packetData.ElementAt(i);
+            var parameter = line.Key;
+            var value = line.Value;
+
+            dataBuilder.Append(parameter).Append('=');
+
+            if (value.ToString()?.Contains(' ') == true)
+            {
+                dataBuilder.Append('"').Append(value).Append('"');
+            }
+            else
+            {
+                dataBuilder.Append(value);
+            }
+
+            dataBuilder.Append('\n');
+        }
+
+        dataBuilder.Remove(dataBuilder.Length - 1, 1);
+        return dataBuilder;
+    }
+
     /// <summary>
     /// Returns index of provided byte pattern in a buffer,
     /// returns -1 if not found
