@@ -54,7 +54,35 @@ public class ArcadiaFesl
             {
                 HandleHello();
             }
+            else if(reqPacket.Type == "acct" && reqTxn == "NuPS3Login")
+            {
+                HandleLogin();
+            }
         }
+    }
+
+    private void HandleLogin()
+    {
+        var loginResponseData = new Dictionary<string, object>
+        {
+            { "TXN", "NuPS3Login" },
+            { "localizedMessage", "The user was not found" },
+            { "errorContainer.[]", "0" },
+            { "errorCode", "101" },
+        };
+
+        var data = Utils.DataDictToPacketString(loginResponseData);
+        var loginId = Interlocked.Increment(ref _ticketCounter);
+        var checksum = GenerateChecksum(data.ToString(), 0x80000000, loginId);
+
+        var response = new List<byte>();
+
+        response.AddRange(Encoding.ASCII.GetBytes("acct"));
+        response.AddRange(checksum);
+        response.AddRange(Encoding.ASCII.GetBytes(data.ToString()));
+
+        _network.WriteApplicationData(response.ToArray(), 0, response.Count);
+        Console.WriteLine(Encoding.ASCII.GetString(response.ToArray()));
     }
 
     private void HandleHello()
