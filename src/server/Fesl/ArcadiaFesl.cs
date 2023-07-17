@@ -49,6 +49,7 @@ public class ArcadiaFesl
 
             Console.WriteLine($"Type: {reqPacket.Type}");
             Console.WriteLine($"TXN: {reqTxn}");
+            _ = IsEncryptedData(reqPacket);
 
             if (reqPacket.Type == "fsys" && reqTxn == "Hello")
             {
@@ -58,7 +59,16 @@ public class ArcadiaFesl
             {
                 HandleLogin();
             }
+            else if(reqPacket.Type == "acct" && reqTxn == "NuGetTos")
+            {
+                HandleGetTos();
+            }
         }
+    }
+
+    private void HandleGetTos()
+    {
+        throw new NotImplementedException("TOS not implemented yet!");
     }
 
     private void HandleLogin()
@@ -172,5 +182,20 @@ public class ArcadiaFesl
         byte[] packetLengthBytes = GeneratePacketLength(data);
 
         return packetIdBytes.Concat(packetLengthBytes).ToArray();
+    }
+
+    private static bool IsEncryptedData(FeslPacket packet)
+    {
+        try
+        {
+            var encryptedData = (string)packet.DataDict["data"];
+            var decodedData = encryptedData.Replace("%3d", "=");
+
+            Console.WriteLine($"Encrypted data detected: {decodedData}");
+            return true;
+        }
+        catch { }
+
+        return false;
     }
 }
