@@ -57,7 +57,31 @@ public class ArcadiaFesl
             {
                 await HandleGetTos();
             }
+            else if(reqPacket.Type == "acct" && reqTxn == "NuPS3AddAccount")
+            {
+                await HandleAddAccount(reqPacket);
+            }
         }
+    }
+
+    private async Task HandleAddAccount(FeslPacket request)
+    {
+        var data = new Dictionary<string, object>
+        {
+            {"TXN", "NuPS3AddAccount"},
+        };
+
+        var email = request.DataDict["nuid"] as string;
+        var pass = request.DataDict["password"] as string;
+
+        Console.WriteLine($"Trying to register user {email} with password {pass}");
+
+        var id = Interlocked.Increment(ref _ticketCounter);
+        var packet = new FeslPacket("acct", 0x80000000, data);
+        var response = await packet.ToPacket(id);
+
+        _network.WriteApplicationData(response.AsSpan());
+        Console.WriteLine(Encoding.ASCII.GetString(response));
     }
 
     private async Task HandleGetTos()
