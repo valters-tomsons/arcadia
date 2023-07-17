@@ -52,9 +52,16 @@ public class ArcadiaFesl
 
             if (reqPacket.Type == "fsys" && reqTxn == "Hello")
             {
-                var currentTime = DateTime.UtcNow.ToString("MMM-dd-yyyy HH:mm:ss 'UTC'", CultureInfo.InvariantCulture);
+                HandleHello();
+            }
+        }
+    }
 
-                var serverHelloData = new Dictionary<string, object>
+    private void HandleHello()
+    {
+        var currentTime = DateTime.UtcNow.ToString("MMM-dd-yyyy HH:mm:ss 'UTC'", CultureInfo.InvariantCulture);
+
+        var serverHelloData = new Dictionary<string, object>
                 {
                     { "domainPartition.domain", "ps3" },
                     { "messengerIp", _serverAddress },
@@ -63,26 +70,26 @@ public class ArcadiaFesl
                     { "TXN", "Hello" },
                     { "activityTimeoutSecs", 0 },
                     { "curTime", currentTime},
-                    {"theaterIp", _serverAddress },
-                    {"theaterPort", 18236 }
+                    { "theaterIp", "beach-ps3.fesl.ea.com" },
+                    { "theaterPort", 18236 }
                 };
 
-                var reqPlasmaId = Interlocked.Increment(ref _ticketCounter);
+        var reqPlasmaId = Interlocked.Increment(ref _ticketCounter);
 
-                var dataSb = Utils.DataDictToPacketString(serverHelloData);
-                var helloSumBytes = GenerateChecksum(dataSb.ToString(), reqPacket.Id, reqPlasmaId);
+        var dataSb = Utils.DataDictToPacketString(serverHelloData);
+        var helloSumBytes = GenerateChecksum(dataSb.ToString(), 0x80000000, reqPlasmaId);
 
-                var helloResponse = new List<byte>();
+        var helloResponse = new List<byte>();
 
-                helloResponse.AddRange(Encoding.ASCII.GetBytes("fsys"));
-                helloResponse.AddRange(helloSumBytes);
-                helloResponse.AddRange(Encoding.ASCII.GetBytes(dataSb.ToString()));
+        helloResponse.AddRange(Encoding.ASCII.GetBytes("fsys"));
+        helloResponse.AddRange(helloSumBytes);
+        helloResponse.AddRange(Encoding.ASCII.GetBytes(dataSb.ToString()));
 
-                Console.WriteLine(Encoding.ASCII.GetString(helloResponse.ToArray()));
+        Console.WriteLine(Encoding.ASCII.GetString(helloResponse.ToArray()));
 
-                _network.WriteApplicationData(helloResponse.ToArray(), 0, helloResponse.Count);
+        _network.WriteApplicationData(helloResponse.ToArray(), 0, helloResponse.Count);
 
-                var memCheckData = new Dictionary<string, object>
+        var memCheckData = new Dictionary<string, object>
                 {
                     { "TXN", "MemCheck" },
                     { "memcheck.[]", "0" },
@@ -90,17 +97,16 @@ public class ArcadiaFesl
                     { "salt", GenerateSalt() },
                 };
 
-                var memCheckDataSb = Utils.DataDictToPacketString(memCheckData);
-                var memSumBytes = GenerateChecksum(memCheckDataSb.ToString(), 0x80000000, reqPlasmaId);
+        var memCheckDataSb = Utils.DataDictToPacketString(memCheckData);
+        var memSumBytes = GenerateChecksum(memCheckDataSb.ToString(), 0x80000000, reqPlasmaId + 1);
 
-                var memRequest = new List<byte>();
-                memRequest.AddRange(Encoding.ASCII.GetBytes("fsys"));
-                memRequest.AddRange(memSumBytes);
-                memRequest.AddRange(Encoding.ASCII.GetBytes(memCheckDataSb.ToString()));
+        var memRequest = new List<byte>();
+        memRequest.AddRange(Encoding.ASCII.GetBytes("fsys"));
+        memRequest.AddRange(memSumBytes);
+        memRequest.AddRange(Encoding.ASCII.GetBytes(memCheckDataSb.ToString()));
 
-                Console.WriteLine(Encoding.ASCII.GetString(memRequest.ToArray()));
-            }
-        }
+        _network.WriteApplicationData(memRequest.ToArray(), 0, memRequest.Count);
+        Console.WriteLine(Encoding.ASCII.GetString(memRequest.ToArray()));
     }
 
     private static string GenerateSalt()
