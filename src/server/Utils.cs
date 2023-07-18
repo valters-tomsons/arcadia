@@ -114,7 +114,11 @@ public static class Utils
             dataBuilder.Append('\n');
         }
 
-        dataBuilder.Remove(dataBuilder.Length - 1, 1);
+        if (dataBuilder.Length > 0)
+        {
+            dataBuilder.Remove(dataBuilder.Length - 1, 1);
+        }
+
         dataBuilder.Append('\0');
         return dataBuilder;
     }
