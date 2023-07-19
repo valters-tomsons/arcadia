@@ -4,16 +4,16 @@ namespace Arcadia.Fesl.Structures;
 
 public readonly struct FeslPacket
 {
-    public FeslPacket(byte[] appData)
+    public FeslPacket(byte[] packet)
     {
-        Type = Encoding.ASCII.GetString(appData, 0, 4);
+        Type = Encoding.ASCII.GetString(packet, 0, 4);
 
-        var firstSplit = Utils.SplitAt(appData, 12);
+        var firstSplit = Utils.SplitAt(packet, 12);
         Checksum = firstSplit[0][4..];
 
         var bigEndianChecksum = (BitConverter.IsLittleEndian ? Checksum.Reverse().ToArray() : Checksum).AsSpan();
-        Id = BitConverter.ToUInt32(bigEndianChecksum[..4]);
-        Length = BitConverter.ToUInt32(bigEndianChecksum[4..]);
+        Length = BitConverter.ToUInt32(bigEndianChecksum[..4]);
+        Id = BitConverter.ToUInt32(bigEndianChecksum[4..]);
 
         Data = firstSplit[1];
         DataDict = Utils.ParseFeslPacketToDict(Data);
@@ -22,14 +22,14 @@ public readonly struct FeslPacket
     public FeslPacket(string type, uint id, Dictionary<string, object>? dataDict = null)
     {
         Type = type;
-        Id = id;
+        Length = id;
         DataDict = dataDict ?? new Dictionary<string, object>();
     }
 
     public async Task<byte[]> ToPacket(uint ticketId)
     {
         var data = Utils.DataDictToPacketString(DataDict).ToString();
-        var checksum = PacketUtils.GenerateChecksum(data, Id + ticketId);
+        var checksum = PacketUtils.GeneratePacketChecksum(data, Length + ticketId);
 
         var typeBytes = Encoding.ASCII.GetBytes(Type);
         var dataBytes = Encoding.ASCII.GetBytes(data);
@@ -46,8 +46,8 @@ public readonly struct FeslPacket
 
     public string Type { get; }
     public uint Id { get; }
+    public uint Length { get; }
     public Dictionary<string, object> DataDict { get; }
-    public uint? Length { get; }
     public byte[]? Data { get; }
     public byte[]? Checksum { get; }
 }
