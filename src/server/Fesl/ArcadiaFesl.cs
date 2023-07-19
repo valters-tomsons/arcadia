@@ -9,7 +9,8 @@ public class ArcadiaFesl
 {
     private readonly TlsServerProtocol _network;
     private readonly string _clientEndpoint;
-    private uint _ticketCounter;
+
+    private uint _plasmaTicketId;
 
     public ArcadiaFesl(TlsServerProtocol network, string clientEndpoint)
     {
@@ -41,6 +42,11 @@ public class ArcadiaFesl
 
             var reqPacket = new FeslPacket(readBuffer[..read]);
             var reqTxn = (string)reqPacket.DataDict["TXN"];
+
+            if (reqPacket.Id != 0x80000000)
+            {
+                _plasmaTicketId++;
+            }
 
             Console.WriteLine($"Type: {reqPacket.Type}");
             Console.WriteLine($"TXN: {reqTxn}");
@@ -76,9 +82,8 @@ public class ArcadiaFesl
 
         Console.WriteLine($"Trying to register user {email} with password {pass}");
 
-        var id = Interlocked.Increment(ref _ticketCounter);
         var packet = new FeslPacket("acct", 0x80000000, data);
-        var response = await packet.ToPacket(id);
+        var response = await packet.ToPacket(_plasmaTicketId);
 
         _network.WriteApplicationData(response.AsSpan());
         Console.WriteLine(Encoding.ASCII.GetString(response));
@@ -95,9 +100,8 @@ public class ArcadiaFesl
             { "tos", $"{System.Net.WebUtility.UrlEncode(tos).Replace('+', ' ')}" },
         };
 
-        var id = Interlocked.Increment(ref _ticketCounter);
         var packet = new FeslPacket("acct", 0x80000000, data);
-        var response = await packet.ToPacket(id);
+        var response = await packet.ToPacket(_plasmaTicketId);
 
         _network.WriteApplicationData(response.AsSpan());
         Console.WriteLine(Encoding.ASCII.GetString(response));
@@ -111,7 +115,6 @@ public class ArcadiaFesl
         var loginResponseData = new Dictionary<string, object>();
 
         var tosAccepted = request.DataDict.TryGetValue("tosVersion", out var tosAcceptedValue);
-        var loginId = _ticketCounter;
 
         if (!tosAccepted || string.IsNullOrEmpty(tosAcceptedValue as string))
         {
@@ -129,12 +132,10 @@ public class ArcadiaFesl
             loginResponseData.Add("TXN", "NuPS3Login");
             loginResponseData.Add("userId", 1000000000000);
             loginResponseData.Add("personaName", "faith");
-
-            loginId = Interlocked.Increment(ref _ticketCounter);
         }
 
         var loginPacket = new FeslPacket("acct", 0x80000000, loginResponseData);
-        var loginResponse = await loginPacket.ToPacket(loginId);
+        var loginResponse = await loginPacket.ToPacket(_plasmaTicketId);
 
         _network.WriteApplicationData(loginResponse.AsSpan());
         Console.WriteLine(Encoding.ASCII.GetString(loginResponse));
@@ -156,9 +157,8 @@ public class ArcadiaFesl
                     { "theaterPort", 18236 }
                 };
 
-        var helloId = Interlocked.Increment(ref _ticketCounter);
         var helloPacket = new FeslPacket("fsys", 0x80000000, serverHelloData);
-        var helloResponse = await helloPacket.ToPacket(helloId);
+        var helloResponse = await helloPacket.ToPacket(_plasmaTicketId);
 
         _network.WriteApplicationData(helloResponse.AsSpan());
         Console.WriteLine(Encoding.ASCII.GetString(helloResponse));
@@ -171,9 +171,8 @@ public class ArcadiaFesl
                     { "salt", PacketUtils.GenerateSalt() }
                 };
 
-        var memcheckId = Interlocked.Increment(ref _ticketCounter);
         var memcheckPacket = new FeslPacket("fsys", 0x80000000, memCheckData);
-        var memcheckResponse = await memcheckPacket.ToPacket(memcheckId);
+        var memcheckResponse = await memcheckPacket.ToPacket(_plasmaTicketId);
 
         _network.WriteApplicationData(memcheckResponse.AsSpan());
         Console.WriteLine(Encoding.ASCII.GetString(memcheckResponse));
