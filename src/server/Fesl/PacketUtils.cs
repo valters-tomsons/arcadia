@@ -13,7 +13,15 @@ public static class PacketUtils
         return seed.ToString();
     }
 
-    public static byte[] GeneratePacketLength(string packetData)
+    public static byte[] GeneratePacketChecksum(string data, uint id)
+    {
+        byte[] packetIdBytes = GeneratePacketId(id);
+        byte[] packetLengthBytes = GeneratePacketLength(data);
+
+        return packetIdBytes.Concat(packetLengthBytes).ToArray();
+    }
+
+    private static byte[] GeneratePacketLength(string packetData)
     {
         var dataBytes = Encoding.ASCII.GetBytes(packetData);
 
@@ -26,7 +34,7 @@ public static class PacketUtils
         return bytes;
     }
 
-    public static byte[] GeneratePacketId(uint packetId)
+    private static byte[] GeneratePacketId(uint packetId)
     {
         byte[] bytes = BitConverter.GetBytes(packetId);
 
@@ -34,13 +42,5 @@ public static class PacketUtils
             Array.Reverse(bytes);
 
         return bytes;
-    }
-
-    public static byte[] GenerateChecksum(string data, uint id)
-    {
-        byte[] packetIdBytes = GeneratePacketId(id);
-        byte[] packetLengthBytes = GeneratePacketLength(data);
-
-        return packetIdBytes.Concat(packetLengthBytes).ToArray();
     }
 }
