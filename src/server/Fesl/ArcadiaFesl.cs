@@ -20,14 +20,14 @@ public class ArcadiaFesl
 
     public async Task HandleClientConnection()
     {
-        var readBuffer = new byte[1514];
         while (_network.IsConnected)
         {
             int read;
+            byte[]? readBuffer;
 
             try
             {
-                read = _network.ReadApplicationData(readBuffer, 0, readBuffer.Length);
+                (read, readBuffer) = await Utils.ReadApplicationDataAsync(_network);
             }
             catch
             {
@@ -45,7 +45,7 @@ public class ArcadiaFesl
 
             if (reqPacket.Id != 0x80000000)
             {
-                _plasmaTicketId++;
+                Interlocked.Increment(ref _plasmaTicketId);
             }
 
             Console.WriteLine($"Type: {reqPacket.Type}");
