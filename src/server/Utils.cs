@@ -12,6 +12,13 @@ namespace Arcadia;
 
 public static class Utils
 {
+    public static async Task<(int, byte[])> ReadApplicationDataAsync(TlsServerProtocol network)
+    {
+        var readBuffer = new byte[1514];
+        var read = await Task.Run(() => network.ReadApplicationData(readBuffer, 0, readBuffer.Length));
+        return (read, readBuffer);
+    }
+
     public static AppSettings BuildConfig()
     {
         var builder = new ConfigurationBuilder()
