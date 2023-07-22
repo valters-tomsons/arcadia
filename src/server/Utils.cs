@@ -15,8 +15,15 @@ public static class Utils
     public static async Task<(int, byte[])> ReadApplicationDataAsync(TlsServerProtocol network)
     {
         var readBuffer = new byte[1514];
-        var read = await Task.Run(() => network.ReadApplicationData(readBuffer, 0, readBuffer.Length));
-        return (read, readBuffer);
+        try
+        {
+            var read = await Task.Run(() => network.ReadApplicationData(readBuffer, 0, readBuffer.Length));
+            return (read, readBuffer);
+        }
+        catch
+        {
+            throw new Exception("Connection has been closed");
+        }
     }
 
     public static AppSettings BuildConfig()

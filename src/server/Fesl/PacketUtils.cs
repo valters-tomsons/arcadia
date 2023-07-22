@@ -9,7 +9,7 @@ public static class PacketUtils
 
     public static string GenerateSalt()
     {
-        var seed = Random.NextInt64(900000000, 999999999);
+        var seed = Random.NextInt64(100000000, 999999999);
         return seed.ToString();
     }
 

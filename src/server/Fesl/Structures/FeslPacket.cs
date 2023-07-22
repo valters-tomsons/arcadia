@@ -19,10 +19,10 @@ public readonly struct FeslPacket
         DataDict = Utils.ParseFeslPacketToDict(Data);
     }
 
-    public FeslPacket(string type, uint id, Dictionary<string, object>? dataDict = null)
+    public FeslPacket(string type, uint packetId, Dictionary<string, object>? dataDict = null)
     {
-        Type = type;
-        Length = id;
+        Type = type.Trim();
+        Length = packetId;
         DataDict = dataDict ?? new Dictionary<string, object>();
     }
 
