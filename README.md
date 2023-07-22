@@ -1,8 +1,8 @@
 # Arcadia
 
-An experimental project in emulating backend services for Battlefield 1943, primarily targeting Playstation 3. This project is not affiliated with EA or DICE.
+An experimental project in emulating backend services for Battlefield 1943 (possibly others!). Project is in early development and is not yet playable. 
 
-Note: This project is in early development and is not yet playable.
+**Note**: This project is not affiliated with EA or DICE.
 
 ## RPCS3 Client Configuration
 
