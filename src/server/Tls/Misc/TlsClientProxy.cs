@@ -16,17 +16,17 @@ public class TlsClientProxy
         _crypto = crypto;
     }
 
-    public async Task StartProxy(AppSettings config)
+    public async Task StartProxy(ArcadiaSettings config, FeslProxySettings proxyConfig)
     {
-        InitializeUpstreamClient(config);
+        InitializeUpstreamClient(config, proxyConfig);
         await StartProxying();
     }
 
-    private void InitializeUpstreamClient(AppSettings config)
+    private void InitializeUpstreamClient(ArcadiaSettings config, FeslProxySettings proxyConfig)
     {
-        Console.WriteLine($"Connecting to upstream {config.UpstreamHost}:{config.Port}");
+        Console.WriteLine($"Connecting to upstream {proxyConfig.ServerAddress}:{config.FeslPort}");
 
-        var upstreamTcpClient = new TcpClient(config.UpstreamHost, config.Port);
+        var upstreamTcpClient = new TcpClient(proxyConfig.ServerAddress, config.FeslPort);
         var upstreamTcpStream = upstreamTcpClient.GetStream();
         _upstreamProtocol = new TlsClientProtocol(upstreamTcpStream);
 
@@ -41,7 +41,7 @@ public class TlsClientProxy
         catch(Exception e)
         {
             Console.WriteLine(e.Message);
-            throw new Exception($"Failed to connect to upstream {config.UpstreamHost}:{config.Port}");
+            throw new Exception($"Failed to connect to upstream {proxyConfig.ServerAddress}:{config.FeslPort}");
         }
     }
 

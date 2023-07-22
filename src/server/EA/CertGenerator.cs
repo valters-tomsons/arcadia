@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Generators;
@@ -16,27 +17,22 @@ namespace Arcadia.EA;
 /// <summary>
 /// Based on the following article: https://github.com/Aim4kill/Bug_OldProtoSSL
 /// </summary>
-public static class CertGenerator
+public class CertGenerator
 {
     private const string CipherAlgorithm = "SHA1WITHRSA";
+
+    private readonly ILogger<CertGenerator> _logger;
+
+    public CertGenerator(ILogger<CertGenerator> logger)
+    {
+        _logger = logger;
+    }
 
     /// <summary>
     /// Generates a certificate for vulnerable ProtoSSL versions.
     /// </summary>
-    public static (AsymmetricKeyParameter, Certificate) GenerateVulnerableCert(string? issuer = null, string? subject = null)
+    public (AsymmetricKeyParameter, Certificate) GenerateVulnerableCert(string issuer, string subject)
     {
-        if (string.IsNullOrWhiteSpace(issuer))
-        {
-            Console.WriteLine("No issuer specified, using default...");
-            issuer = "CN=OTG3 Certificate Authority, C=US, ST=California, L=Redwood City, O=\"Electronic Arts, Inc.\", OU=Online Technology Group, emailAddress=dirtysock-contact@ea.com";
-        }
-
-        if(string.IsNullOrWhiteSpace(subject))
-        {
-            Console.WriteLine("No subject specified, using default...");
-            subject = "C=US, ST=California, O=\"Electronic Arts, Inc.\", OU=Online Technology Group, CN=fesl.ea.com, emailAddress=fesl@ea.com";
-        }
-
         var crypto = new BcTlsCrypto(new SecureRandom());
         var rsaKeyPairGen = new RsaKeyPairGenerator();
         rsaKeyPairGen.Init(new KeyGenerationParameters(crypto.SecureRandom, 1024));
@@ -52,7 +48,8 @@ public static class CertGenerator
         var certEntry = new X509CertificateEntry(patched_cCertificate);
 
         var certDomain = subject.Split("CN=")[1].Split(",")[0];
-        Console.WriteLine($"Certificate patched for: {certDomain}");
+
+        _logger.LogInformation("Certificate patched for: {domain}", certDomain);
 
         store.SetCertificateEntry(certDomain, certEntry);
         store.SetKeyEntry(certDomain, new AsymmetricKeyEntry(cKeyPair.Private), new[] { certEntry });

@@ -2,11 +2,16 @@ using Arcadia.EA.Constants;
 
 namespace Arcadia;
 
-public record AppSettings
+public record ArcadiaSettings
 {
-    public int Port { get; init; } = Beach.FeslPort;
-    public string UpstreamHost { get; init; } = "beach-ps3.fesl.ea.com";
-    public bool MirrorUpstreamCert { get; init; }
+    public int FeslPort { get; init; } = Beach.FeslPort;
+    public int TheaterPort { get; init; } = Beach.TheaterPort;
     public bool DumpPatchedCert { get; init; }
-    public bool EnableProxyMode { get; init; }
+}
+
+public record FeslProxySettings
+{
+    public string ServerAddress { get; init; } = "beach-ps3.fesl.ea.com";
+    public bool MirrorCertificateStrings { get; init; }
+    public bool EnableProxy { get; init; }
 }

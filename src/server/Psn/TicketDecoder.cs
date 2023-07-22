@@ -48,7 +48,6 @@ public class TicketDecoder
     {
         if (ticket.Data.Count < 2)
         {
-            Console.WriteLine("PSN: Ticket data count is less than 2");
             return false;
         }
 
@@ -69,7 +68,6 @@ public class TicketDecoder
 
         if (!signedData.SequenceEqual(userData))
         {
-            Console.WriteLine("PSN: Signed data does not match user blob data");
             return false;
         }
 

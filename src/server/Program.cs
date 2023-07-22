@@ -1,126 +1,42 @@
-﻿using System.Net.Sockets;
-using Org.BouncyCastle.Tls;
-using Arcadia;
+﻿using Arcadia;
 using Arcadia.Fesl;
-using Arcadia.Tls;
 using Arcadia.Tls.Crypto;
-using Arcadia.Tls.Misc;
-using System.Collections.Concurrent;
-using Arcadia.EA.Constants;
 using Arcadia.Theater;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
+using Arcadia.Services;
+using Microsoft.Extensions.Hosting;
 using Arcadia.EA;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Console;
 
-var config = Utils.BuildConfig();
+var config = new ConfigurationBuilder()
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
+    .Build();
 
-var IssuerDN = string.Empty;
-var SubjectDN = string.Empty;
-if (config.MirrorUpstreamCert)
-{
-    Console.WriteLine($"Upstream cert mirroring enabled: {config.UpstreamHost}");
-    (IssuerDN, SubjectDN) = TlsCertDumper.DumpPubFeslCert(config.UpstreamHost, config.Port);
-}
-
-var (feslCertKey, feslPubCert) = CertGenerator.GenerateVulnerableCert(IssuerDN, SubjectDN);
-if(config.DumpPatchedCert)
-{
-    Console.WriteLine("Dumping patched certificate...");
-    Utils.DumpCertificate(feslCertKey, feslPubCert, config.UpstreamHost);
-}
-
-var arcadiaFeslListener = new TcpListener(System.Net.IPAddress.Any, config.Port);
-arcadiaFeslListener.Start();
-
-var arcadiaTheaterListener = new TcpListener(System.Net.IPAddress.Any, Beach.TheaterPort);
-arcadiaTheaterListener.Start();
-
-var arcadiaTlsCrypto = new Rc4TlsCrypto(true);
-
-if (config.EnableProxyMode)
-{
-    Console.WriteLine("Proxy mode enabled!");
-}
-
-var activeConnections = new ConcurrentBag<Task>();
-
-var feslServer = Task.Run(async () => await StartFesl(arcadiaFeslListener));
-var theaterServer = Task.Run(async () => await StartTheater(arcadiaTheaterListener));
-
-await Task.WhenAll(feslServer, theaterServer);
-
-//
-
-async Task StartFesl(TcpListener listener)
-{
-    Console.WriteLine($"Listening on tcp:{listener.LocalEndpoint}");
-
-    while (true)
+var host = Host.CreateDefaultBuilder()
+    .ConfigureServices((_, services) =>
     {
-        var tcpClient = await listener.AcceptTcpClientAsync();
-        var clientEndpoint = tcpClient.Client.RemoteEndPoint!.ToString()!;
+        services.AddLogging(log =>
+        {
+            log.ClearProviders();
+            log.AddConsole(x => x.FormatterName = ConsoleFormatterNames.Systemd);
+        });
 
-        Console.WriteLine($"Opening connection from: {clientEndpoint}");
-        var connection = Task.Run(async () => await HandleFeslConnection(tcpClient, clientEndpoint));
-        activeConnections!.Add(connection);
-    }
-}
+        services.AddSingleton<CertGenerator>();
 
-async Task StartTheater(TcpListener listener)
-{
-    Console.WriteLine($"Listening on tcp:{listener.LocalEndpoint}");
+        services.Configure<ArcadiaSettings>(config.GetSection(nameof(ArcadiaSettings)));
+        services.Configure<FeslProxySettings>(config.GetSection(nameof(FeslProxySettings)));
 
-    while (true)
-    {
-        var tcpClient = await listener.AcceptTcpClientAsync();
-        var clientEndpoint = tcpClient.Client.RemoteEndPoint!.ToString()!;
+        services.AddScoped(_ => new Rc4TlsCrypto(true));
+        services.AddScoped<FeslHandler>();
+        services.AddScoped<TheaterHandler>();
 
-        Console.WriteLine($"Opening connection from: {clientEndpoint}");
-        var connection = Task.Run(async () => await HandleTheaterConnection(tcpClient, clientEndpoint));
-        activeConnections!.Add(connection);
-    }
-}
+        services
+            .AddHostedService<FeslHostedService>()
+            .AddHostedService<TheaterHostedService>();
+    })
+    .Build();
 
-async Task HandleFeslConnection(TcpClient tcpClient, string clientEndpoint)
-{
-    var networkStream = tcpClient.GetStream();
-
-    var connTls = new Ssl3TlsServer(arcadiaTlsCrypto, feslPubCert, feslCertKey);
-    var arcadiaServerProtocol = new TlsServerProtocol(networkStream);
-
-    try
-    {
-        arcadiaServerProtocol.Accept(connTls);
-        Console.WriteLine("SSL Handshake with game client successful!");
-    }
-    catch (Exception e)
-    {
-        Console.WriteLine($"Failed to accept connection: {e.Message}");
-
-        arcadiaServerProtocol.Flush();
-        arcadiaServerProtocol.Close();
-        connTls.Cancel();
-
-        return;
-    }
-
-    if (config.EnableProxyMode)
-    {
-        var proxy = new TlsClientProxy(arcadiaServerProtocol, arcadiaTlsCrypto);
-        await proxy.StartProxy(config);
-
-        return;
-    }
-
-    Console.WriteLine("Starting arcadia-emu FESL session");
-    var serverHandler = new ArcadiaFesl(arcadiaServerProtocol, clientEndpoint);
-    await serverHandler.HandleClientConnection();
-}
-
-async Task HandleTheaterConnection(TcpClient tcpClient, string clientEndpoint)
-{
-    var networkStream = tcpClient.GetStream();
-    var arcadiaServerProtocol = new TlsServerProtocol(networkStream);
-
-    Console.WriteLine("Starting arcadia-emu Theater session");
-    var serverHandler = new ArcadiaTheater(arcadiaServerProtocol, clientEndpoint);
-    await serverHandler.HandleClientConnection();
-}
+await host.RunAsync();

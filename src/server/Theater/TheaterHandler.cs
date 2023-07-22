@@ -1,23 +1,28 @@
 using Arcadia.EA;
+using Microsoft.Extensions.Logging;
 using Org.BouncyCastle.Tls;
 
 namespace Arcadia.Theater;
 
-public class ArcadiaTheater
+public class TheaterHandler
 {
-    private readonly TlsServerProtocol _network;
-    private readonly string _clientEndpoint;
+    private TlsServerProtocol _network = null!;
+    private string _clientEndpoint = null!;
+
+    private readonly ILogger<TheaterHandler> _logger;
 
     private uint _plasmaTicketId;
 
-    public ArcadiaTheater(TlsServerProtocol network, string clientEndpoint)
+    public TheaterHandler(ILogger<TheaterHandler> logger)
+    {
+        _logger = logger;
+    }
+
+    public async Task HandleClientConnection(TlsServerProtocol network, string clientEndpoint)
     {
         _network = network;
         _clientEndpoint = clientEndpoint;
-    }
 
-    public async Task HandleClientConnection()
-    {
         while (_network.IsConnected)
         {
             int read;
@@ -29,7 +34,7 @@ public class ArcadiaTheater
             }
             catch
             {
-                Console.WriteLine($"[theater] Connection has been closed with {_clientEndpoint}");
+                _logger.LogInformation("Connection has been closed: {endpoint}", _clientEndpoint);
                 break;
             }
 
@@ -46,10 +51,11 @@ public class ArcadiaTheater
                 Interlocked.Increment(ref _plasmaTicketId);
             }
 
-            Console.WriteLine($"Type: {reqPacket.Type}");
-            Console.WriteLine($"TXN: {reqTxn}");
+            _logger.LogInformation("Type: {type}", reqPacket.Type);
+            _logger.LogInformation("TXN: {txn}", reqTxn);
 
-            Console.WriteLine($"Unknown packet type: {reqPacket.Type} TXN: {reqTxn}");
+            _logger.LogWarning("Unknown packet type: {type} TXN: {txn}", reqPacket.Type, reqTxn);
+
             Interlocked.Increment(ref _plasmaTicketId);
         }
     }

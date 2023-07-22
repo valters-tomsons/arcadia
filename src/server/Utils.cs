@@ -26,16 +26,6 @@ public static class Utils
         }
     }
 
-    public static AppSettings BuildConfig()
-    {
-        var builder = new ConfigurationBuilder()
-        .SetBasePath(Directory.GetCurrentDirectory())
-        .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false);
-
-        var config = builder.Build();
-        return config.GetSection(nameof(AppSettings)).Get<AppSettings>() ?? new AppSettings();
-    }
-
     public static byte[]? ReflectMasterSecretFromBCTls(TlsSecret secret)
     {
         // We need to use reflection to access the master secret from BC
@@ -57,8 +47,6 @@ public static class Utils
             using var pemWriter = new PemWriter(textWriter);
             pemWriter.WriteObject(privateKey);
             pemWriter.Writer.Flush();
-
-            Console.WriteLine($"Private key dumped to: {file}");
         }
 
         // Export Certificate
@@ -71,8 +59,6 @@ public static class Utils
             using var pemWriter = new PemWriter(textWriter);
             pemWriter.WriteObject(x509);
             pemWriter.Writer.Flush();
-
-            Console.WriteLine($"Certificate dumped to: {file}");
         }
     }
 

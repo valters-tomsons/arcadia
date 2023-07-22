@@ -13,11 +13,6 @@ public class Rc4TlsCrypto : BcTlsCrypto
     public Rc4TlsCrypto(bool writeSslKeyLog = false)
     {
         _writeSslKeyLog = writeSslKeyLog;
-
-        if (_writeSslKeyLog)
-        {
-            Console.WriteLine($"SSL key logging enabled: '{SslKeyLogFileName}'");
-        }
     }
 
     public override TlsCipher CreateCipher(TlsCryptoParameters cryptoParams, int encryptionAlgorithm, int macAlgorithm)

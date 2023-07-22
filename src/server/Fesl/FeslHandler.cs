@@ -1,25 +1,30 @@
 using System.Globalization;
 using System.Text;
 using Arcadia.EA;
+using Microsoft.Extensions.Logging;
 using Org.BouncyCastle.Tls;
 
 namespace Arcadia.Fesl;
 
-public class ArcadiaFesl
+public class FeslHandler
 {
-    private readonly TlsServerProtocol _network;
-    private readonly string _clientEndpoint;
+    private readonly ILogger<FeslHandler> _logger;
+
+    private TlsServerProtocol _network = null!;
+    private string _clientEndpoint = null!;
 
     private uint _feslTicketId;
 
-    public ArcadiaFesl(TlsServerProtocol network, string clientEndpoint)
+    public FeslHandler(ILogger<FeslHandler> logger)
+    {
+        _logger = logger;
+    }
+
+    public async Task HandleClientConnection(TlsServerProtocol network, string clientEndpoint)
     {
         _network = network;
         _clientEndpoint = clientEndpoint;
-    }
 
-    public async Task HandleClientConnection()
-    {
         while (_network.IsConnected)
         {
             int read;
@@ -31,7 +36,7 @@ public class ArcadiaFesl
             }
             catch
             {
-                Console.WriteLine($"Connection has been closed with {_clientEndpoint}");
+                _logger.LogInformation("Connection has been closed with {endpoint}", _clientEndpoint);
                 break;
             }
 
@@ -50,8 +55,8 @@ public class ArcadiaFesl
 
             if (reqTxn != "MemCheck")
             {
-                Console.WriteLine($"Type: {reqPacket.Type}");
-                Console.WriteLine($"TXN: {reqTxn}");
+                _logger.LogInformation("Type: {type}", reqPacket.Type);
+                _logger.LogInformation("TXN: {txn}", reqTxn);
             }
 
             if (reqPacket.Type == "fsys" && reqTxn == "Hello")
@@ -76,7 +81,7 @@ public class ArcadiaFesl
             }
             else
             {
-                Console.WriteLine($"Unknown packet type: {reqPacket.Type} TXN: {reqTxn}");
+                _logger.LogWarning("Unknown packet type: {type}, TXN: {txn}", reqPacket.Type, reqTxn);
                 Interlocked.Increment(ref _feslTicketId);
             }
         }
@@ -102,8 +107,6 @@ public class ArcadiaFesl
         var helloResponse = await helloPacket.ToPacket(_feslTicketId);
 
         _network.WriteApplicationData(helloResponse.AsSpan());
-        Console.WriteLine(Encoding.ASCII.GetString(helloResponse));
-
         await SendMemCheck();
     }
 
@@ -122,22 +125,24 @@ public class ArcadiaFesl
         var response = await packet.ToPacket(_feslTicketId);
 
         _network.WriteApplicationData(response.AsSpan());
-        Console.WriteLine(Encoding.ASCII.GetString(response));
     }
 
     private async Task HandleLogin(Packet request)
     {
         var encryptedSet = request.DataDict.TryGetValue("returnEncryptedInfo", out var returnEncryptedInfo);
-        Console.WriteLine($"returnEncryptedInfo: {returnEncryptedInfo} ({encryptedSet})");
+        _logger.LogInformation("returnEncryptedInfo: {returnEncryptedInfo} ({encryptedSet})", returnEncryptedInfo, encryptedSet);
 
         var loginResponseData = new Dictionary<string, object>();
 
         var tosAccepted = request.DataDict.TryGetValue("tosVersion", out var tosAcceptedValue);
 
-        // loginResponseData.Add("TXN", request.Type);
-        // loginResponseData.Add("localizedMessage", "The password the user specified is incorrect");
-        // loginResponseData.Add("errorContainer.[]", "0");
-        // loginResponseData.Add("errorCode", "122");
+        // if (false)
+        // {
+        //     loginResponseData.Add("TXN", request.Type);
+        //     loginResponseData.Add("localizedMessage", "The password the user specified is incorrect");
+        //     loginResponseData.Add("errorContainer.[]", "0");
+        //     loginResponseData.Add("errorCode", "122");
+        // }
 
         if (!tosAccepted || string.IsNullOrEmpty(tosAcceptedValue as string))
         {
@@ -161,7 +166,6 @@ public class ArcadiaFesl
         var loginResponse = await loginPacket.ToPacket(_feslTicketId);
 
         _network.WriteApplicationData(loginResponse.AsSpan());
-        Console.WriteLine(Encoding.ASCII.GetString(loginResponse));
     }
 
     private async Task HandleAddAccount(Packet request)
@@ -174,13 +178,12 @@ public class ArcadiaFesl
         var email = request.DataDict["nuid"] as string;
         var pass = request.DataDict["password"] as string;
 
-        Console.WriteLine($"Trying to register user {email} with password {pass}");
+        _logger.LogInformation("Trying to register user {email} with password {pass}", email, pass);
 
         var resultPacket = new Packet("acct", 0x80000000, data);
         var response = await resultPacket.ToPacket(_feslTicketId);
 
         _network.WriteApplicationData(response.AsSpan());
-        Console.WriteLine(Encoding.ASCII.GetString(response));
     }
 
     private async Task HandleMemCheck()
