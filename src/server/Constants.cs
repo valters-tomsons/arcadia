@@ -11,4 +11,5 @@ public static class BadCompany
 public static class Beach
 {
     public const int FeslPort = 18231;
+    public const int TheaterPort = 18236;
 }
