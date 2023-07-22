@@ -1,10 +1,10 @@
 using System.Text;
 
-namespace Arcadia.Fesl.Structures;
+namespace Arcadia.EA;
 
-public readonly struct FeslPacket
+public readonly struct Packet
 {
-    public FeslPacket(byte[] packet)
+    public Packet(byte[] packet)
     {
         Type = Encoding.ASCII.GetString(packet, 0, 4);
 
@@ -19,7 +19,7 @@ public readonly struct FeslPacket
         DataDict = Utils.ParseFeslPacketToDict(Data);
     }
 
-    public FeslPacket(string type, uint packetId, Dictionary<string, object>? dataDict = null)
+    public Packet(string type, uint packetId, Dictionary<string, object>? dataDict = null)
     {
         Type = type.Trim();
         Length = packetId;

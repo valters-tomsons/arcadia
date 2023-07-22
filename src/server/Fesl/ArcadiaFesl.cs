@@ -1,6 +1,6 @@
 using System.Globalization;
 using System.Text;
-using Arcadia.Fesl.Structures;
+using Arcadia.EA;
 using Org.BouncyCastle.Tls;
 
 namespace Arcadia.Fesl;
@@ -40,7 +40,7 @@ public class ArcadiaFesl
                 continue;
             }
 
-            var reqPacket = new FeslPacket(readBuffer[..read]);
+            var reqPacket = new Packet(readBuffer[..read]);
             var reqTxn = (string)reqPacket.DataDict["TXN"];
 
             if (reqPacket.Id != 0x80000000)
@@ -98,7 +98,7 @@ public class ArcadiaFesl
                     { "theaterPort", 18236 }
                 };
 
-        var helloPacket = new FeslPacket("fsys", 0x80000000, serverHelloData);
+        var helloPacket = new Packet("fsys", 0x80000000, serverHelloData);
         var helloResponse = await helloPacket.ToPacket(_plasmaTicketId);
 
         _network.WriteApplicationData(helloResponse.AsSpan());
@@ -118,14 +118,14 @@ public class ArcadiaFesl
             { "tos", $"{System.Net.WebUtility.UrlEncode(tos).Replace('+', ' ')}" },
         };
 
-        var packet = new FeslPacket("acct", 0x80000000, data);
+        var packet = new Packet("acct", 0x80000000, data);
         var response = await packet.ToPacket(_plasmaTicketId);
 
         _network.WriteApplicationData(response.AsSpan());
         Console.WriteLine(Encoding.ASCII.GetString(response));
     }
 
-    private async Task HandleLogin(FeslPacket request)
+    private async Task HandleLogin(Packet request)
     {
         var encryptedSet = request.DataDict.TryGetValue("returnEncryptedInfo", out var returnEncryptedInfo);
         Console.WriteLine($"returnEncryptedInfo: {returnEncryptedInfo} ({encryptedSet})");
@@ -157,14 +157,14 @@ public class ArcadiaFesl
             loginResponseData.Add("personaName", "faith");
         }
 
-        var loginPacket = new FeslPacket("acct", 0x80000000, loginResponseData);
+        var loginPacket = new Packet("acct", 0x80000000, loginResponseData);
         var loginResponse = await loginPacket.ToPacket(_plasmaTicketId);
 
         _network.WriteApplicationData(loginResponse.AsSpan());
         Console.WriteLine(Encoding.ASCII.GetString(loginResponse));
     }
 
-    private async Task HandleAddAccount(FeslPacket request)
+    private async Task HandleAddAccount(Packet request)
     {
         var data = new Dictionary<string, object>
         {
@@ -176,7 +176,7 @@ public class ArcadiaFesl
 
         Console.WriteLine($"Trying to register user {email} with password {pass}");
 
-        var resultPacket = new FeslPacket("acct", 0x80000000, data);
+        var resultPacket = new Packet("acct", 0x80000000, data);
         var response = await resultPacket.ToPacket(_plasmaTicketId);
 
         _network.WriteApplicationData(response.AsSpan());
@@ -199,7 +199,7 @@ public class ArcadiaFesl
                     { "salt", PacketUtils.GenerateSalt() }
                 };
 
-        var memcheckPacket = new FeslPacket("fsys", 0x80000000, memCheckData);
+        var memcheckPacket = new Packet("fsys", 0x80000000, memCheckData);
         var memcheckResponse = await memcheckPacket.ToPacket(_plasmaTicketId);
 
         _network.WriteApplicationData(memcheckResponse.AsSpan());

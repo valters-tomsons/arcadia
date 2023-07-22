@@ -11,12 +11,12 @@ using Org.BouncyCastle.Tls.Crypto.Impl.BC;
 using Org.BouncyCastle.Utilities;
 using Org.BouncyCastle.X509;
 
-namespace Arcadia.Fesl;
+namespace Arcadia.EA;
 
 /// <summary>
 /// Based on the following article: https://github.com/Aim4kill/Bug_OldProtoSSL
 /// </summary>
-public static class ProtoSslCertGenerator
+public static class CertGenerator
 {
     private const string CipherAlgorithm = "SHA1WITHRSA";
 

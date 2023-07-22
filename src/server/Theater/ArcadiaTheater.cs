@@ -1,4 +1,4 @@
-using Arcadia.Fesl.Structures;
+using Arcadia.EA;
 using Org.BouncyCastle.Tls;
 
 namespace Arcadia.Theater;
@@ -38,7 +38,7 @@ public class ArcadiaTheater
                 continue;
             }
 
-            var reqPacket = new FeslPacket(readBuffer[..read]);
+            var reqPacket = new Packet(readBuffer[..read]);
             var reqTxn = (string)reqPacket.DataDict["TXN"];
 
             if (reqPacket.Id != 0x80000000)

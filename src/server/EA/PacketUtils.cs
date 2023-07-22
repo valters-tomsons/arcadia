@@ -1,7 +1,7 @@
 using System.Text;
 using Org.BouncyCastle.Security;
 
-namespace Arcadia.Fesl;
+namespace Arcadia.EA;
 
 public static class PacketUtils
 {

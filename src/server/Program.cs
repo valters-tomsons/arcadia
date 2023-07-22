@@ -6,8 +6,9 @@ using Arcadia.Tls;
 using Arcadia.Tls.Crypto;
 using Arcadia.Tls.Misc;
 using System.Collections.Concurrent;
-using Arcadia.Constants;
+using Arcadia.EA.Constants;
 using Arcadia.Theater;
+using Arcadia.EA;
 
 var config = Utils.BuildConfig();
 
@@ -19,7 +20,7 @@ if (config.MirrorUpstreamCert)
     (IssuerDN, SubjectDN) = TlsCertDumper.DumpPubFeslCert(config.UpstreamHost, config.Port);
 }
 
-var (feslCertKey, feslPubCert) = ProtoSslCertGenerator.GenerateVulnerableCert(IssuerDN, SubjectDN);
+var (feslCertKey, feslPubCert) = CertGenerator.GenerateVulnerableCert(IssuerDN, SubjectDN);
 if(config.DumpPatchedCert)
 {
     Console.WriteLine("Dumping patched certificate...");

@@ -1,4 +1,4 @@
-using Arcadia.Constants;
+using Arcadia.EA.Constants;
 
 namespace Arcadia;
 
