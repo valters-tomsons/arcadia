@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text;
 using Arcadia.EA;
 using Microsoft.Extensions.Logging;
 using Org.BouncyCastle.Tls;
@@ -14,6 +13,8 @@ public class FeslHandler
     private string _clientEndpoint = null!;
 
     private uint _feslTicketId;
+
+    private long _playerId = 1000000001337;
 
     public FeslHandler(ILogger<FeslHandler> logger)
     {
@@ -67,6 +68,10 @@ public class FeslHandler
             {
                 await HandleMemCheck();
             }
+            else if (reqPacket.Type == "fsys" && reqTxn == "GetPingSites")
+            {
+                await HandleGetPingSites();
+            }
             else if(reqPacket.Type == "acct" && reqTxn == "NuPS3Login")
             {
                 await HandleLogin(reqPacket);
@@ -79,12 +84,80 @@ public class FeslHandler
             {
                 await HandleAddAccount(reqPacket);
             }
+            else if(reqPacket.Type == "acct" && reqTxn == "NuLookupUserInfo")
+            {
+                await HandleLookupUserInfo(reqPacket);
+            }
+            else if(reqPacket.Type == "asso" && reqTxn == "GetAssociations")
+            {
+                await HandleGetAssociations(reqPacket);
+            }
             else
             {
                 _logger.LogWarning("Unknown packet type: {type}, TXN: {txn}", reqPacket.Type, reqTxn);
                 Interlocked.Increment(ref _feslTicketId);
             }
         }
+    }
+
+    private async Task HandleLookupUserInfo(Packet reqPacket)
+    {
+        var responseData = new Dictionary<string, object>
+        {
+            { "TXN", "NuLookupUserInfo" },
+            { "userInfo.[]", "1" },
+            { "userInfo.0.userName", "faith" },
+        };
+    }
+
+    private async Task HandleGetAssociations(Packet request)
+    {
+        var assoType = request.DataDict["type"] as string;
+        var responseData = new Dictionary<string, object>
+        {
+            { "TXN", "GetAssociations" },
+            { "domainPartition.domain", request.DataDict["domainPartition.domain"] },
+            { "domainPartition.subDomain", request.DataDict["domainPartition.subDomain"] },
+            { "owner.id", _playerId },
+            { "owner.type", "1" },
+            { "type", assoType },
+            { "members.[]", "0" },
+        };
+
+        if (assoType == "PlasmaMute")
+        {
+            responseData.Add("maxListSize", 100);
+            responseData.Add("owner.name", "faith");
+        }
+        else
+        {
+            _logger.LogWarning("Unknown association type: {assoType}", assoType);
+        }
+
+        var packet = new Packet("asso", 0x80000000, responseData);
+        var response = await packet.ToPacket(_feslTicketId);
+
+        _network.WriteApplicationData(response.AsSpan());
+    }
+
+    private async Task HandleGetPingSites()
+    {
+        const string serverIp = "127.0.0.1";
+
+        var responseData = new Dictionary<string, object>
+        {
+            { "TXN", "GetPingSites" },
+            { "pingSite.[]", "4"},
+            { "pingSite.0.addr", serverIp },
+            { "pingSite.0.type", "0"},
+            { "pingSite.0.name", "eu1"},
+            { "minPingSitesToPing", "0"}
+        };
+
+        var packet = new Packet("fsys", 0x80000000, responseData);
+        var response = await packet.ToPacket(_feslTicketId);
+
+        _network.WriteApplicationData(response.AsSpan());
     }
 
     private async Task HandleHello()

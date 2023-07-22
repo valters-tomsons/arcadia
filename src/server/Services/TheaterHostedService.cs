@@ -67,9 +67,17 @@ public class TheaterHostedService : IHostedService
         await handler.HandleClientConnection(serverProtocol, clientEndpoint);
     }
 
-    public Task StopAsync(CancellationToken cancellationToken)
+    public async Task StopAsync(CancellationToken cancellationToken)
     {
+        _cts.Cancel();
         _listener.Stop();
-        return Task.CompletedTask;
+
+        await Task.Delay(200, cancellationToken);
+
+        if (_server is not null || _server!.IsCompleted)
+        {
+            _logger.LogCritical("Waiting for connections to close...");
+            await _server.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
+        }
     }
 }

@@ -139,7 +139,9 @@ public class FeslHostedService : IHostedService
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
+        _cts.Cancel();
         _listener.Stop();
+
         return Task.CompletedTask;
     }
 }
