@@ -15,6 +15,7 @@ public class FeslHandler
     private uint _feslTicketId;
 
     private long _playerId = 1000000001337;
+    private string _username = string.Empty;
 
     public FeslHandler(ILogger<FeslHandler> logger)
     {
@@ -92,6 +93,10 @@ public class FeslHandler
             {
                 await HandleGetAssociations(reqPacket);
             }
+            else if(reqPacket.Type == "pres" && reqTxn == "PresenceSubscribe")
+            {
+                await HandlePresenceSubscribe();
+            }
             else
             {
                 _logger.LogWarning("Unknown packet type: {type}, TXN: {txn}", reqPacket.Type, reqTxn);
@@ -100,14 +105,38 @@ public class FeslHandler
         }
     }
 
+    private async Task HandlePresenceSubscribe()
+    {
+        var responseData = new Dictionary<string, object>
+        {
+            { "TXN", "PresenceSubscribe" },
+            { "responses.0.outcome", "0" },
+            { "responses.[]", "1" },
+            { "responses.0.owner.type", "1" },
+            { "responses.0.owner.id", _playerId },
+        };
+
+        var packet = new Packet("pres", 0x80000000, responseData);
+        var response = await packet.ToPacket(_feslTicketId);
+
+        _network.WriteApplicationData(response.AsSpan());
+    }
+
     private async Task HandleLookupUserInfo(Packet reqPacket)
     {
+        _username = reqPacket.DataDict["userInfo.0.userName"] as string ?? string.Empty;
+
         var responseData = new Dictionary<string, object>
         {
             { "TXN", "NuLookupUserInfo" },
             { "userInfo.[]", "1" },
-            { "userInfo.0.userName", "faith" },
+            { "userInfo.0.userName", _username },
         };
+
+        var packet = new Packet("acct", 0x80000000, responseData);
+        var response = await packet.ToPacket(_feslTicketId);
+
+        _network.WriteApplicationData(response.AsSpan());
     }
 
     private async Task HandleGetAssociations(Packet request)
@@ -127,7 +156,7 @@ public class FeslHandler
         if (assoType == "PlasmaMute")
         {
             responseData.Add("maxListSize", 100);
-            responseData.Add("owner.name", "faith");
+            responseData.Add("owner.name", _username);
         }
         else
         {
@@ -261,8 +290,8 @@ public class FeslHandler
 
     private async Task HandleMemCheck()
     {
-        await Task.Delay(1000);
-        await SendMemCheck();
+        // await Task.Delay(1000);
+        // await SendMemCheck();
     }
 
     private async Task SendMemCheck()
