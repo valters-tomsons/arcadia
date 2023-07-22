@@ -22,7 +22,7 @@ public readonly struct Packet
     public Packet(string type, uint packetId, Dictionary<string, object>? dataDict = null)
     {
         Type = type.Trim();
-        Length = packetId;
+        Id = packetId;
         DataDict = dataDict ?? new Dictionary<string, object>();
     }
 
