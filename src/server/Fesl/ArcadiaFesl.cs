@@ -10,7 +10,7 @@ public class ArcadiaFesl
     private readonly TlsServerProtocol _network;
     private readonly string _clientEndpoint;
 
-    private uint _plasmaTicketId;
+    private uint _feslTicketId;
 
     public ArcadiaFesl(TlsServerProtocol network, string clientEndpoint)
     {
@@ -45,7 +45,7 @@ public class ArcadiaFesl
 
             if (reqPacket.Id != 0x80000000)
             {
-                Interlocked.Increment(ref _plasmaTicketId);
+                Interlocked.Increment(ref _feslTicketId);
             }
 
             if (reqTxn != "MemCheck")
@@ -77,7 +77,7 @@ public class ArcadiaFesl
             else
             {
                 Console.WriteLine($"Unknown packet type: {reqPacket.Type} TXN: {reqTxn}");
-                Interlocked.Increment(ref _plasmaTicketId);
+                Interlocked.Increment(ref _feslTicketId);
             }
         }
     }
@@ -99,7 +99,7 @@ public class ArcadiaFesl
                 };
 
         var helloPacket = new Packet("fsys", 0x80000000, serverHelloData);
-        var helloResponse = await helloPacket.ToPacket(_plasmaTicketId);
+        var helloResponse = await helloPacket.ToPacket(_feslTicketId);
 
         _network.WriteApplicationData(helloResponse.AsSpan());
         Console.WriteLine(Encoding.ASCII.GetString(helloResponse));
@@ -119,7 +119,7 @@ public class ArcadiaFesl
         };
 
         var packet = new Packet("acct", 0x80000000, data);
-        var response = await packet.ToPacket(_plasmaTicketId);
+        var response = await packet.ToPacket(_feslTicketId);
 
         _network.WriteApplicationData(response.AsSpan());
         Console.WriteLine(Encoding.ASCII.GetString(response));
@@ -158,7 +158,7 @@ public class ArcadiaFesl
         }
 
         var loginPacket = new Packet("acct", 0x80000000, loginResponseData);
-        var loginResponse = await loginPacket.ToPacket(_plasmaTicketId);
+        var loginResponse = await loginPacket.ToPacket(_feslTicketId);
 
         _network.WriteApplicationData(loginResponse.AsSpan());
         Console.WriteLine(Encoding.ASCII.GetString(loginResponse));
@@ -177,7 +177,7 @@ public class ArcadiaFesl
         Console.WriteLine($"Trying to register user {email} with password {pass}");
 
         var resultPacket = new Packet("acct", 0x80000000, data);
-        var response = await resultPacket.ToPacket(_plasmaTicketId);
+        var response = await resultPacket.ToPacket(_feslTicketId);
 
         _network.WriteApplicationData(response.AsSpan());
         Console.WriteLine(Encoding.ASCII.GetString(response));
@@ -200,7 +200,7 @@ public class ArcadiaFesl
                 };
 
         var memcheckPacket = new Packet("fsys", 0x80000000, memCheckData);
-        var memcheckResponse = await memcheckPacket.ToPacket(_plasmaTicketId);
+        var memcheckResponse = await memcheckPacket.ToPacket(_feslTicketId);
 
         _network.WriteApplicationData(memcheckResponse.AsSpan());
     }
