@@ -48,12 +48,19 @@ public class ArcadiaFesl
                 Interlocked.Increment(ref _plasmaTicketId);
             }
 
-            Console.WriteLine($"Type: {reqPacket.Type}");
-            Console.WriteLine($"TXN: {reqTxn}");
+            if (reqTxn != "MemCheck")
+            {
+                Console.WriteLine($"Type: {reqPacket.Type}");
+                Console.WriteLine($"TXN: {reqTxn}");
+            }
 
             if (reqPacket.Type == "fsys" && reqTxn == "Hello")
             {
                 await HandleHello();
+            }
+            else if (reqPacket.Type == "fsys" && reqTxn == "MemCheck")
+            {
+                await HandleMemCheck();
             }
             else if(reqPacket.Type == "acct" && reqTxn == "NuPS3Login")
             {
@@ -67,6 +74,11 @@ public class ArcadiaFesl
             {
                 await HandleAddAccount(reqPacket);
             }
+            else
+            {
+                Console.WriteLine($"Unknown packet type: {reqPacket.Type} TXN: {reqTxn}");
+                Interlocked.Increment(ref _plasmaTicketId);
+            }
         }
     }
 
@@ -76,13 +88,13 @@ public class ArcadiaFesl
         var serverHelloData = new Dictionary<string, object>
                 {
                     { "domainPartition.domain", "ps3" },
-                    { "messengerIp", "beach-ps3.fesl.ea.com" },
+                    { "messengerIp", "127.0.0.1" },
                     { "messengerPort", 0 },
                     { "domainPartition.subDomain", "BEACH" },
                     { "TXN", "Hello" },
                     { "activityTimeoutSecs", 0 },
                     { "curTime", currentTime},
-                    { "theaterIp", "beach-ps3.fesl.ea.com" },
+                    { "theaterIp", "127.0.0.1" },
                     { "theaterPort", 18236 }
                 };
 
@@ -92,19 +104,7 @@ public class ArcadiaFesl
         _network.WriteApplicationData(helloResponse.AsSpan());
         Console.WriteLine(Encoding.ASCII.GetString(helloResponse));
 
-        var memCheckData = new Dictionary<string, object>
-                {
-                    { "TXN", "MemCheck" },
-                    { "memcheck.[]", "0" },
-                    { "type", "0" },
-                    { "salt", PacketUtils.GenerateSalt() }
-                };
-
-        var memcheckPacket = new FeslPacket("fsys", 0x80000000, memCheckData);
-        var memcheckResponse = await memcheckPacket.ToPacket(_plasmaTicketId);
-
-        _network.WriteApplicationData(memcheckResponse.AsSpan());
-        Console.WriteLine(Encoding.ASCII.GetString(memcheckResponse));
+        await SendMemCheck();
     }
 
     private async Task HandleGetTos()
@@ -134,6 +134,11 @@ public class ArcadiaFesl
 
         var tosAccepted = request.DataDict.TryGetValue("tosVersion", out var tosAcceptedValue);
 
+        // loginResponseData.Add("TXN", request.Type);
+        // loginResponseData.Add("localizedMessage", "The password the user specified is incorrect");
+        // loginResponseData.Add("errorContainer.[]", "0");
+        // loginResponseData.Add("errorCode", "122");
+
         if (!tosAccepted || string.IsNullOrEmpty(tosAcceptedValue as string))
         {
             loginResponseData.Add("TXN", request.Type);
@@ -144,7 +149,7 @@ public class ArcadiaFesl
         else
         {
             const string keyTempl = "W5NyZzx{0}Cki6GQAAKDw.";
-            var lkey = string.Format(keyTempl, "123456789");
+            var lkey = string.Format(keyTempl, "SaUr4131g");
 
             loginResponseData.Add("lkey", lkey);
             loginResponseData.Add("TXN", "NuPS3Login");
@@ -163,7 +168,7 @@ public class ArcadiaFesl
     {
         var data = new Dictionary<string, object>
         {
-            {"TXN", "NuPS3AddAccount"},
+            {"TXN", "NuPS3AddAccount"}
         };
 
         var email = request.DataDict["nuid"] as string;
@@ -171,10 +176,32 @@ public class ArcadiaFesl
 
         Console.WriteLine($"Trying to register user {email} with password {pass}");
 
-        var packet = new FeslPacket("acct", 0x80000000, data);
-        var response = await packet.ToPacket(_plasmaTicketId);
+        var resultPacket = new FeslPacket("acct", 0x80000000, data);
+        var response = await resultPacket.ToPacket(_plasmaTicketId);
 
         _network.WriteApplicationData(response.AsSpan());
         Console.WriteLine(Encoding.ASCII.GetString(response));
+    }
+
+    private async Task HandleMemCheck()
+    {
+        await Task.Delay(1000);
+        await SendMemCheck();
+    }
+
+    private async Task SendMemCheck()
+    {
+        var memCheckData = new Dictionary<string, object>
+                {
+                    { "TXN", "MemCheck" },
+                    { "memcheck.[]", "0" },
+                    { "type", "0" },
+                    { "salt", PacketUtils.GenerateSalt() }
+                };
+
+        var memcheckPacket = new FeslPacket("fsys", 0x80000000, memCheckData);
+        var memcheckResponse = await memcheckPacket.ToPacket(_plasmaTicketId);
+
+        _network.WriteApplicationData(memcheckResponse.AsSpan());
     }
 }
