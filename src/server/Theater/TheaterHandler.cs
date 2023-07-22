@@ -1,36 +1,34 @@
-using Arcadia.EA;
+using System.Net.Sockets;
+using System.Text;
 using Microsoft.Extensions.Logging;
-using Org.BouncyCastle.Tls;
 
 namespace Arcadia.Theater;
 
 public class TheaterHandler
 {
-    private TlsServerProtocol _network = null!;
+    private NetworkStream _network = null!;
     private string _clientEndpoint = null!;
 
     private readonly ILogger<TheaterHandler> _logger;
-
-    private uint _plasmaTicketId;
 
     public TheaterHandler(ILogger<TheaterHandler> logger)
     {
         _logger = logger;
     }
 
-    public async Task HandleClientConnection(TlsServerProtocol network, string clientEndpoint)
+    public async Task HandleClientConnection(NetworkStream network, string clientEndpoint)
     {
         _network = network;
         _clientEndpoint = clientEndpoint;
 
-        while (_network.IsConnected)
+        while (_network.CanRead)
         {
             int read;
-            byte[]? readBuffer;
+            byte[] readBuffer = new byte[1514];
 
             try
             {
-                (read, readBuffer) = await Utils.ReadApplicationDataAsync(_network);
+                read = await _network.ReadAsync(readBuffer.AsMemory());
             }
             catch
             {
@@ -43,20 +41,8 @@ public class TheaterHandler
                 continue;
             }
 
-            var reqPacket = new Packet(readBuffer[..read]);
-            var reqTxn = (string)reqPacket.DataDict["TXN"];
-
-            if (reqPacket.Id != 0x80000000)
-            {
-                Interlocked.Increment(ref _plasmaTicketId);
-            }
-
-            _logger.LogInformation("Type: {type}", reqPacket.Type);
-            _logger.LogInformation("TXN: {txn}", reqTxn);
-
-            _logger.LogWarning("Unknown packet type: {type} TXN: {txn}", reqPacket.Type, reqTxn);
-
-            Interlocked.Increment(ref _plasmaTicketId);
+            _logger.LogInformation("Received {read} bytes", read);
+            _logger.LogInformation("Data: {data}", Encoding.ASCII.GetString(readBuffer[..read]));
         }
     }
 }

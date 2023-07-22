@@ -13,7 +13,7 @@ public class TheaterHostedService : IHostedService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IOptions<ArcadiaSettings> _settings;
-    private readonly ILogger<FeslHostedService> _logger;
+    private readonly ILogger<TheaterHostedService> _logger;
 
     private readonly ConcurrentBag<Task> _activeConnections = new();
     private readonly TcpListener _listener;
@@ -22,7 +22,7 @@ public class TheaterHostedService : IHostedService
 
     private Task? _server;
 
-    public TheaterHostedService(IOptions<ArcadiaSettings> settings, ILogger<FeslHostedService> logger, IServiceScopeFactory scopeFactory)
+    public TheaterHostedService(IOptions<ArcadiaSettings> settings, ILogger<TheaterHostedService> logger, IServiceScopeFactory scopeFactory)
     {
         _logger = logger;
         _scopeFactory = scopeFactory;
@@ -61,10 +61,8 @@ public class TheaterHostedService : IHostedService
         using var scope = _scopeFactory.CreateAsyncScope();
         var networkStream = tcpClient.GetStream();
 
-        var serverProtocol = new TlsServerProtocol(networkStream);
-
         var handler = scope.ServiceProvider.GetRequiredService<TheaterHandler>();
-        await handler.HandleClientConnection(serverProtocol, clientEndpoint);
+        await handler.HandleClientConnection(networkStream, clientEndpoint);
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
