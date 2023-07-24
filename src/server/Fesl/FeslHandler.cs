@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text;
 using Arcadia.EA;
 using Microsoft.Extensions.Logging;
 using Org.BouncyCastle.Tls;
@@ -14,6 +13,9 @@ public class FeslHandler
     private string _clientEndpoint = null!;
 
     private uint _feslTicketId;
+
+    private readonly long _playerId = 1000000001337;
+    private string _username = string.Empty;
 
     public FeslHandler(ILogger<FeslHandler> logger)
     {
@@ -46,12 +48,13 @@ public class FeslHandler
             }
 
             var reqPacket = new Packet(readBuffer[..read]);
-            var reqTxn = (string)reqPacket.DataDict["TXN"];
-
             if (reqPacket.Id != 0x80000000)
             {
                 Interlocked.Increment(ref _feslTicketId);
             }
+
+            reqPacket.DataDict.TryGetValue("TXN", out var txn);
+            var reqTxn = txn as string ?? string.Empty;
 
             if (reqTxn != "MemCheck")
             {
@@ -67,6 +70,10 @@ public class FeslHandler
             {
                 await HandleMemCheck();
             }
+            else if (reqPacket.Type == "fsys" && reqTxn == "GetPingSites")
+            {
+                await HandleGetPingSites();
+            }
             else if(reqPacket.Type == "acct" && reqTxn == "NuPS3Login")
             {
                 await HandleLogin(reqPacket);
@@ -79,12 +86,137 @@ public class FeslHandler
             {
                 await HandleAddAccount(reqPacket);
             }
+            else if(reqPacket.Type == "acct" && reqTxn == "NuLookupUserInfo")
+            {
+                await HandleLookupUserInfo(reqPacket);
+            }
+            else if(reqPacket.Type == "asso" && reqTxn == "GetAssociations")
+            {
+                await HandleGetAssociations(reqPacket);
+            }
+            else if(reqPacket.Type == "pres" && reqTxn == "PresenceSubscribe")
+            {
+                await HandlePresenceSubscribe();
+            }
+            else if (reqPacket.Type == "rank" && reqTxn == "GetStats")
+            {
+                await HandleGetStats(reqPacket);
+            }
             else
             {
                 _logger.LogWarning("Unknown packet type: {type}, TXN: {txn}", reqPacket.Type, reqTxn);
                 Interlocked.Increment(ref _feslTicketId);
             }
         }
+    }
+
+    private async Task HandleGetStats(Packet request)
+    {
+        var responseData = new Dictionary<string, object>
+        {
+            { "TXN", "GetStats" },
+            {"stats.[]", 0}
+        };
+
+        // TODO: Add some stats
+        // var keysStr = request.DataDict["keys.[]"] as string ?? string.Empty;
+        // var reqKeys = int.Parse(keysStr, CultureInfo.InvariantCulture);
+        // for (var i = 0; i < reqKeys; i++)
+        // {
+        //     var key = request.DataDict[$"keys.{i}"];
+
+        //     responseData.Add($"stats.{i}.key", key);
+        //     responseData.Add($"stats.{i}.value", 0.0);
+        // }
+
+        var packet = new Packet("rank", 0x80000000, responseData);
+        var response = await packet.ToPacket(_feslTicketId);
+
+        _network.WriteApplicationData(response.AsSpan());
+    }
+
+    private async Task HandlePresenceSubscribe()
+    {
+        var responseData = new Dictionary<string, object>
+        {
+            { "TXN", "PresenceSubscribe" },
+            { "responses.0.outcome", "0" },
+            { "responses.[]", "1" },
+            { "responses.0.owner.type", "1" },
+            { "responses.0.owner.id", _playerId },
+        };
+
+        var packet = new Packet("pres", 0x80000000, responseData);
+        var response = await packet.ToPacket(_feslTicketId);
+
+        _network.WriteApplicationData(response.AsSpan());
+    }
+
+    private async Task HandleLookupUserInfo(Packet reqPacket)
+    {
+        _username = reqPacket.DataDict["userInfo.0.userName"] as string ?? string.Empty;
+
+        var responseData = new Dictionary<string, object>
+        {
+            { "TXN", "NuLookupUserInfo" },
+            { "userInfo.[]", "1" },
+            { "userInfo.0.userName", _username },
+        };
+
+        var packet = new Packet("acct", 0x80000000, responseData);
+        var response = await packet.ToPacket(_feslTicketId);
+
+        _network.WriteApplicationData(response.AsSpan());
+    }
+
+    private async Task HandleGetAssociations(Packet request)
+    {
+        var assoType = request.DataDict["type"] as string;
+        var responseData = new Dictionary<string, object>
+        {
+            { "TXN", "GetAssociations" },
+            { "domainPartition.domain", request.DataDict["domainPartition.domain"] },
+            { "domainPartition.subDomain", request.DataDict["domainPartition.subDomain"] },
+            { "owner.id", _playerId },
+            { "owner.type", "1" },
+            { "type", assoType },
+            { "members.[]", "0" },
+        };
+
+        if (assoType == "PlasmaMute")
+        {
+            responseData.Add("maxListSize", 100);
+            responseData.Add("owner.name", _username);
+        }
+        else
+        {
+            _logger.LogWarning("Unknown association type: {assoType}", assoType);
+        }
+
+        var packet = new Packet("asso", 0x80000000, responseData);
+        var response = await packet.ToPacket(_feslTicketId);
+
+        _network.WriteApplicationData(response.AsSpan());
+    }
+
+    private async Task HandleGetPingSites()
+    {
+        const string serverIp = "127.0.0.1";
+
+        var responseData = new Dictionary<string, object>
+        {
+            { "TXN", "GetPingSites" },
+            { "pingSite.[]", "4"},
+            { "pingSite.0.addr", serverIp },
+            { "pingSite.0.type", "0"},
+            { "pingSite.0.name", "eu1"},
+            { "minPingSitesToPing", "0"}
+        };
+
+        var packet = new Packet("fsys", 0x80000000, responseData);
+        var response = await packet.ToPacket(_feslTicketId);
+
+        _network.WriteApplicationData(response.AsSpan());
     }
 
     private async Task HandleHello()
@@ -188,8 +320,8 @@ public class FeslHandler
 
     private async Task HandleMemCheck()
     {
-        await Task.Delay(1000);
-        await SendMemCheck();
+        // await Task.Delay(1000);
+        // await SendMemCheck();
     }
 
     private async Task SendMemCheck()

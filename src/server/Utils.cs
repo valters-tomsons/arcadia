@@ -1,6 +1,5 @@
 using System.Reflection;
 using System.Text;
-using Microsoft.Extensions.Configuration;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.OpenSsl;
 using Org.BouncyCastle.Tls;
@@ -14,7 +13,7 @@ public static class Utils
 {
     public static async Task<(int, byte[])> ReadApplicationDataAsync(TlsServerProtocol network)
     {
-        var readBuffer = new byte[1514];
+        var readBuffer = new byte[5120];
         try
         {
             var read = await Task.Run(() => network.ReadApplicationData(readBuffer, 0, readBuffer.Length));
@@ -82,9 +81,9 @@ public static class Utils
             var entrySplit = dataSplit[i].Split('=', StringSplitOptions.TrimEntries);
 
             var parameter = entrySplit[0];
-            var value = entrySplit[1].Replace("\"", "");
+            var value = entrySplit.Length > 1 ? entrySplit[1].Replace(@"\", string.Empty) : string.Empty;
 
-            dataDict.Add(parameter, value);
+            dataDict.TryAdd(parameter, value);
         }
 
         return dataDict;

@@ -1,36 +1,35 @@
+using System.Net.Sockets;
+using System.Text;
 using Arcadia.EA;
 using Microsoft.Extensions.Logging;
-using Org.BouncyCastle.Tls;
 
 namespace Arcadia.Theater;
 
 public class TheaterHandler
 {
-    private TlsServerProtocol _network = null!;
+    private NetworkStream _network = null!;
     private string _clientEndpoint = null!;
 
     private readonly ILogger<TheaterHandler> _logger;
-
-    private uint _plasmaTicketId;
 
     public TheaterHandler(ILogger<TheaterHandler> logger)
     {
         _logger = logger;
     }
 
-    public async Task HandleClientConnection(TlsServerProtocol network, string clientEndpoint)
+    public async Task HandleClientConnection(NetworkStream network, string clientEndpoint)
     {
         _network = network;
         _clientEndpoint = clientEndpoint;
 
-        while (_network.IsConnected)
+        while (_network.CanRead)
         {
             int read;
-            byte[]? readBuffer;
+            byte[] readBuffer = new byte[1514];
 
             try
             {
-                (read, readBuffer) = await Utils.ReadApplicationDataAsync(_network);
+                read = await _network.ReadAsync(readBuffer.AsMemory());
             }
             catch
             {
@@ -43,20 +42,65 @@ public class TheaterHandler
                 continue;
             }
 
-            var reqPacket = new Packet(readBuffer[..read]);
-            var reqTxn = (string)reqPacket.DataDict["TXN"];
+            _logger.LogInformation("Received {read} bytes", read);
+            _logger.LogInformation("Data: {data}", Encoding.ASCII.GetString(readBuffer[..read]));
 
-            if (reqPacket.Id != 0x80000000)
+            var packet = new Packet(readBuffer[..read]);
+            var type = packet.Type;
+
+            if (type == "CONN")
             {
-                Interlocked.Increment(ref _plasmaTicketId);
+                await HandleCONN(packet);
             }
-
-            _logger.LogInformation("Type: {type}", reqPacket.Type);
-            _logger.LogInformation("TXN: {txn}", reqTxn);
-
-            _logger.LogWarning("Unknown packet type: {type} TXN: {txn}", reqPacket.Type, reqTxn);
-
-            Interlocked.Increment(ref _plasmaTicketId);
+            else if (type == "USER")
+            {
+                await HandleUSER(packet);
+            }
+            else
+            {
+                _logger.LogWarning("Unknown packet type: {type}", type);
+            }
         }
+    }
+
+    private async Task HandleCONN(Packet request)
+    {
+        var tid = request.DataDict["TID"];
+        var prot = request.DataDict["PROT"];
+
+        _logger.LogInformation("CONN: {tid} {prot}", tid, prot);
+
+        var response = new Dictionary<string, object>
+        {
+            ["TID"] = tid,
+            ["PROT"] = prot,
+            ["TIME"] = 0,
+            ["activityTimeoutSecs"] = 240,
+        };
+
+        var packet = new Packet("CONN", 0x00000000, response);
+        var data = await packet.ToPacket(0);
+
+        await _network.WriteAsync(data);
+    }
+
+    private async Task HandleUSER(Packet request)
+    {
+        var lkey = request.DataDict["LKEY"];
+
+        _logger.LogInformation("USER: {lkey}", lkey);
+
+        // !TODO: compare with fesl sessions
+
+        var response = new Dictionary<string, object>
+        {
+            ["TID"] = request.DataDict["TID"],
+            ["NAME"] = "faith"
+        };
+
+        var packet = new Packet("USER", 0x00000000, response);
+        var data = await packet.ToPacket(0);
+
+        await _network.WriteAsync(data);
     }
 }
