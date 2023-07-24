@@ -14,7 +14,7 @@ public class FeslHandler
 
     private uint _feslTicketId;
 
-    private long _playerId = 1000000001337;
+    private readonly long _playerId = 1000000001337;
     private string _username = string.Empty;
 
     public FeslHandler(ILogger<FeslHandler> logger)
@@ -48,12 +48,13 @@ public class FeslHandler
             }
 
             var reqPacket = new Packet(readBuffer[..read]);
-            var reqTxn = (string)reqPacket.DataDict["TXN"];
-
             if (reqPacket.Id != 0x80000000)
             {
                 Interlocked.Increment(ref _feslTicketId);
             }
+
+            reqPacket.DataDict.TryGetValue("TXN", out var txn);
+            var reqTxn = txn as string ?? string.Empty;
 
             if (reqTxn != "MemCheck")
             {
@@ -97,12 +98,41 @@ public class FeslHandler
             {
                 await HandlePresenceSubscribe();
             }
+            else if (reqPacket.Type == "rank" && reqTxn == "GetStats")
+            {
+                await HandleGetStats(reqPacket);
+            }
             else
             {
                 _logger.LogWarning("Unknown packet type: {type}, TXN: {txn}", reqPacket.Type, reqTxn);
                 Interlocked.Increment(ref _feslTicketId);
             }
         }
+    }
+
+    private async Task HandleGetStats(Packet request)
+    {
+        var responseData = new Dictionary<string, object>
+        {
+            { "TXN", "GetStats" },
+            {"stats.[]", 0}
+        };
+
+        // TODO: Add some stats
+        // var keysStr = request.DataDict["keys.[]"] as string ?? string.Empty;
+        // var reqKeys = int.Parse(keysStr, CultureInfo.InvariantCulture);
+        // for (var i = 0; i < reqKeys; i++)
+        // {
+        //     var key = request.DataDict[$"keys.{i}"];
+
+        //     responseData.Add($"stats.{i}.key", key);
+        //     responseData.Add($"stats.{i}.value", 0.0);
+        // }
+
+        var packet = new Packet("rank", 0x80000000, responseData);
+        var response = await packet.ToPacket(_feslTicketId);
+
+        _network.WriteApplicationData(response.AsSpan());
     }
 
     private async Task HandlePresenceSubscribe()

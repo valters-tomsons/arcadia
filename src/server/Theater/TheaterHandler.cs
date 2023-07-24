@@ -1,5 +1,6 @@
 using System.Net.Sockets;
 using System.Text;
+using Arcadia.EA;
 using Microsoft.Extensions.Logging;
 
 namespace Arcadia.Theater;
@@ -43,6 +44,63 @@ public class TheaterHandler
 
             _logger.LogInformation("Received {read} bytes", read);
             _logger.LogInformation("Data: {data}", Encoding.ASCII.GetString(readBuffer[..read]));
+
+            var packet = new Packet(readBuffer[..read]);
+            var type = packet.Type;
+
+            if (type == "CONN")
+            {
+                await HandleCONN(packet);
+            }
+            else if (type == "USER")
+            {
+                await HandleUSER(packet);
+            }
+            else
+            {
+                _logger.LogWarning("Unknown packet type: {type}", type);
+            }
         }
+    }
+
+    private async Task HandleCONN(Packet request)
+    {
+        var tid = request.DataDict["TID"];
+        var prot = request.DataDict["PROT"];
+
+        _logger.LogInformation("CONN: {tid} {prot}", tid, prot);
+
+        var response = new Dictionary<string, object>
+        {
+            ["TID"] = tid,
+            ["PROT"] = prot,
+            ["TIME"] = 0,
+            ["activityTimeoutSecs"] = 240,
+        };
+
+        var packet = new Packet("CONN", 0x00000000, response);
+        var data = await packet.ToPacket(0);
+
+        await _network.WriteAsync(data);
+    }
+
+    private async Task HandleUSER(Packet request)
+    {
+        var lkey = request.DataDict["LKEY"];
+
+        _logger.LogInformation("USER: {lkey}", lkey);
+
+        // !TODO: compare with fesl sessions
+
+        var response = new Dictionary<string, object>
+        {
+            ["TID"] = request.DataDict["TID"],
+            ["NAME"] = "faith"
+        };
+
+        var packet = new Packet("USER", 0x00000000, response);
+        var data = await packet.ToPacket(0);
+
+        await _network.WriteAsync(data);
     }
 }
