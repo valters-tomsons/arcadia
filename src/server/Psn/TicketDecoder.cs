@@ -22,7 +22,7 @@ public class TicketDecoder
         publicKey = (ECPublicKeyParameters)pemReader.ReadObject();
     }
 
-    public Ticket DecodeFromASCIIString(string ticketData)
+    public static Ticket DecodeFromASCIIString(string ticketData)
     {
         var rawTicket = Encoding.ASCII.GetBytes(ticketData);
 
@@ -96,7 +96,29 @@ public class TicketDecoder
             _ => ticketData.Id >= 0x3000 ? TicketType.Blob : throw new Exception($"Unexpected ticket data id: {ticketData.Id}")
         };
 
-        ticketData.Data = br.ReadBytes(ticketData.Len);
+        switch (ticketData.Type)
+        {
+            case TicketType.Blob:
+                ticketData.SubData = DecodeSubData(br, ticketData.Len);
+                break;
+            default:
+                ticketData.Data = br.ReadBytes(ticketData.Len);
+                break;
+        }
+
         return ticketData;
+    }
+
+    private static TicketData[] DecodeSubData(BinaryReader br, int totalLen)
+    {
+        var subData = new List<TicketData>();
+        var endPos = br.BaseStream.Position + totalLen;
+
+        while (br.BaseStream.Position < endPos)
+        {
+            subData.Add(ReadTicketData(br));
+        }
+
+        return subData.ToArray();
     }
 }

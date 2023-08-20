@@ -17,6 +17,7 @@ public struct TicketData
     public ushort Id;
     public ushort Len;
     public byte[] Data;
+    public TicketData[] SubData;
 }
 
 public struct Ticket
