@@ -66,6 +66,10 @@ public class FeslHandler
             {
                 await HandleHello();
             }
+            else if(reqPacket.Type == "pnow" && reqTxn == "Start")
+            {
+                await HandlePlayNow();
+            }
             else if (reqPacket.Type == "fsys" && reqTxn == "MemCheck")
             {
                 await HandleMemCheck();
@@ -110,12 +114,39 @@ public class FeslHandler
         }
     }
 
+    private async Task HandlePlayNow()
+    {
+        var responseData = new Dictionary<string, object>
+        {
+            { "TXN", "Start" },
+            { "partition.partition", "/ps3/BEACH" },
+            { "debugLevel", "off" },
+            { "version", 1 },
+            { "players.[]", 1 },
+            { "players.0.ownerId", $"{_playerId}" },
+            { "players.0.ownerType", 1 },
+            { "players.0.props.{sessionType}", "findServer" },
+            { "players.0.props.{name}", _username },
+            { "players.0.props.{firewallType}", "strict" },
+            { "players.0.props.{poolMaxPlayers}", 1 },
+            { "players.0.props.{poolTimeout}", 30 },
+            { "players.0.props.{poolTargetPlayers}", "0:1" },
+            { "players.0.props.{ping}", "eu1:-3|na2:-3|na1:-3|nrt:264" },
+        };
+
+        var packet = new Packet("rank", 0x80000000, responseData);
+        var response = await packet.ToPacket(_feslTicketId);
+
+        _network.WriteApplicationData(response.AsSpan());
+        await SendMemCheck();
+    }
+
     private async Task HandleGetStats(Packet request)
     {
         var responseData = new Dictionary<string, object>
         {
             { "TXN", "GetStats" },
-            {"stats.[]", 0}
+            {"stats.[]", 0 }
         };
 
         // TODO: Add some stats
