@@ -4,6 +4,10 @@ An experimental project in emulating backend services for Battlefield 1943 (poss
 
 **Note**: This project is not affiliated with EA or DICE.
 
+## Features
+
+Currently, enough is "implemented" to allow accessing the game's tutorial. When asked to enter email/password, just submit whatever (or keep them empty).
+
 ## RPCS3 Client Configuration
 
 1. Enable network connection and RPCN
