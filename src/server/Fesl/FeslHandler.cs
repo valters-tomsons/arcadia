@@ -1,6 +1,7 @@
 using System.Globalization;
 using Arcadia.EA;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Org.BouncyCastle.Tls;
 
 namespace Arcadia.Fesl;
@@ -8,6 +9,13 @@ namespace Arcadia.Fesl;
 public class FeslHandler
 {
     private readonly ILogger<FeslHandler> _logger;
+    private readonly IOptions<ArcadiaSettings> _settings;
+
+    public FeslHandler(ILogger<FeslHandler> logger, IOptions<ArcadiaSettings> settings)
+    {
+        _logger = logger;
+        _settings = settings;
+    }
 
     private TlsServerProtocol _network = null!;
     private string _clientEndpoint = null!;
@@ -16,11 +24,6 @@ public class FeslHandler
 
     private readonly long _playerId = 1000000001337;
     private string _username = string.Empty;
-
-    public FeslHandler(ILogger<FeslHandler> logger)
-    {
-        _logger = logger;
-    }
 
     public async Task HandleClientConnection(TlsServerProtocol network, string clientEndpoint)
     {
@@ -262,7 +265,7 @@ public class FeslHandler
                     { "TXN", "Hello" },
                     { "activityTimeoutSecs", 0 },
                     { "curTime", currentTime},
-                    { "theaterIp", "127.0.0.1" },
+                    { "theaterIp", _settings.Value.TheaterAddress },
                     { "theaterPort", 18236 }
                 };
 
