@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": ".NET Core Launch (console)",
+            "name": "Start Arcadia",
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
@@ -13,9 +13,15 @@
             "stopAtEntry": false
         },
         {
-            "name": ".NET Core Attach",
+            "name": "dump-pcap",
             "type": "coreclr",
-            "request": "attach"
+            "request": "launch",
+            "preLaunchTask": "build-dpcap",
+            "program": "${workspaceFolder}/tools/dump-pcap/bin/Debug/net7.0/dump-pcap.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/tools/dump-pcap",
+            "console": "internalConsole",
+            "stopAtEntry": false
         }
     ]
 }
