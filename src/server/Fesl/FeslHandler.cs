@@ -61,8 +61,7 @@ public class FeslHandler
 
             if (reqTxn != "MemCheck")
             {
-                _logger.LogInformation("Type: {type}", reqPacket.Type);
-                _logger.LogInformation("TXN: {txn}", reqTxn);
+                _logger.LogInformation("Type: {type} | TXN: {txn}", reqPacket.Type, reqTxn);
             }
 
             if (reqPacket.Type == "fsys" && reqTxn == "Hello")
@@ -88,6 +87,10 @@ public class FeslHandler
             else if(reqPacket.Type == "acct" && reqTxn == "NuGetTos")
             {
                 await HandleGetTos();
+            }
+            else if(reqPacket.Type == "acct" && reqTxn == "GetTelemetryToken")
+            {
+                await HandleTelemetryToken();
             }
             else if(reqPacket.Type == "acct" && reqTxn == "NuPS3AddAccount")
             {
@@ -117,6 +120,19 @@ public class FeslHandler
         }
     }
 
+    private async Task HandleTelemetryToken()
+    {
+        var responseData = new Dictionary<string, object>
+        {
+            { "TXN", "GetTelemetryToken" },
+        };
+
+        var packet = new Packet("acct", 0x80000000, responseData);
+        var response = await packet.ToPacket(_feslTicketId);
+
+        _network.WriteApplicationData(response.AsSpan());
+    }
+
     private async Task HandlePlayNow()
     {
         var responseData = new Dictionary<string, object>
@@ -137,11 +153,10 @@ public class FeslHandler
             { "players.0.props.{ping}", "eu1:-3|na2:-3|na1:-3|nrt:264" },
         };
 
-        var packet = new Packet("rank", 0x80000000, responseData);
+        var packet = new Packet("pnow", 0x80000000, responseData);
         var response = await packet.ToPacket(_feslTicketId);
 
         _network.WriteApplicationData(response.AsSpan());
-        await SendMemCheck();
     }
 
     private async Task HandleGetStats(Packet request)
