@@ -12,9 +12,20 @@ public class TheaterHandler
 
     private readonly ILogger<TheaterHandler> _logger;
 
+    private readonly Dictionary<string, Func<Packet, Task>> _handlers;
+
     public TheaterHandler(ILogger<TheaterHandler> logger)
     {
         _logger = logger;
+
+        _handlers = new Dictionary<string, Func<Packet, Task>>
+        {
+            ["CONN"] = HandleCONN,
+            ["USER"] = HandleUSER,
+            ["CGAM"] = HandleCGAM,
+            ["ECNL"] = HandleECNL,
+            ["EGAM"] = HandleEGAM
+        };
     }
 
     public async Task HandleClientConnection(NetworkStream network, string clientEndpoint)
@@ -49,18 +60,15 @@ public class TheaterHandler
             _logger.LogDebug("Type: {type}", type);
             _logger.LogTrace("Data: {data}", Encoding.ASCII.GetString(readBuffer[..read]));
 
-            if (type == "CONN")
-            {
-                await HandleCONN(packet);
-            }
-            else if (type == "USER")
-            {
-                await HandleUSER(packet);
-            }
-            else
+            _handlers.TryGetValue(type, out var handler);
+
+            if (handler is null)
             {
                 _logger.LogWarning("Unknown packet type: {type}", type);
+                continue;
             }
+
+            await handler(packet);
         }
     }
 
