@@ -21,7 +21,12 @@ var host = Host.CreateDefaultBuilder()
         services.AddLogging(log =>
         {
             log.ClearProviders();
-            log.AddConsole(x => x.FormatterName = ConsoleFormatterNames.Systemd);
+            log.AddSimpleConsole(x => {
+                x.IncludeScopes = false;
+                x.SingleLine = true;
+                x.TimestampFormat = "[HH:mm:ss] ";
+                x.ColorBehavior = LoggerColorBehavior.Enabled;
+            });
         });
 
         services.AddSingleton<CertGenerator>();

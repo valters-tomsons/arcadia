@@ -61,7 +61,7 @@ public class FeslHandler
 
             if (reqTxn != "MemCheck")
             {
-                _logger.LogInformation("Type: {type} | TXN: {txn}", reqPacket.Type, reqTxn);
+                _logger.LogDebug("Type: {type} | TXN: {txn}", reqPacket.Type, reqTxn);
             }
 
             if (reqPacket.Type == "fsys" && reqTxn == "Hello")
@@ -311,7 +311,7 @@ public class FeslHandler
     private async Task HandleLogin(Packet request)
     {
         var encryptedSet = request.DataDict.TryGetValue("returnEncryptedInfo", out var returnEncryptedInfo);
-        _logger.LogInformation("returnEncryptedInfo: {returnEncryptedInfo} ({encryptedSet})", returnEncryptedInfo, encryptedSet);
+        _logger.LogTrace("returnEncryptedInfo: {returnEncryptedInfo} ({encryptedSet})", returnEncryptedInfo, encryptedSet);
 
         var loginResponseData = new Dictionary<string, object>();
 
@@ -359,7 +359,7 @@ public class FeslHandler
         var email = request.DataDict["nuid"] as string;
         var pass = request.DataDict["password"] as string;
 
-        _logger.LogInformation("Trying to register user {email} with password {pass}", email, pass);
+        _logger.LogDebug("Trying to register user {email} with password {pass}", email, pass);
 
         var resultPacket = new Packet("acct", 0x80000000, data);
         var response = await resultPacket.ToPacket(_feslTicketId);
