@@ -49,7 +49,7 @@ public class CertGenerator
 
         var certDomain = subject.Split("CN=")[1].Split(",")[0];
 
-        _logger.LogInformation("Certificate patched for: {domain}", certDomain);
+        _logger.LogDebug("Certificate generated for: {domain}", certDomain);
 
         store.SetCertificateEntry(certDomain, certEntry);
         store.SetKeyEntry(certDomain, new AsymmetricKeyEntry(cKeyPair.Private), new[] { certEntry });

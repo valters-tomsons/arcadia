@@ -42,11 +42,12 @@ public class TheaterHandler
                 continue;
             }
 
-            _logger.LogInformation("Received {read} bytes", read);
-            _logger.LogInformation("Data: {data}", Encoding.ASCII.GetString(readBuffer[..read]));
 
             var packet = new Packet(readBuffer[..read]);
             var type = packet.Type;
+
+            _logger.LogDebug("Type: {type}", type);
+            _logger.LogTrace("Data: {data}", Encoding.ASCII.GetString(readBuffer[..read]));
 
             if (type == "CONN")
             {
