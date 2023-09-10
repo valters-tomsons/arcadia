@@ -137,7 +137,7 @@ public partial class MainWindow : Window
 
         if (transportPacket is TcpPacket tcpPacket && IsSslV3Packet(tcpPacket.PayloadData))
         {
-            InitializeCipher(tcpPacket.PayloadData);
+            InitializeCipher(tcpPacket.PayloadData, sessionKeys);
         }
     }
 
