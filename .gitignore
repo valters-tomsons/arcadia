@@ -7,5 +7,6 @@
 **.pfx
 **.pem
 
-# SSL key log
+# SSL keys and dumps
 **/sslkeylog.log
+**/dumps/priv/*
