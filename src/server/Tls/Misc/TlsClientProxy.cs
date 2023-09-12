@@ -24,9 +24,9 @@ public class TlsClientProxy
 
     private void InitializeUpstreamClient(ArcadiaSettings config, FeslSettings proxyConfig)
     {
-        Console.WriteLine($"Connecting to upstream {proxyConfig.ServerAddress}:{config.FeslPort}");
+        Console.WriteLine($"Connecting to upstream {proxyConfig.ServerAddress}:{proxyConfig.ServerPort}");
 
-        var upstreamTcpClient = new TcpClient(proxyConfig.ServerAddress, config.FeslPort);
+        var upstreamTcpClient = new TcpClient(proxyConfig.ServerAddress, proxyConfig.ServerPort);
         var upstreamTcpStream = upstreamTcpClient.GetStream();
         _upstreamProtocol = new TlsClientProtocol(upstreamTcpStream);
 
@@ -41,7 +41,7 @@ public class TlsClientProxy
         catch(Exception e)
         {
             Console.WriteLine(e.Message);
-            throw new Exception($"Failed to connect to upstream {proxyConfig.ServerAddress}:{config.FeslPort}");
+            throw new Exception($"Failed to connect to upstream {proxyConfig.ServerAddress}:{proxyConfig.ServerPort}");
         }
     }
 
