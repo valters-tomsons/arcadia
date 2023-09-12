@@ -10,11 +10,13 @@ public class FeslHandler
 {
     private readonly ILogger<FeslHandler> _logger;
     private readonly IOptions<ArcadiaSettings> _settings;
+    private readonly IOptions<FeslSettings> _feslSettings;
 
-    public FeslHandler(ILogger<FeslHandler> logger, IOptions<ArcadiaSettings> settings)
+    public FeslHandler(ILogger<FeslHandler> logger, IOptions<ArcadiaSettings> settings, IOptions<FeslSettings> feslSettings)
     {
         _logger = logger;
         _settings = settings;
+        _feslSettings = feslSettings;
     }
 
     private TlsServerProtocol _network = null!;
@@ -281,7 +283,7 @@ public class FeslHandler
                     { "activityTimeoutSecs", 0 },
                     { "curTime", currentTime},
                     { "theaterIp", _settings.Value.TheaterAddress },
-                    { "theaterPort", 18236 }
+                    { "theaterPort", _settings.Value.TheaterPort }
                 };
 
         var helloPacket = new Packet("fsys", 0x80000000, serverHelloData);

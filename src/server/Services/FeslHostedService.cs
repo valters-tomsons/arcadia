@@ -18,7 +18,7 @@ public class FeslHostedService : IHostedService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IOptions<ArcadiaSettings> _settings;
-    private readonly IOptions<FeslProxySettings> _proxySettings;
+    private readonly IOptions<FeslSettings> _feslSettings;
     private readonly ILogger<FeslHostedService> _logger;
     private readonly CertGenerator _certGenerator;
 
@@ -31,16 +31,16 @@ public class FeslHostedService : IHostedService
 
     private Task? _server;
 
-    public FeslHostedService(IOptions<FeslProxySettings> proxySettings, IOptions<ArcadiaSettings> settings, ILogger<FeslHostedService> logger, CertGenerator certGenerator, IServiceScopeFactory scopeFactory)
+    public FeslHostedService(IOptions<FeslSettings> proxySettings, IOptions<ArcadiaSettings> settings, ILogger<FeslHostedService> logger, CertGenerator certGenerator, IServiceScopeFactory scopeFactory)
     {
         _logger = logger;
         _scopeFactory = scopeFactory;
 
-        _proxySettings = proxySettings;
+        _feslSettings = proxySettings;
         _settings = settings;
         _certGenerator = certGenerator;
 
-        _listener = new TcpListener(System.Net.IPAddress.Any, _settings.Value.FeslPort);
+        _listener = new TcpListener(System.Net.IPAddress.Any, _feslSettings.Value.ServerPort);
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -51,14 +51,14 @@ public class FeslHostedService : IHostedService
 
         _listener.Start();
 
-        if (_proxySettings.Value.EnableProxy)
+        if (_feslSettings.Value.EnableProxy)
         {
             _logger.LogWarning("Proxying enabled!");
         }
 
         _server = Task.Run(async () =>
         {
-            _logger.LogInformation("Fesl listening on port tcp:{port}", _settings.Value.FeslPort);
+            _logger.LogInformation("Fesl listening on port tcp:{port}", _feslSettings.Value.ServerPort);
 
             while (!_cts.Token.IsCancellationRequested)
             {
@@ -77,14 +77,14 @@ public class FeslHostedService : IHostedService
 
     private void PrepareCertificate()
     {
-        var proxySettings = _proxySettings.Value;
+        var proxySettings = _feslSettings.Value;
 
         var IssuerDN = "CN=OTG3 Certificate Authority, C=US, ST=California, L=Redwood City, O=\"Electronic Arts, Inc.\", OU=Online Technology Group, emailAddress=dirtysock-contact@ea.com";
         var SubjectDN = "C=US, ST=California, O=\"Electronic Arts, Inc.\", OU=Online Technology Group, CN=fesl.ea.com, emailAddress=fesl@ea.com";
 
         if (proxySettings.MirrorCertificateStrings)
         {
-            (IssuerDN, SubjectDN) = TlsCertDumper.DumpPubFeslCert(proxySettings.ServerAddress, _settings.Value.FeslPort);
+            (IssuerDN, SubjectDN) = TlsCertDumper.DumpPubFeslCert(proxySettings.ServerAddress, proxySettings.ServerPort);
             _logger.LogWarning("Certificate strings copied from upstream: {address}", proxySettings.ServerAddress);
         }
 
@@ -121,7 +121,7 @@ public class FeslHostedService : IHostedService
             return;
         }
 
-        if (_proxySettings.Value.EnableProxy)
+        if (_feslSettings.Value.EnableProxy)
         {
             await HandleAsProxy(serverProtocol, crypto, _cts.Token);
             return;
@@ -134,7 +134,7 @@ public class FeslHostedService : IHostedService
     private async Task HandleAsProxy(TlsServerProtocol protocol, Rc4TlsCrypto crypto, CancellationToken ct)
     {
         var proxy = new TlsClientProxy(protocol, crypto);
-        await proxy.StartProxy(_settings.Value, _proxySettings.Value);
+        await proxy.StartProxy(_settings.Value, _feslSettings.Value);
     }
 
     public Task StopAsync(CancellationToken cancellationToken)

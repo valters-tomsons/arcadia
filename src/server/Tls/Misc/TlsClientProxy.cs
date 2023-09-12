@@ -16,13 +16,13 @@ public class TlsClientProxy
         _crypto = crypto;
     }
 
-    public async Task StartProxy(ArcadiaSettings config, FeslProxySettings proxyConfig)
+    public async Task StartProxy(ArcadiaSettings config, FeslSettings proxyConfig)
     {
         InitializeUpstreamClient(config, proxyConfig);
         await StartProxying();
     }
 
-    private void InitializeUpstreamClient(ArcadiaSettings config, FeslProxySettings proxyConfig)
+    private void InitializeUpstreamClient(ArcadiaSettings config, FeslSettings proxyConfig)
     {
         Console.WriteLine($"Connecting to upstream {proxyConfig.ServerAddress}:{config.FeslPort}");
 

@@ -32,7 +32,7 @@ var host = Host.CreateDefaultBuilder()
         services.AddSingleton<CertGenerator>();
 
         services.Configure<ArcadiaSettings>(config.GetSection(nameof(ArcadiaSettings)));
-        services.Configure<FeslProxySettings>(config.GetSection(nameof(FeslProxySettings)));
+        services.Configure<FeslSettings>(config.GetSection(nameof(FeslSettings)));
 
         services.AddScoped(_ => new Rc4TlsCrypto(true));
         services.AddScoped<FeslHandler>();
