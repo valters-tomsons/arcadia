@@ -113,6 +113,7 @@ public class TheaterHandler
         await _network.WriteAsync(data);
     }
 
+    // CreateGame
     private async Task HandleCGAM(Packet request)
     {
         // !TODO: set gid to a valid game id
@@ -137,6 +138,7 @@ public class TheaterHandler
         await _network.WriteAsync(data);
     }
 
+    // LeaveGame
     private async Task HandleECNL(Packet request)
     {
         // !TODO: set gid to a valid game id
@@ -155,6 +157,7 @@ public class TheaterHandler
         await _network.WriteAsync(data);
     }
 
+    // EnterGameRequest
     private async Task HandleEGAM(Packet request)
     {
         var response = new Dictionary<string, object>
