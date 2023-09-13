@@ -26,7 +26,9 @@ public class TheaterHandler
             ["USER"] = HandleUSER,
             ["CGAM"] = HandleCGAM,
             ["ECNL"] = HandleECNL,
-            ["EGAM"] = HandleEGAM
+            ["EGAM"] = HandleEGAM,
+            ["EGRS"] = HandleEGRS,
+            ["PENT"] = HandlePENT
         };
     }
 
@@ -121,11 +123,14 @@ public class TheaterHandler
         // !TODO: set gid to a valid game id
         // !TODO: figure out ekey and secret
 
+        _sessionCache["UGID"] = request.DataDict["UGID"];
+        _sessionCache["EKEY"] = "Esnq0vjAFedKXcUZKtpOWw%3d%3d";
+
         var response = new Dictionary<string, object>
         {
             ["TID"] = request.DataDict["TID"],
             ["MAX-PLAYERS"] = request.DataDict["MAX-PLAYERS"],
-            ["EKEY"] = "AIBSgPFqRDg0TfdXW1zUGa4%3d",
+            ["EKEY"] = _sessionCache["EKEY"],
             ["UGID"] = request.DataDict["UGID"],
             ["JOIN"] = request.DataDict["JOIN"],
             ["SECRET"] = "ivR7O1eYEzUQLcwnt8/dsGKE0T1W81JZ8BhkMcEpRdiYwV/oy9gMyTp5DpckPOl4GK1tmraNiN3ugPm11NfuBg%3d%3d",
@@ -165,6 +170,7 @@ public class TheaterHandler
         _sessionCache["R-INT-PORT"] = request.DataDict["R-INT-PORT"];
         _sessionCache["R-INT-IP"] = request.DataDict["R-INT-IP"];
         _sessionCache["PORT"] = request.DataDict["PORT"];
+        _sessionCache["TID"] = request.DataDict["TID"];
 
         var response = new Dictionary<string, object>
         {
@@ -178,8 +184,36 @@ public class TheaterHandler
 
         await _network.WriteAsync(data);
 
-        await Task.Delay(200);
         await SendEGRQ();
+    }
+
+    private async Task HandleEGRS(Packet request)
+    {
+        var serverInfo = new Dictionary<string, object>
+        {
+            ["TID"] = request.DataDict["TID"]
+        };
+
+        var packet = new Packet("EGRS", 0x00000000, serverInfo);
+        var data = await packet.ToPacket(0);
+
+        await _network.WriteAsync(data);
+
+        await SendEGEG();
+    }
+
+    private async Task HandlePENT(Packet request)
+    {
+        var serverInfo = new Dictionary<string, object>
+        {
+            ["TID"] = request.DataDict["TID"],
+            ["PID"] = request.DataDict["PID"],
+        };
+
+        var packet = new Packet("PENT", 0x00000000, serverInfo);
+        var data = await packet.ToPacket(0);
+
+        await _network.WriteAsync(data);
     }
 
     private async Task SendEGRQ()
@@ -196,7 +230,7 @@ public class TheaterHandler
             ["PID"] = 1,
             ["UID"] = 1000000000000,
             ["IP"] = "192.168.0.164",
-            ["LID"] = 257,
+            ["LID"] = 255,
             ["GID"] = 801000
         };
 
@@ -204,6 +238,31 @@ public class TheaterHandler
         var data = await packet.ToPacket(0);
 
         _logger.LogTrace("Sending EGRQ to client at {endpoint}", _clientEndpoint);
+        await _network.WriteAsync(data);
+    }
+
+    private async Task SendEGEG()
+    {
+        var serverInfo = new Dictionary<string, object>
+        {
+            ["PL"] = "ps3",
+            ["TICKET"] = "-479505973",
+            ["PID"] = 1,
+            ["P"] = 10000,
+            ["HUID"] = "1006895385784",
+            ["INT-PORT"] = _sessionCache["PORT"],
+            ["EKEY"] = _sessionCache["EKEY"],
+            ["INT-IP"] = _sessionCache["R-INT-IP"],
+            ["UGID"] = _sessionCache["UGID"],
+            ["I"] = "192.168.0.164",
+            ["LID"] = 255,
+            ["GID"] = 801000
+        };
+
+        var packet = new Packet("EGEG", 0x00000000, serverInfo);
+        var data = await packet.ToPacket(0);
+
+        _logger.LogTrace("Sending EGEG to client at {endpoint}", _clientEndpoint);
         await _network.WriteAsync(data);
     }
 }
