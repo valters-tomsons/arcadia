@@ -24,7 +24,7 @@ var host = Host.CreateDefaultBuilder()
             log.AddSimpleConsole(x => {
                 x.IncludeScopes = false;
                 x.SingleLine = true;
-                x.TimestampFormat = "[HH:mm:ss] ";
+                x.TimestampFormat = "[HH:mm:ss::fff] ";
                 x.ColorBehavior = LoggerColorBehavior.Enabled;
             });
         });
