@@ -137,28 +137,35 @@ public class FeslHandler
 
     private async Task HandlePlayNow()
     {
-        var responseData = new Dictionary<string, object>
+        var data1 = new Dictionary<string, object>
         {
             { "TXN", "Start" },
-            { "partition.partition", "/ps3/BEACH" },
-            { "debugLevel", "off" },
-            { "version", 1 },
-            { "players.[]", 1 },
-            { "players.0.ownerId", $"{_playerId}" },
-            { "players.0.ownerType", 1 },
-            { "players.0.props.{sessionType}", "findServer" },
-            { "players.0.props.{name}", _username },
-            { "players.0.props.{firewallType}", "strict" },
-            { "players.0.props.{poolMaxPlayers}", 1 },
-            { "players.0.props.{poolTimeout}", 30 },
-            { "players.0.props.{poolTargetPlayers}", "0:1" },
-            { "players.0.props.{ping}", "eu1:-3|na2:-3|na1:-3|nrt:264" },
+            { "id.id", 351158 },
+            { "id.partition", "/ps3/BEACH" },
         };
 
-        var packet = new Packet("pnow", 0x80000000, responseData);
-        var response = await packet.ToPacket(_feslTicketId);
+        var packet1 = new Packet("pnow", 0x80000000, data1);
+        var response1 = await packet1.ToPacket(_feslTicketId);
+        _network.WriteApplicationData(response1.AsSpan());
 
-        _network.WriteApplicationData(response.AsSpan());
+        var data2 = new Dictionary<string, object>
+        {
+            { "TXN", "Status" },
+            { "id.id", 351158 },
+            { "id.partition", "/ps3/BEACH" },
+            { "sessionState", "COMPLETE" },
+            { "props.{}", 3 },
+            { "props.{resultType}", "JOIN" },
+            { "props.{avgFit}", "0.8182313914386985" },
+            { "props.{games}.[]", 1 },
+            { "props.{games}.0.gid", 801000 },
+            { "props.{games}.0.lid", 255 }
+        };
+
+        var packet2 = new Packet("pnow", 0x80000000, data2);
+        var response2 = await packet2.ToPacket(_feslTicketId);
+        _network.WriteApplicationData(response2.AsSpan());
+
     }
 
     private async Task HandleGetStats(Packet request)
