@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Net.Sockets;
+using System.Text;
 using Arcadia.Theater;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -15,11 +16,13 @@ public class TheaterHostedService : IHostedService
     private readonly ILogger<TheaterHostedService> _logger;
 
     private readonly ConcurrentBag<Task> _activeConnections = new();
-    private readonly TcpListener _listener;
+    private readonly TcpListener _tcpListener;
+    private readonly UdpClient _udpListener;
 
     private CancellationTokenSource _cts = null!;
 
-    private Task? _server;
+    private Task? _tcpServer;
+    private Task? _udpServer;
 
     public TheaterHostedService(IOptions<ArcadiaSettings> settings, ILogger<TheaterHostedService> logger, IServiceScopeFactory scopeFactory)
     {
@@ -28,27 +31,39 @@ public class TheaterHostedService : IHostedService
 
         _settings = settings;
 
-        _listener = new TcpListener(System.Net.IPAddress.Any, _settings.Value.TheaterPort);
+        _tcpListener = new TcpListener(System.Net.IPAddress.Any, _settings.Value.TheaterPort);
+        _udpListener = new UdpClient(_settings.Value.TheaterPort);
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-        _listener.Start();
-        _logger.LogInformation("Theater listening on port tcp:{port}", _settings.Value.TheaterPort);
-
-        _server = Task.Run(async () =>
+        _tcpListener.Start();
+        _tcpServer = Task.Run(async () =>
         {
+            _logger.LogInformation("Theater listening on port tcp:{port}", _settings.Value.TheaterPort);
+
             while (!_cts.Token.IsCancellationRequested)
             {
-                var tcpClient = await _listener.AcceptTcpClientAsync(_cts.Token);
+                var tcpClient = await _tcpListener.AcceptTcpClientAsync(_cts.Token);
                 var clientEndpoint = tcpClient.Client.RemoteEndPoint!.ToString()!;
 
-                _logger.LogInformation("Opening connection from: {clientEndpoint}", clientEndpoint);
+                _logger.LogInformation("Opening TCP connection from: {clientEndpoint}", clientEndpoint);
 
                 var connection = Task.Run(async () => await HandleConnection(tcpClient, clientEndpoint), _cts.Token);
                 _activeConnections.Add(connection);
+            }
+        }, _cts.Token);
+
+        _udpServer = Task.Run(async () =>
+        {
+            _logger.LogInformation("Theater listening on port udp:{port}", _settings.Value.TheaterPort);
+
+            while (!_cts.Token.IsCancellationRequested)
+            {
+                var udpClient = await _udpListener.ReceiveAsync(_cts.Token);
+                _logger.LogInformation("UDP: {data}", Encoding.ASCII.GetString(udpClient.Buffer));
             }
         }, _cts.Token);
 
@@ -67,14 +82,14 @@ public class TheaterHostedService : IHostedService
     public async Task StopAsync(CancellationToken cancellationToken)
     {
         _cts.Cancel();
-        _listener.Stop();
+        _tcpListener.Stop();
 
         await Task.Delay(200, cancellationToken);
 
-        if (_server is not null || _server!.IsCompleted)
+        if (_tcpServer is not null || _tcpServer!.IsCompleted)
         {
             _logger.LogCritical("Waiting for connections to close...");
-            await _server.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
+            await _tcpServer.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
         }
     }
 }
