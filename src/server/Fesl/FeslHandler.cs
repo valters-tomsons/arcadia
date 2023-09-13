@@ -327,15 +327,24 @@ public class FeslHandler
         //     loginResponseData.Add("errorCode", "122");
         // }
 
-        if (!tosAccepted || string.IsNullOrEmpty(tosAcceptedValue as string))
-        {
-            loginResponseData.Add("TXN", request.Type);
-            loginResponseData.Add( "localizedMessage", "The user was not found" );
-            loginResponseData.Add( "errorContainer.[]", 0 );
-            loginResponseData.Add( "errorCode", 101 );
-        }
-        else
-        {
+        // if (!tosAccepted || string.IsNullOrEmpty(tosAcceptedValue as string))
+        // {
+        //     loginResponseData.Add("TXN", request.Type);
+        //     loginResponseData.Add( "localizedMessage", "The user was not found" );
+        //     loginResponseData.Add( "errorContainer.[]", 0 );
+        //     loginResponseData.Add( "errorCode", 101 );
+        // }
+        // else
+        // {
+        //     const string keyTempl = "W5NyZzx{0}Cki6GQAAKDw.";
+        //     var lkey = string.Format(keyTempl, "SaUr4131g");
+
+        //     loginResponseData.Add("lkey", lkey);
+        //     loginResponseData.Add("TXN", "NuPS3Login");
+        //     loginResponseData.Add("userId", 1000000000000);
+        //     loginResponseData.Add("personaName", "faith");
+        // }
+
             const string keyTempl = "W5NyZzx{0}Cki6GQAAKDw.";
             var lkey = string.Format(keyTempl, "SaUr4131g");
 
@@ -343,7 +352,6 @@ public class FeslHandler
             loginResponseData.Add("TXN", "NuPS3Login");
             loginResponseData.Add("userId", 1000000000000);
             loginResponseData.Add("personaName", "faith");
-        }
 
         var loginPacket = new Packet("acct", 0x80000000, loginResponseData);
         var loginResponse = await loginPacket.ToPacket(_feslTicketId);
