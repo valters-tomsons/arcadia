@@ -28,7 +28,8 @@ public class TheaterHandler
             ["ECNL"] = HandleECNL,
             ["EGAM"] = HandleEGAM,
             ["EGRS"] = HandleEGRS,
-            ["PENT"] = HandlePENT
+            ["PENT"] = HandlePENT,
+            ["GDAT"] = HandleGDAT
         };
     }
 
@@ -184,7 +185,8 @@ public class TheaterHandler
 
         await _network.WriteAsync(data);
 
-        await SendEGRQ();
+        // await SendEGRQ();
+        await SendEGEG();
     }
 
     private async Task HandleEGRS(Packet request)
@@ -213,6 +215,77 @@ public class TheaterHandler
         var packet = new Packet("PENT", 0x00000000, serverInfo);
         var data = await packet.ToPacket(0);
 
+        await _network.WriteAsync(data);
+    }
+
+    private async Task HandleGDAT(Packet request)
+    {
+        _sessionCache["TID"] = request.DataDict["TID"];
+
+        var serverInfo = new Dictionary<string, object>
+        {
+            ["JP"] = 1,
+            ["B-U-location"] = "nrt",
+            ["HN"] = "beach.server.p",
+            ["B-U-level"] = "levels/coral_sea",
+            ["N"] = "nrtps3313601",
+            ["I"] = "192.168.0.164",
+            ["J"] = 0,
+            ["HU"] = 201104017,
+            ["B-U-Time"] = "T%3a0.00 S%3a 6.65 L%3a 0.00",
+            ["V"] = "1.0",
+            ["B-U-gamemode"] = "CONQUEST",
+            ["B-U-trial"] = "RETAIL",
+            ["P"] = "38681",
+            ["B-U-balance"] = "NORMAL",
+            ["B-U-hash"] = "8FF089DA-0DE7-0470-EF0F-0D4C905B7DC5",
+            ["B-numObservers"] = 0,
+            ["TYPE"] = "G",
+            ["LID"] = 255,
+            ["B-U-Frames"] = "T%3a 205 B%3a 0",
+            ["B-version"] = "RETAIL421378",
+            ["QP"] = 0,
+            ["MP"] = 24,
+            ["B-U-type"] = "RANKED",
+            ["B-U-playgroup"] = "YES",
+            ["B-U-public"] = "YES",
+            ["GID"] = 801000,
+            ["PL"] = "PC",
+            ["B-U-elo"] = 1000,
+            ["B-maxObservers"] = 0,
+            ["PW"] = 0,
+            ["TID"] = request.DataDict["TID"],
+            ["B-U-coralsea"] = "YES",
+            ["AP"] = 0
+        };
+
+        var packet = new Packet("GDAT", 0x00000000, serverInfo);
+        var data = await packet.ToPacket(0);
+
+        await _network.WriteAsync(data);
+
+        await SendGDET();
+    }
+
+    private async Task SendGDET()
+    {
+        var serverInfo = new Dictionary<string, object>
+        {
+            ["LID"] = 255,
+            ["UGID"] = "b7b78dc5-99a8-42cb-b0e7-81184929f0bb",
+            ["GID"] = 801000,
+            ["TID"] = _sessionCache["TID"]
+        };
+
+        for (var i = 0; i < 24; i++)
+        {
+            serverInfo.Add($"D-pdat{i}", "|0|0|0|0");
+        }
+
+        var packet = new Packet("GDET", 0x00000000, serverInfo);
+        var data = await packet.ToPacket(0);
+
+        _logger.LogTrace("Sending GDET to client at {endpoint}", _clientEndpoint);
         await _network.WriteAsync(data);
     }
 
@@ -248,12 +321,13 @@ public class TheaterHandler
             ["PL"] = "ps3",
             ["TICKET"] = "-479505973",
             ["PID"] = 1,
-            ["P"] = 10000,
+            ["P"] = 1003,
             ["HUID"] = "1006895385784",
             ["INT-PORT"] = _sessionCache["PORT"],
-            ["EKEY"] = _sessionCache["EKEY"],
+            ["EKEY"] = "QKGzc59Hls7pGgQJi/jBWw%3d%3d",
             ["INT-IP"] = _sessionCache["R-INT-IP"],
-            ["UGID"] = _sessionCache["UGID"],
+            ["INT-IP"] = "192.168.0.164",
+            ["UGID"] = "b26fad9a-416c-460d-8824-83e7c4b4dd77",
             ["I"] = "192.168.0.164",
             ["LID"] = 255,
             ["GID"] = 801000
