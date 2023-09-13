@@ -14,6 +14,8 @@ public class TheaterHandler
 
     private readonly Dictionary<string, Func<Packet, Task>> _handlers;
 
+    private readonly Dictionary<string, object> _sessionCache = new();
+
     public TheaterHandler(ILogger<TheaterHandler> logger)
     {
         _logger = logger;
@@ -81,10 +83,10 @@ public class TheaterHandler
 
         var response = new Dictionary<string, object>
         {
+            ["TIME"] = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             ["TID"] = tid,
-            ["PROT"] = prot,
-            ["TIME"] = 0,
             ["activityTimeoutSecs"] = 240,
+            ["PROT"] = prot
         };
 
         var packet = new Packet("CONN", 0x00000000, response);
@@ -103,8 +105,8 @@ public class TheaterHandler
 
         var response = new Dictionary<string, object>
         {
-            ["TID"] = request.DataDict["TID"],
-            ["NAME"] = "faith"
+            ["NAME"] = "faith",
+            ["TID"] = request.DataDict["TID"]
         };
 
         var packet = new Packet("USER", 0x00000000, response);
@@ -126,10 +128,10 @@ public class TheaterHandler
             ["EKEY"] = "AIBSgPFqRDg0TfdXW1zUGa4%3d",
             ["UGID"] = request.DataDict["UGID"],
             ["JOIN"] = request.DataDict["JOIN"],
-            ["SECRET"] = "4l94N6Y0A3Il3+kb55pVfK6xRjc+Z6sGNuztPeNGwN5CMwC7ZlE/lwel07yciyZ5y3bav7whbzHugPm11NfuBg%3d%3d",
-            ["LID"] = 1,
+            ["SECRET"] = "ivR7O1eYEzUQLcwnt8/dsGKE0T1W81JZ8BhkMcEpRdiYwV/oy9gMyTp5DpckPOl4GK1tmraNiN3ugPm11NfuBg%3d%3d",
+            ["LID"] = 255,
             ["J"] = request.DataDict["JOIN"],
-            ["GID"] = 1
+            ["GID"] = 801000
         };
 
         var packet = new Packet("CGAM", 0x00000000, response);
@@ -160,6 +162,10 @@ public class TheaterHandler
     // EnterGameRequest
     private async Task HandleEGAM(Packet request)
     {
+        _sessionCache["R-INT-PORT"] = request.DataDict["R-INT-PORT"];
+        _sessionCache["R-INT-IP"] = request.DataDict["R-INT-IP"];
+        _sessionCache["PORT"] = request.DataDict["PORT"];
+
         var response = new Dictionary<string, object>
         {
             ["TID"] = request.DataDict["TID"],
@@ -170,6 +176,34 @@ public class TheaterHandler
         var packet = new Packet("EGAM", 0x00000000, response);
         var data = await packet.ToPacket(0);
 
+        await _network.WriteAsync(data);
+
+        await Task.Delay(200);
+        await SendEGRQ();
+    }
+
+    private async Task SendEGRQ()
+    {
+        var serverInfo = new Dictionary<string, object>
+        {
+            ["R-INT-PORT"] = _sessionCache["R-INT-PORT"],
+            ["R-INT-IP"] = _sessionCache["R-INT-IP"],
+            ["PORT"] = _sessionCache["PORT"],
+            ["NAME"] = "faith",
+            ["PTYPE"] = "P",
+            ["TICKET"] = "-479505973",
+            ["PID"] = 1,
+            ["PID"] = 1,
+            ["UID"] = 1000000000000,
+            ["IP"] = "192.168.0.164",
+            ["LID"] = 257,
+            ["GID"] = 801000
+        };
+
+        var packet = new Packet("EGRQ", 0x00000000, serverInfo);
+        var data = await packet.ToPacket(0);
+
+        _logger.LogTrace("Sending EGRQ to client at {endpoint}", _clientEndpoint);
         await _network.WriteAsync(data);
     }
 }
