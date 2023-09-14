@@ -110,6 +110,10 @@ public class FeslHandler
             {
                 await HandlePresenceSubscribe();
             }
+            else if(reqPacket.Type == "pres" && reqTxn == "SetPresenceStatus")
+            {
+                await HandleSetPresenceStatus();
+            }
             else if (reqPacket.Type == "rank" && reqTxn == "GetStats")
             {
                 await HandleGetStats(reqPacket);
@@ -202,6 +206,19 @@ public class FeslHandler
             { "responses.[]", "1" },
             { "responses.0.owner.type", "1" },
             { "responses.0.owner.id", _playerId },
+        };
+
+        var packet = new Packet("pres", 0x80000000, responseData);
+        var response = await packet.ToPacket(_feslTicketId);
+
+        _network.WriteApplicationData(response.AsSpan());
+    }
+
+    private async Task HandleSetPresenceStatus()
+    {
+        var responseData = new Dictionary<string, object>
+        {
+            { "TXN", "SetPresenceStatus" },
         };
 
         var packet = new Packet("pres", 0x80000000, responseData);
