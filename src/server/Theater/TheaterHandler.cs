@@ -326,7 +326,6 @@ public class TheaterHandler
             ["INT-PORT"] = _sessionCache["PORT"],
             ["EKEY"] = "QKGzc59Hls7pGgQJi/jBWw%3d%3d",
             ["INT-IP"] = _sessionCache["R-INT-IP"],
-            ["INT-IP"] = "192.168.0.164",
             ["UGID"] = "b26fad9a-416c-460d-8824-83e7c4b4dd77",
             ["I"] = "192.168.0.164",
             ["LID"] = 255,
