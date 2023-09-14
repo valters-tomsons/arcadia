@@ -321,13 +321,16 @@ public class TheaterHandler
             ["PL"] = "ps3",
             ["TICKET"] = "-479505973",
             ["PID"] = 1,
-            ["P"] = 1003,
             ["HUID"] = "1006895385784",
-            ["INT-PORT"] = _sessionCache["PORT"],
             ["EKEY"] = "QKGzc59Hls7pGgQJi/jBWw%3d%3d",
-            ["INT-IP"] = _sessionCache["R-INT-IP"],
             ["UGID"] = "b26fad9a-416c-460d-8824-83e7c4b4dd77",
+
+            ["INT-IP"] = _sessionCache["R-INT-IP"],
+            ["INT-PORT"] = _sessionCache["PORT"],
+
             ["I"] = "192.168.0.164",
+            ["P"] = 1003,
+
             ["LID"] = 255,
             ["GID"] = 801000
         };
