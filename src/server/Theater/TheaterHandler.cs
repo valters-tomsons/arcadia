@@ -16,6 +16,9 @@ public class TheaterHandler
 
     private readonly Dictionary<string, object> _sessionCache = new();
 
+    private readonly string _serverIp = "192.168.0.164"; 
+    private readonly int _serverPort = 1003;
+
     public TheaterHandler(ILogger<TheaterHandler> logger)
     {
         _logger = logger;
@@ -229,14 +232,14 @@ public class TheaterHandler
             ["HN"] = "beach.server.p",
             ["B-U-level"] = "levels/coral_sea",
             ["N"] = "nrtps3313601",
-            ["I"] = "192.168.0.164",
+            ["I"] = _serverIp,
             ["J"] = 0,
             ["HU"] = 201104017,
             ["B-U-Time"] = "T%3a0.00 S%3a 6.65 L%3a 0.00",
             ["V"] = "1.0",
             ["B-U-gamemode"] = "CONQUEST",
             ["B-U-trial"] = "RETAIL",
-            ["P"] = "38681",
+            ["P"] = 38681,
             ["B-U-balance"] = "NORMAL",
             ["B-U-hash"] = "8FF089DA-0DE7-0470-EF0F-0D4C905B7DC5",
             ["B-numObservers"] = 0,
@@ -289,6 +292,34 @@ public class TheaterHandler
         await _network.WriteAsync(data);
     }
 
+    private async Task SendEGEG()
+    {
+        var serverInfo = new Dictionary<string, object>
+        {
+            ["PL"] = "ps3",
+            ["TICKET"] = "-479505973",
+            ["PID"] = 1,
+            ["HUID"] = "",
+            ["EKEY"] = "",
+            ["UGID"] = "",
+
+            ["INT-IP"] = _serverIp,
+            ["INT-PORT"] = _serverPort,
+
+            ["I"] = _serverIp,
+            ["P"] = _serverPort,
+
+            ["LID"] = 255,
+            ["GID"] = 801000
+        };
+
+        var packet = new Packet("EGEG", 0x00000000, serverInfo);
+        var data = await packet.ToPacket(0);
+
+        _logger.LogTrace("Sending EGEG to client at {endpoint}", _clientEndpoint);
+        await _network.WriteAsync(data);
+    }
+
     private async Task SendEGRQ()
     {
         var serverInfo = new Dictionary<string, object>
@@ -311,34 +342,6 @@ public class TheaterHandler
         var data = await packet.ToPacket(0);
 
         _logger.LogTrace("Sending EGRQ to client at {endpoint}", _clientEndpoint);
-        await _network.WriteAsync(data);
-    }
-
-    private async Task SendEGEG()
-    {
-        var serverInfo = new Dictionary<string, object>
-        {
-            ["PL"] = "ps3",
-            ["TICKET"] = "-479505973",
-            ["PID"] = 1,
-            ["HUID"] = "1006895385784",
-            ["EKEY"] = "QKGzc59Hls7pGgQJi/jBWw%3d%3d",
-            ["UGID"] = "b26fad9a-416c-460d-8824-83e7c4b4dd77",
-
-            ["INT-IP"] = _sessionCache["R-INT-IP"],
-            ["INT-PORT"] = _sessionCache["PORT"],
-
-            ["I"] = "192.168.0.164",
-            ["P"] = 1003,
-
-            ["LID"] = 255,
-            ["GID"] = 801000
-        };
-
-        var packet = new Packet("EGEG", 0x00000000, serverInfo);
-        var data = await packet.ToPacket(0);
-
-        _logger.LogTrace("Sending EGEG to client at {endpoint}", _clientEndpoint);
         await _network.WriteAsync(data);
     }
 }
