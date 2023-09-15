@@ -366,7 +366,7 @@ public class FeslHandler
         //     loginResponseData.Add("lkey", lkey);
         //     loginResponseData.Add("TXN", "NuPS3Login");
         //     loginResponseData.Add("userId", 1000000000000);
-        //     loginResponseData.Add("personaName", "faith");
+        //     loginResponseData.Add("personaName", "arcadia_ps3");
         // }
 
             const string keyTempl = "W5NyZzx{0}Cki6GQAAKDw.";
@@ -375,7 +375,7 @@ public class FeslHandler
             loginResponseData.Add("lkey", lkey);
             loginResponseData.Add("TXN", "NuPS3Login");
             loginResponseData.Add("userId", 1000000000000);
-            loginResponseData.Add("personaName", "faith");
+            loginResponseData.Add("personaName", "arcadia_ps3");
 
         var loginPacket = new Packet("acct", 0x80000000, loginResponseData);
         var loginResponse = await loginPacket.ToPacket(_feslTicketId);

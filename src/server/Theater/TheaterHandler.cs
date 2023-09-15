@@ -111,7 +111,7 @@ public class TheaterHandler
 
         var response = new Dictionary<string, object>
         {
-            ["NAME"] = "faith",
+            ["NAME"] = "arcadia-ps3",
             ["TID"] = request.DataDict["TID"]
         };
 
@@ -327,7 +327,7 @@ public class TheaterHandler
             ["R-INT-PORT"] = _sessionCache["R-INT-PORT"],
             ["R-INT-IP"] = _sessionCache["R-INT-IP"],
             ["PORT"] = _sessionCache["PORT"],
-            ["NAME"] = "faith",
+            ["NAME"] = "arcadia-ps3",
             ["PTYPE"] = "P",
             ["TICKET"] = "-479505973",
             ["PID"] = 1,
