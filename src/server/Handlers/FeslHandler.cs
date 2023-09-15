@@ -4,19 +4,17 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Org.BouncyCastle.Tls;
 
-namespace Arcadia.Fesl;
+namespace Arcadia.Handlers;
 
 public class FeslHandler
 {
     private readonly ILogger<FeslHandler> _logger;
     private readonly IOptions<ArcadiaSettings> _settings;
-    private readonly IOptions<FeslSettings> _feslSettings;
 
-    public FeslHandler(ILogger<FeslHandler> logger, IOptions<ArcadiaSettings> settings, IOptions<FeslSettings> feslSettings)
+    public FeslHandler(ILogger<FeslHandler> logger, IOptions<ArcadiaSettings> settings)
     {
         _logger = logger;
         _settings = settings;
-        _feslSettings = feslSettings;
     }
 
     private TlsServerProtocol _network = null!;
@@ -314,6 +312,7 @@ public class FeslHandler
         var helloResponse = await helloPacket.ToPacket(_feslTicketId);
 
         _network.WriteApplicationData(helloResponse.AsSpan());
+
         await SendMemCheck();
     }
 

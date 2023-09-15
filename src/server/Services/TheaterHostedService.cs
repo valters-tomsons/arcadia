@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Net.Sockets;
 using System.Text;
-using Arcadia.Theater;
+using Arcadia.Handlers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;

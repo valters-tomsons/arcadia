@@ -3,7 +3,7 @@ using System.Text;
 using Arcadia.EA;
 using Microsoft.Extensions.Logging;
 
-namespace Arcadia.Theater;
+namespace Arcadia.Handlers;
 
 public class TheaterHandler
 {
@@ -91,7 +91,7 @@ public class TheaterHandler
         {
             ["TIME"] = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             ["TID"] = tid,
-            ["activityTimeoutSecs"] = 240,
+            ["activityTimeoutSecs"] = 0,
             ["PROT"] = prot
         };
 
@@ -128,7 +128,7 @@ public class TheaterHandler
         // !TODO: figure out ekey and secret
 
         _sessionCache["UGID"] = request.DataDict["UGID"];
-        _sessionCache["EKEY"] = "Esnq0vjAFedKXcUZKtpOWw%3d%3d";
+        _sessionCache["EKEY"] = "";
 
         var response = new Dictionary<string, object>
         {
@@ -137,7 +137,7 @@ public class TheaterHandler
             ["EKEY"] = _sessionCache["EKEY"],
             ["UGID"] = request.DataDict["UGID"],
             ["JOIN"] = request.DataDict["JOIN"],
-            ["SECRET"] = "ivR7O1eYEzUQLcwnt8/dsGKE0T1W81JZ8BhkMcEpRdiYwV/oy9gMyTp5DpckPOl4GK1tmraNiN3ugPm11NfuBg%3d%3d",
+            ["SECRET"] = "",
             ["LID"] = 255,
             ["J"] = request.DataDict["JOIN"],
             ["GID"] = 801000
@@ -171,11 +171,6 @@ public class TheaterHandler
     // EnterGameRequest
     private async Task HandleEGAM(Packet request)
     {
-        _sessionCache["R-INT-PORT"] = request.DataDict["R-INT-PORT"];
-        _sessionCache["R-INT-IP"] = request.DataDict["R-INT-IP"];
-        _sessionCache["PORT"] = request.DataDict["PORT"];
-        _sessionCache["TID"] = request.DataDict["TID"];
-
         var response = new Dictionary<string, object>
         {
             ["TID"] = request.DataDict["TID"],
@@ -188,7 +183,7 @@ public class TheaterHandler
 
         await _network.WriteAsync(data);
 
-        // await SendEGRQ();
+        await SendEGRQ();
         await SendEGEG();
     }
 
@@ -241,7 +236,7 @@ public class TheaterHandler
             ["B-U-trial"] = "RETAIL",
             ["P"] = 38681,
             ["B-U-balance"] = "NORMAL",
-            ["B-U-hash"] = "8FF089DA-0DE7-0470-EF0F-0D4C905B7DC5",
+            ["B-U-hash"] = "2AC3F219-3614-F46A-843B-A02E03E849E1",
             ["B-numObservers"] = 0,
             ["TYPE"] = "G",
             ["LID"] = 255,
@@ -275,7 +270,7 @@ public class TheaterHandler
         var serverInfo = new Dictionary<string, object>
         {
             ["LID"] = 255,
-            ["UGID"] = "b7b78dc5-99a8-42cb-b0e7-81184929f0bb",
+            ["UGID"] = "2AC3F219-3614-F46A-843B-A02E03E849E1",
             ["GID"] = 801000,
             ["TID"] = _sessionCache["TID"]
         };
@@ -324,16 +319,16 @@ public class TheaterHandler
     {
         var serverInfo = new Dictionary<string, object>
         {
-            ["R-INT-PORT"] = _sessionCache["R-INT-PORT"],
-            ["R-INT-IP"] = _sessionCache["R-INT-IP"],
-            ["PORT"] = _sessionCache["PORT"],
+            ["R-INT-PORT"] = _serverPort,
+            ["R-INT-IP"] = _serverIp,
+            ["PORT"] = _serverPort,
+            ["IP"] = _serverIp,
             ["NAME"] = "arcadia-ps3",
             ["PTYPE"] = "P",
             ["TICKET"] = "-479505973",
             ["PID"] = 1,
             ["PID"] = 1,
             ["UID"] = 1000000000000,
-            ["IP"] = "192.168.0.164",
             ["LID"] = 255,
             ["GID"] = 801000
         };
