@@ -1,5 +1,6 @@
 using System.Globalization;
 using Arcadia.EA;
+using Arcadia.Storage;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Org.BouncyCastle.Tls;
@@ -10,20 +11,22 @@ public class FeslHandler
 {
     private readonly ILogger<FeslHandler> _logger;
     private readonly IOptions<ArcadiaSettings> _settings;
+    private readonly SharedCounters _sharedCounters;
+    private readonly SharedCache _sharedCache;
 
-    public FeslHandler(ILogger<FeslHandler> logger, IOptions<ArcadiaSettings> settings)
+    public FeslHandler(ILogger<FeslHandler> logger, IOptions<ArcadiaSettings> settings, SharedCounters sharedCounters, SharedCache sharedCache)
     {
         _logger = logger;
         _settings = settings;
+        _sharedCounters = sharedCounters;
+        _sharedCache = sharedCache;
     }
 
+    private readonly Dictionary<string, object> _sessionCache = new();
     private TlsServerProtocol _network = null!;
     private string _clientEndpoint = null!;
 
     private uint _feslTicketId;
-
-    private readonly long _playerId = 1000000001337;
-    private string _username = string.Empty;
 
     public async Task HandleClientConnection(TlsServerProtocol network, string clientEndpoint)
     {
@@ -139,10 +142,14 @@ public class FeslHandler
 
     private async Task HandlePlayNow()
     {
+        var pnowId = _sharedCounters.GetNextPnowId();
+        var gid = _sharedCounters.GetNextGameId();
+        var lid = _sharedCounters.GetNextLobbyId();
+
         var data1 = new Dictionary<string, object>
         {
             { "TXN", "Start" },
-            { "id.id", 351158 },
+            { "id.id", pnowId },
             { "id.partition", "/ps3/BEACH" },
         };
 
@@ -153,15 +160,15 @@ public class FeslHandler
         var data2 = new Dictionary<string, object>
         {
             { "TXN", "Status" },
-            { "id.id", 351158 },
+            { "id.id", pnowId },
             { "id.partition", "/ps3/BEACH" },
             { "sessionState", "COMPLETE" },
             { "props.{}", 3 },
             { "props.{resultType}", "JOIN" },
             { "props.{avgFit}", "0.8182313914386985" },
             { "props.{games}.[]", 1 },
-            { "props.{games}.0.gid", 801000 },
-            { "props.{games}.0.lid", 255 }
+            { "props.{games}.0.gid", gid },
+            { "props.{games}.0.lid", lid }
         };
 
         var packet2 = new Packet("pnow", 0x80000000, data2);
@@ -203,7 +210,7 @@ public class FeslHandler
             { "responses.0.outcome", "0" },
             { "responses.[]", "1" },
             { "responses.0.owner.type", "1" },
-            { "responses.0.owner.id", _playerId },
+            { "responses.0.owner.id", _sessionCache["UID"] },
         };
 
         var packet = new Packet("pres", 0x80000000, responseData);
@@ -227,13 +234,11 @@ public class FeslHandler
 
     private async Task HandleLookupUserInfo(Packet reqPacket)
     {
-        _username = reqPacket.DataDict["userInfo.0.userName"] as string ?? string.Empty;
-
         var responseData = new Dictionary<string, object>
         {
             { "TXN", "NuLookupUserInfo" },
             { "userInfo.[]", "1" },
-            { "userInfo.0.userName", _username },
+            { "userInfo.0.userName", _sessionCache["personaName"] },
         };
 
         var packet = new Packet("acct", 0x80000000, responseData);
@@ -250,7 +255,7 @@ public class FeslHandler
             { "TXN", "GetAssociations" },
             { "domainPartition.domain", request.DataDict["domainPartition.domain"] },
             { "domainPartition.subDomain", request.DataDict["domainPartition.subDomain"] },
-            { "owner.id", _playerId },
+            { "owner.id", _sessionCache["UID"] },
             { "owner.type", "1" },
             { "type", assoType },
             { "members.[]", "0" },
@@ -259,7 +264,7 @@ public class FeslHandler
         if (assoType == "PlasmaMute")
         {
             responseData.Add("maxListSize", 100);
-            responseData.Add("owner.name", _username);
+            responseData.Add("owner.name", _sessionCache["personaName"]);
         }
         else
         {
@@ -338,10 +343,8 @@ public class FeslHandler
         var encryptedSet = request.DataDict.TryGetValue("returnEncryptedInfo", out var returnEncryptedInfo);
         _logger.LogTrace("returnEncryptedInfo: {returnEncryptedInfo} ({encryptedSet})", returnEncryptedInfo, encryptedSet);
 
-        var loginResponseData = new Dictionary<string, object>();
 
-        var tosAccepted = request.DataDict.TryGetValue("tosVersion", out var tosAcceptedValue);
-
+        // var tosAccepted = request.DataDict.TryGetValue("tosVersion", out var tosAcceptedValue);
         // if (false)
         // {
         //     loginResponseData.Add("TXN", request.Type);
@@ -368,13 +371,19 @@ public class FeslHandler
         //     loginResponseData.Add("personaName", "arcadia_ps3");
         // }
 
-            const string keyTempl = "W5NyZzx{0}Cki6GQAAKDw.";
-            var lkey = string.Format(keyTempl, "SaUr4131g");
+        _sessionCache["LKEY"] = _sharedCounters.GetNextLkey();
+        _sessionCache["UID"] = _sharedCounters.GetNextUserId();
+        _sessionCache["personaName"] = "arcadia_ps3";
 
-            loginResponseData.Add("lkey", lkey);
-            loginResponseData.Add("TXN", "NuPS3Login");
-            loginResponseData.Add("userId", 1000000000000);
-            loginResponseData.Add("personaName", "arcadia_ps3");
+        _sharedCache.AddUserWithKey((string)_sessionCache["LKEY"], (string)_sessionCache["personaName"]);
+
+        var loginResponseData = new Dictionary<string, object>
+        {
+            { "TXN", "NuPS3Login" },
+            { "lkey", _sessionCache["LKEY"] },
+            { "userId", _sessionCache["UID"] },
+            { "personaName", _sessionCache["personaName"] }
+        };
 
         var loginPacket = new Packet("acct", 0x80000000, loginResponseData);
         var loginResponse = await loginPacket.ToPacket(_feslTicketId);

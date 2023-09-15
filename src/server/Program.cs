@@ -8,6 +8,7 @@ using Microsoft.Extensions.Hosting;
 using Arcadia.EA;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
+using Arcadia.Storage;
 
 var config = new ConfigurationBuilder()
     .SetBasePath(Directory.GetCurrentDirectory())
@@ -29,6 +30,8 @@ var host = Host.CreateDefaultBuilder()
         });
 
         services.AddSingleton<CertGenerator>();
+        services.AddSingleton<SharedCounters>();
+        services.AddSingleton<SharedCache>();
 
         services.Configure<ArcadiaSettings>(config.GetSection(nameof(ArcadiaSettings)));
         services.Configure<FeslSettings>(config.GetSection(nameof(FeslSettings)));

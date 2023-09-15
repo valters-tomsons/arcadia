@@ -1,6 +1,7 @@
 using System.Net.Sockets;
 using System.Text;
 using Arcadia.EA;
+using Arcadia.Storage;
 using Microsoft.Extensions.Logging;
 
 namespace Arcadia.Handlers;
@@ -11,6 +12,8 @@ public class TheaterHandler
     private string _clientEndpoint = null!;
 
     private readonly ILogger<TheaterHandler> _logger;
+    private readonly SharedCounters _sharedCounters;
+    private readonly SharedCache _sharedCache;
 
     private readonly Dictionary<string, Func<Packet, Task>> _handlers;
 
@@ -19,9 +22,11 @@ public class TheaterHandler
     private readonly string _serverIp = "192.168.0.164"; 
     private readonly int _serverPort = 1003;
 
-    public TheaterHandler(ILogger<TheaterHandler> logger)
+    public TheaterHandler(ILogger<TheaterHandler> logger, SharedCounters sharedCounters, SharedCache sharedCache)
     {
         _logger = logger;
+        _sharedCounters = sharedCounters;
+        _sharedCache = sharedCache;
 
         _handlers = new Dictionary<string, Func<Packet, Task>>
         {
@@ -104,14 +109,14 @@ public class TheaterHandler
     private async Task HandleUSER(Packet request)
     {
         var lkey = request.DataDict["LKEY"];
-
         _logger.LogInformation("USER: {lkey}", lkey);
 
-        // !TODO: compare with fesl sessions
+        var username = _sharedCache.GetUsernameByKey((string)lkey);
+        // _sessionCache["NAME"] = username;
 
         var response = new Dictionary<string, object>
         {
-            ["NAME"] = "arcadia-ps3",
+            ["NAME"] = username,
             ["TID"] = request.DataDict["TID"]
         };
 
@@ -127,14 +132,13 @@ public class TheaterHandler
         // !TODO: set gid to a valid game id
         // !TODO: figure out ekey and secret
 
-        _sessionCache["UGID"] = request.DataDict["UGID"];
-        _sessionCache["EKEY"] = "";
+        // _sessionCache["UGID"] = request.DataDict["UGID"];
 
         var response = new Dictionary<string, object>
         {
             ["TID"] = request.DataDict["TID"],
             ["MAX-PLAYERS"] = request.DataDict["MAX-PLAYERS"],
-            ["EKEY"] = _sessionCache["EKEY"],
+            ["EKEY"] = "",
             ["UGID"] = request.DataDict["UGID"],
             ["JOIN"] = request.DataDict["JOIN"],
             ["SECRET"] = "",
@@ -158,8 +162,8 @@ public class TheaterHandler
         var response = new Dictionary<string, object>
         {
             ["TID"] = request.DataDict["TID"],
-            ["LID"] = 10,
-            ["GID"] = 1
+            ["LID"] = request.DataDict["LID"],
+            ["GID"] = request.DataDict["GID"],
         };
 
         var packet = new Packet("ECNL", 0x00000000, response);
@@ -183,8 +187,10 @@ public class TheaterHandler
 
         await _network.WriteAsync(data);
 
-        await SendEGRQ();
-        await SendEGEG();
+        // await SendEGRQ();
+
+        await SendEGEG(request);
+        // await SendGDET(request);
     }
 
     private async Task HandleEGRS(Packet request)
@@ -199,7 +205,7 @@ public class TheaterHandler
 
         await _network.WriteAsync(data);
 
-        await SendEGEG();
+        await SendEGEG(request);
     }
 
     private async Task HandlePENT(Packet request)
@@ -218,8 +224,6 @@ public class TheaterHandler
 
     private async Task HandleGDAT(Packet request)
     {
-        _sessionCache["TID"] = request.DataDict["TID"];
-
         var serverInfo = new Dictionary<string, object>
         {
             ["JP"] = 1,
@@ -234,12 +238,12 @@ public class TheaterHandler
             ["V"] = "1.0",
             ["B-U-gamemode"] = "CONQUEST",
             ["B-U-trial"] = "RETAIL",
-            ["P"] = 38681,
+            ["P"] = _serverPort,
             ["B-U-balance"] = "NORMAL",
             ["B-U-hash"] = "2AC3F219-3614-F46A-843B-A02E03E849E1",
             ["B-numObservers"] = 0,
             ["TYPE"] = "G",
-            ["LID"] = 255,
+            ["LID"] = request.DataDict["LID"],
             ["B-U-Frames"] = "T%3a 205 B%3a 0",
             ["B-version"] = "RETAIL421378",
             ["QP"] = 0,
@@ -247,7 +251,7 @@ public class TheaterHandler
             ["B-U-type"] = "RANKED",
             ["B-U-playgroup"] = "YES",
             ["B-U-public"] = "YES",
-            ["GID"] = 801000,
+            ["GID"] = request.DataDict["GID"],
             ["PL"] = "PC",
             ["B-U-elo"] = 1000,
             ["B-maxObservers"] = 0,
@@ -259,20 +263,19 @@ public class TheaterHandler
 
         var packet = new Packet("GDAT", 0x00000000, serverInfo);
         var data = await packet.ToPacket(0);
-
         await _network.WriteAsync(data);
 
-        await SendGDET();
+        await SendGDET(request);
     }
 
-    private async Task SendGDET()
+    private async Task SendGDET(Packet request)
     {
         var serverInfo = new Dictionary<string, object>
         {
-            ["LID"] = 255,
+            ["LID"] = request.DataDict["LID"],
             ["UGID"] = "2AC3F219-3614-F46A-843B-A02E03E849E1",
-            ["GID"] = 801000,
-            ["TID"] = _sessionCache["TID"]
+            ["GID"] = request.DataDict["GID"],
+            ["TID"] = request.DataDict["TID"]
         };
 
         for (var i = 0; i < 24; i++)
@@ -287,16 +290,16 @@ public class TheaterHandler
         await _network.WriteAsync(data);
     }
 
-    private async Task SendEGEG()
+    private async Task SendEGEG(Packet request)
     {
         var serverInfo = new Dictionary<string, object>
         {
             ["PL"] = "ps3",
-            ["TICKET"] = "-479505973",
-            ["PID"] = 1,
-            ["HUID"] = "",
+            ["TICKET"] = _sharedCounters.GetNextTicket(),
+            ["PID"] = 1301,
+            ["HUID"] = "201104017",
             ["EKEY"] = "",
-            ["UGID"] = "",
+            ["UGID"] = "2AC3F219-3614-F46A-843B-A02E03E849E1",
 
             ["INT-IP"] = _serverIp,
             ["INT-PORT"] = _serverPort,
@@ -304,8 +307,8 @@ public class TheaterHandler
             ["I"] = _serverIp,
             ["P"] = _serverPort,
 
-            ["LID"] = 255,
-            ["GID"] = 801000
+            ["LID"] = request.DataDict["LID"],
+            ["GID"] = request.DataDict["GID"]
         };
 
         var packet = new Packet("EGEG", 0x00000000, serverInfo);
