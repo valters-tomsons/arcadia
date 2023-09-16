@@ -128,11 +128,6 @@ public class TheaterHandler
     // CreateGame
     private async Task HandleCGAM(Packet request)
     {
-        // !TODO: set gid to a valid game id
-        // !TODO: figure out ekey and secret
-
-        // _sessionCache["UGID"] = request.DataDict["UGID"];
-
         var response = new Dictionary<string, object>
         {
             ["TID"] = request.DataDict["TID"],
@@ -178,16 +173,7 @@ public class TheaterHandler
         {
             ["TID"] = request.DataDict["TID"],
             ["LID"] = request.DataDict["LID"],
-            ["GID"] = request.DataDict["GID"],
-            ["TICKET"] = _sharedCounters.GetNextTicket(),
-            ["PID"] = _sharedCounters.GetNextPid(),
-            ["P"] = _serverPort,
-            ["HUID"] = "201104017",
-            ["INT-PORT"] = _serverPort,
-            ["EKEY"] = "",
-            ["INT-IP"] = _serverIp,
-            ["UGID"] = Guid.NewGuid().ToString(),
-            ["I"] = _serverIp
+            ["GID"] = request.DataDict["GID"]
         };
 
         var packet = new Packet("EGAM", 0x00000000, response);
@@ -195,10 +181,7 @@ public class TheaterHandler
 
         await _network.WriteAsync(data);
 
-        // await SendEGRQ();
-
         await SendEGEG(request);
-        // await SendGDET(request);
     }
 
     private async Task HandleEGRS(Packet request)
@@ -281,7 +264,7 @@ public class TheaterHandler
         var serverInfo = new Dictionary<string, object>
         {
             ["LID"] = request.DataDict["LID"],
-            ["UGID"] = "2AC3F219-3614-F46A-843B-A02E03E849E1",
+            ["UGID"] = Guid.NewGuid().ToString(),
             ["GID"] = request.DataDict["GID"],
             ["TID"] = request.DataDict["TID"]
         };
@@ -304,10 +287,10 @@ public class TheaterHandler
         {
             ["PL"] = "ps3",
             ["TICKET"] = _sharedCounters.GetNextTicket(),
-            ["PID"] = 1301,
+            ["PID"] = _sharedCounters.GetNextPid(),
             ["HUID"] = "201104017",
             ["EKEY"] = "",
-            ["UGID"] = "2AC3F219-3614-F46A-843B-A02E03E849E1",
+            ["UGID"] = Guid.NewGuid().ToString(),
 
             ["INT-IP"] = _serverIp,
             ["INT-PORT"] = _serverPort,
