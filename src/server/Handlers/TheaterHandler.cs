@@ -1,6 +1,7 @@
 using System.Net.Sockets;
 using System.Text;
 using Arcadia.EA;
+using Arcadia.Psn;
 using Arcadia.Storage;
 using Microsoft.Extensions.Logging;
 
@@ -88,16 +89,15 @@ public class TheaterHandler
     private async Task HandleCONN(Packet request)
     {
         var tid = request.DataDict["TID"];
-        var prot = request.DataDict["PROT"];
 
-        _logger.LogInformation("CONN: {tid} {prot}", tid, prot);
+        _logger.LogInformation("CONN: {tid}", tid);
 
         var response = new Dictionary<string, object>
         {
             ["TIME"] = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             ["TID"] = tid,
             ["activityTimeoutSecs"] = 0,
-            ["PROT"] = prot
+            ["PROT"] = request.DataDict["PROT"]
         };
 
         var packet = new Packet("CONN", 0x00000000, response);
@@ -109,10 +109,9 @@ public class TheaterHandler
     private async Task HandleUSER(Packet request)
     {
         var lkey = request.DataDict["LKEY"];
-        _logger.LogInformation("USER: {lkey}", lkey);
-
         var username = _sharedCache.GetUsernameByKey((string)lkey);
-        // _sessionCache["NAME"] = username;
+
+        _logger.LogInformation("USER: {name} {lkey}", username, lkey);
 
         var response = new Dictionary<string, object>
         {
@@ -180,6 +179,15 @@ public class TheaterHandler
             ["TID"] = request.DataDict["TID"],
             ["LID"] = request.DataDict["LID"],
             ["GID"] = request.DataDict["GID"],
+            ["TICKET"] = _sharedCounters.GetNextTicket(),
+            ["PID"] = _sharedCounters.GetNextPid(),
+            ["P"] = _serverPort,
+            ["HUID"] = "201104017",
+            ["INT-PORT"] = _serverPort,
+            ["EKEY"] = "",
+            ["INT-IP"] = _serverIp,
+            ["UGID"] = Guid.NewGuid().ToString(),
+            ["I"] = _serverIp
         };
 
         var packet = new Packet("EGAM", 0x00000000, response);
@@ -238,7 +246,7 @@ public class TheaterHandler
             ["V"] = "1.0",
             ["B-U-gamemode"] = "CONQUEST",
             ["B-U-trial"] = "RETAIL",
-            ["P"] = _serverPort,
+            ["P"] = "38681",
             ["B-U-balance"] = "NORMAL",
             ["B-U-hash"] = "2AC3F219-3614-F46A-843B-A02E03E849E1",
             ["B-numObservers"] = 0,
