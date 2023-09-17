@@ -1,7 +1,6 @@
 using System.Net.Sockets;
 using System.Text;
 using Arcadia.EA;
-using Arcadia.Psn;
 using Arcadia.Storage;
 using Microsoft.Extensions.Logging;
 
@@ -138,7 +137,7 @@ public class TheaterHandler
             ["SECRET"] = "",
             ["LID"] = 255,
             ["J"] = request.DataDict["JOIN"],
-            ["GID"] = 801000
+            ["GID"] = _sharedCounters.GetNextGameId()
         };
 
         var packet = new Packet("CGAM", 0x00000000, response);
@@ -197,20 +196,6 @@ public class TheaterHandler
         await _network.WriteAsync(data);
 
         await SendEGEG(request);
-    }
-
-    private async Task HandlePENT(Packet request)
-    {
-        var serverInfo = new Dictionary<string, object>
-        {
-            ["TID"] = request.DataDict["TID"],
-            ["PID"] = request.DataDict["PID"],
-        };
-
-        var packet = new Packet("PENT", 0x00000000, serverInfo);
-        var data = await packet.ToPacket(0);
-
-        await _network.WriteAsync(data);
     }
 
     private async Task HandleGDAT(Packet request)
@@ -278,6 +263,20 @@ public class TheaterHandler
         var data = await packet.ToPacket(0);
 
         _logger.LogTrace("Sending GDET to client at {endpoint}", _clientEndpoint);
+        await _network.WriteAsync(data);
+    }
+
+    private async Task HandlePENT(Packet request)
+    {
+        var serverInfo = new Dictionary<string, object>
+        {
+            ["TID"] = request.DataDict["TID"],
+            ["PID"] = request.DataDict["PID"],
+        };
+
+        var packet = new Packet("PENT", 0x00000000, serverInfo);
+        var data = await packet.ToPacket(0);
+
         await _network.WriteAsync(data);
     }
 

@@ -249,7 +249,7 @@ public class FeslHandler
 
     private async Task HandleGetAssociations(Packet request)
     {
-        var assoType = request.DataDict["type"] as string;
+        var assoType = request.DataDict["type"] as string ?? string.Empty;
         var responseData = new Dictionary<string, object>
         {
             { "TXN", "GetAssociations" },
@@ -409,10 +409,9 @@ public class FeslHandler
         _network.WriteApplicationData(response.AsSpan());
     }
 
-    private async Task HandleMemCheck()
+    private Task HandleMemCheck()
     {
-        // await Task.Delay(1000);
-        // await SendMemCheck();
+        return Task.CompletedTask;
     }
 
     private async Task SendMemCheck()
