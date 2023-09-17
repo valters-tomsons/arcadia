@@ -89,11 +89,6 @@ public class FeslHostedService : IHostedService
         }
 
         (_feslCertKey, _feslPubCert) = _certGenerator.GenerateVulnerableCert(IssuerDN, SubjectDN);
-        if (_settings.Value.DumpPatchedCert)
-        {
-            Utils.DumpCertificate(_feslCertKey, _feslPubCert, proxySettings.ServerAddress);
-            _logger.LogWarning("Patched certificate was dumped to disk!");
-        }
     }
 
     private async Task HandleClient(TcpClient tcpClient, string clientEndpoint)

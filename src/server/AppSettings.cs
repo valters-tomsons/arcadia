@@ -6,8 +6,6 @@ public record ArcadiaSettings
 {
     public string TheaterAddress { get; init; } = "theater.ps3.arcadia";
     public int TheaterPort { get; init; } = Beach.TheaterPort;
-
-    public bool DumpPatchedCert { get; init; }
 }
 
 public record FeslSettings
