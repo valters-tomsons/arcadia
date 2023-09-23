@@ -26,7 +26,7 @@ public readonly struct Packet
         DataDict = dataDict ?? new Dictionary<string, object>();
     }
 
-    public async Task<byte[]> ToPacket(uint ticketId)
+    public async Task<byte[]> Serialize(uint ticketId = 0)
     {
         var data = Utils.DataDictToPacketString(DataDict).ToString();
         var checksum = PacketUtils.GeneratePacketChecksum(data, Length + ticketId);

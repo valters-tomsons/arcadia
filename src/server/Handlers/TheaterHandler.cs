@@ -100,7 +100,7 @@ public class TheaterHandler
         };
 
         var packet = new Packet("CONN", 0x00000000, response);
-        var data = await packet.ToPacket(0);
+        var data = await packet.Serialize();
 
         await _network.WriteAsync(data);
     }
@@ -119,7 +119,7 @@ public class TheaterHandler
         };
 
         var packet = new Packet("USER", 0x00000000, response);
-        var data = await packet.ToPacket(0);
+        var data = await packet.Serialize();
 
         await _network.WriteAsync(data);
     }
@@ -141,7 +141,7 @@ public class TheaterHandler
         };
 
         var packet = new Packet("CGAM", 0x00000000, response);
-        var data = await packet.ToPacket(0);
+        var data = await packet.Serialize();
 
         await _network.WriteAsync(data);
     }
@@ -160,7 +160,7 @@ public class TheaterHandler
         };
 
         var packet = new Packet("ECNL", 0x00000000, response);
-        var data = await packet.ToPacket(0);
+        var data = await packet.Serialize();
 
         await _network.WriteAsync(data);
     }
@@ -176,7 +176,7 @@ public class TheaterHandler
         };
 
         var packet = new Packet("EGAM", 0x00000000, response);
-        var data = await packet.ToPacket(0);
+        var data = await packet.Serialize();
 
         await _network.WriteAsync(data);
 
@@ -191,7 +191,7 @@ public class TheaterHandler
         };
 
         var packet = new Packet("EGRS", 0x00000000, serverInfo);
-        var data = await packet.ToPacket(0);
+        var data = await packet.Serialize();
 
         await _network.WriteAsync(data);
 
@@ -238,7 +238,7 @@ public class TheaterHandler
         };
 
         var packet = new Packet("GDAT", 0x00000000, serverInfo);
-        var data = await packet.ToPacket(0);
+        var data = await packet.Serialize();
         await _network.WriteAsync(data);
 
         await SendGDET(request);
@@ -260,7 +260,7 @@ public class TheaterHandler
         }
 
         var packet = new Packet("GDET", 0x00000000, serverInfo);
-        var data = await packet.ToPacket(0);
+        var data = await packet.Serialize();
 
         _logger.LogTrace("Sending GDET to client at {endpoint}", _clientEndpoint);
         await _network.WriteAsync(data);
@@ -275,7 +275,7 @@ public class TheaterHandler
         };
 
         var packet = new Packet("PENT", 0x00000000, serverInfo);
-        var data = await packet.ToPacket(0);
+        var data = await packet.Serialize();
 
         await _network.WriteAsync(data);
     }
@@ -302,7 +302,7 @@ public class TheaterHandler
         };
 
         var packet = new Packet("EGEG", 0x00000000, serverInfo);
-        var data = await packet.ToPacket(0);
+        var data = await packet.Serialize();
 
         _logger.LogTrace("Sending EGEG to client at {endpoint}", _clientEndpoint);
         await _network.WriteAsync(data);
@@ -327,7 +327,7 @@ public class TheaterHandler
         };
 
         var packet = new Packet("EGRQ", 0x00000000, serverInfo);
-        var data = await packet.ToPacket(0);
+        var data = await packet.Serialize();
 
         _logger.LogTrace("Sending EGRQ to client at {endpoint}", _clientEndpoint);
         await _network.WriteAsync(data);

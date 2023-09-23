@@ -135,7 +135,7 @@ public class FeslHandler
         };
 
         var packet = new Packet("acct", 0x80000000, responseData);
-        var response = await packet.ToPacket(_feslTicketId);
+        var response = await packet.Serialize(_feslTicketId);
 
         _network.WriteApplicationData(response.AsSpan());
     }
@@ -154,7 +154,7 @@ public class FeslHandler
         };
 
         var packet1 = new Packet("pnow", 0x80000000, data1);
-        var response1 = await packet1.ToPacket(_feslTicketId);
+        var response1 = await packet1.Serialize(_feslTicketId);
         _network.WriteApplicationData(response1.AsSpan());
 
         var data2 = new Dictionary<string, object>
@@ -172,7 +172,7 @@ public class FeslHandler
         };
 
         var packet2 = new Packet("pnow", 0x80000000, data2);
-        var response2 = await packet2.ToPacket(_feslTicketId);
+        var response2 = await packet2.Serialize(_feslTicketId);
         _network.WriteApplicationData(response2.AsSpan());
 
     }
@@ -197,7 +197,7 @@ public class FeslHandler
         // }
 
         var packet = new Packet("rank", 0x80000000, responseData);
-        var response = await packet.ToPacket(_feslTicketId);
+        var response = await packet.Serialize(_feslTicketId);
 
         _network.WriteApplicationData(response.AsSpan());
     }
@@ -214,7 +214,7 @@ public class FeslHandler
         };
 
         var packet = new Packet("pres", 0x80000000, responseData);
-        var response = await packet.ToPacket(_feslTicketId);
+        var response = await packet.Serialize(_feslTicketId);
 
         _network.WriteApplicationData(response.AsSpan());
     }
@@ -227,7 +227,7 @@ public class FeslHandler
         };
 
         var packet = new Packet("pres", 0x80000000, responseData);
-        var response = await packet.ToPacket(_feslTicketId);
+        var response = await packet.Serialize(_feslTicketId);
 
         _network.WriteApplicationData(response.AsSpan());
     }
@@ -242,7 +242,7 @@ public class FeslHandler
         };
 
         var packet = new Packet("acct", 0x80000000, responseData);
-        var response = await packet.ToPacket(_feslTicketId);
+        var response = await packet.Serialize(_feslTicketId);
 
         _network.WriteApplicationData(response.AsSpan());
     }
@@ -272,7 +272,7 @@ public class FeslHandler
         }
 
         var packet = new Packet("asso", 0x80000000, responseData);
-        var response = await packet.ToPacket(_feslTicketId);
+        var response = await packet.Serialize(_feslTicketId);
 
         _network.WriteApplicationData(response.AsSpan());
     }
@@ -292,7 +292,7 @@ public class FeslHandler
         };
 
         var packet = new Packet("fsys", 0x80000000, responseData);
-        var response = await packet.ToPacket(_feslTicketId);
+        var response = await packet.Serialize(_feslTicketId);
 
         _network.WriteApplicationData(response.AsSpan());
     }
@@ -314,7 +314,7 @@ public class FeslHandler
                 };
 
         var helloPacket = new Packet("fsys", 0x80000000, serverHelloData);
-        var helloResponse = await helloPacket.ToPacket(_feslTicketId);
+        var helloResponse = await helloPacket.Serialize(_feslTicketId);
 
         _network.WriteApplicationData(helloResponse.AsSpan());
 
@@ -333,7 +333,7 @@ public class FeslHandler
         };
 
         var packet = new Packet("acct", 0x80000000, data);
-        var response = await packet.ToPacket(_feslTicketId);
+        var response = await packet.Serialize(_feslTicketId);
 
         _network.WriteApplicationData(response.AsSpan());
     }
@@ -386,7 +386,7 @@ public class FeslHandler
         };
 
         var loginPacket = new Packet("acct", 0x80000000, loginResponseData);
-        var loginResponse = await loginPacket.ToPacket(_feslTicketId);
+        var loginResponse = await loginPacket.Serialize(_feslTicketId);
 
         _network.WriteApplicationData(loginResponse.AsSpan());
     }
@@ -404,7 +404,7 @@ public class FeslHandler
         _logger.LogDebug("Trying to register user {email} with password {pass}", email, pass);
 
         var resultPacket = new Packet("acct", 0x80000000, data);
-        var response = await resultPacket.ToPacket(_feslTicketId);
+        var response = await resultPacket.Serialize(_feslTicketId);
 
         _network.WriteApplicationData(response.AsSpan());
     }
@@ -425,7 +425,7 @@ public class FeslHandler
                 };
 
         var memcheckPacket = new Packet("fsys", 0x80000000, memCheckData);
-        var memcheckResponse = await memcheckPacket.ToPacket(_feslTicketId);
+        var memcheckResponse = await memcheckPacket.Serialize(_feslTicketId);
 
         _network.WriteApplicationData(memcheckResponse.AsSpan());
     }
