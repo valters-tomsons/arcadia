@@ -373,9 +373,9 @@ public class FeslHandler
 
         var ticket = request.DataDict["ticket"] as string ?? string.Empty;
         var ticketData = RPCNTicketDecoder.DecodeFromASCIIString(ticket);
-        var ticketUsername = ticketData.FirstOrDefault(x => x.Type == TicketDataType.BString) as BStringData;
+        var ticketUsername = ticketData.FirstOrDefault(x => x?.Type == TicketDataType.BString) as BStringData;
 
-        _sessionCache["personaName"] = ticketUsername?.Value ?? "0xDEADBEEF";
+        _sessionCache["personaName"] = ticketUsername?.Value.TrimEnd('\0') ?? "0xDEADBEEF";
         _sessionCache["LKEY"] = _sharedCounters.GetNextLkey();
         _sessionCache["UID"] = _sharedCounters.GetNextUserId();
 

@@ -15,6 +15,7 @@ public abstract class TicketData
 {
     public abstract TicketDataType Type { get; }
     public ushort Length { get; set; }
+    public ushort Id { get; set; }
 }
 
 public class EmptyData : TicketData
