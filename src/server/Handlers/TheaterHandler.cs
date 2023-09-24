@@ -3,6 +3,7 @@ using System.Text;
 using Arcadia.EA;
 using Arcadia.Storage;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Arcadia.Handlers;
 
@@ -14,19 +15,18 @@ public class TheaterHandler
     private readonly ILogger<TheaterHandler> _logger;
     private readonly SharedCounters _sharedCounters;
     private readonly SharedCache _sharedCache;
+    private readonly IOptions<ArcadiaSettings> _arcadiaSettings;
 
     private readonly Dictionary<string, Func<Packet, Task>> _handlers;
 
     private readonly Dictionary<string, object> _sessionCache = new();
 
-    private readonly string _serverIp = "192.168.0.164"; 
-    private readonly int _serverPort = 1003;
-
-    public TheaterHandler(ILogger<TheaterHandler> logger, SharedCounters sharedCounters, SharedCache sharedCache)
+    public TheaterHandler(ILogger<TheaterHandler> logger, SharedCounters sharedCounters, SharedCache sharedCache, IOptions<ArcadiaSettings> arcadiaSettings)
     {
         _logger = logger;
         _sharedCounters = sharedCounters;
         _sharedCache = sharedCache;
+        _arcadiaSettings = arcadiaSettings;
 
         _handlers = new Dictionary<string, Func<Packet, Task>>
         {
@@ -207,7 +207,7 @@ public class TheaterHandler
             ["HN"] = "beach.server.p",
             ["B-U-level"] = "levels/coral_sea",
             ["N"] = "nrtps3313601",
-            ["I"] = _serverIp,
+            ["I"] = _arcadiaSettings.Value.GameServerAddress,
             ["J"] = 0,
             ["HU"] = 201104017,
             ["B-U-Time"] = "T%3a0.00 S%3a 6.65 L%3a 0.00",
@@ -220,7 +220,7 @@ public class TheaterHandler
             ["B-numObservers"] = 0,
             ["TYPE"] = "G",
             ["LID"] = request.DataDict["LID"],
-            ["B-U-Frames"] = "T%3a 205 B%3a 0",
+            ["B-U-Frames"] = "T%3a 300 B%3a 0",
             ["B-version"] = "RETAIL421378",
             ["QP"] = 0,
             ["MP"] = 24,
@@ -228,13 +228,13 @@ public class TheaterHandler
             ["B-U-playgroup"] = "YES",
             ["B-U-public"] = "YES",
             ["GID"] = request.DataDict["GID"],
-            ["PL"] = "PC",
-            ["B-U-elo"] = 1000,
+            ["PL"] = "PS3",
+            ["B-U-elo"] = 1520,
             ["B-maxObservers"] = 0,
             ["PW"] = 0,
             ["TID"] = request.DataDict["TID"],
             ["B-U-coralsea"] = "YES",
-            ["AP"] = 0
+            ["AP"] = 5
         };
 
         var packet = new Packet("GDAT", 0x00000000, serverInfo);
@@ -284,6 +284,9 @@ public class TheaterHandler
 
     private async Task SendEGEG(Packet request)
     {
+        var serverIp = _arcadiaSettings.Value.GameServerAddress;
+        var serverPort = _arcadiaSettings.Value.GameServerPort;
+
         var serverInfo = new Dictionary<string, object>
         {
             ["PL"] = "ps3",
@@ -293,11 +296,11 @@ public class TheaterHandler
             ["EKEY"] = "",
             ["UGID"] = _sessionCache["UGID"],
 
-            ["INT-IP"] = _serverIp,
-            ["INT-PORT"] = _serverPort,
+            ["INT-IP"] = serverIp,
+            ["INT-PORT"] = serverPort,
 
-            ["I"] = _serverIp,
-            ["P"] = _serverPort,
+            ["I"] = serverIp,
+            ["P"] = serverPort,
 
             ["LID"] = request.DataDict["LID"],
             ["GID"] = request.DataDict["GID"]
@@ -312,12 +315,15 @@ public class TheaterHandler
 
     private async Task SendEGRQ()
     {
+        var serverIp = _arcadiaSettings.Value.GameServerAddress;
+        var serverPort = _arcadiaSettings.Value.GameServerPort;
+
         var serverInfo = new Dictionary<string, object>
         {
-            ["R-INT-PORT"] = _serverPort,
-            ["R-INT-IP"] = _serverIp,
-            ["PORT"] = _serverPort,
-            ["IP"] = _serverIp,
+            ["R-INT-PORT"] = serverPort,
+            ["R-INT-IP"] = serverIp,
+            ["PORT"] = serverPort,
+            ["IP"] = serverIp,
             ["NAME"] = "arcadia-ps3",
             ["PTYPE"] = "P",
             ["TICKET"] = "-479505973",

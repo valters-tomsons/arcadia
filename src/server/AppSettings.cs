@@ -6,6 +6,8 @@ public record ArcadiaSettings
 {
     public string TheaterAddress { get; init; } = "theater.ps3.arcadia";
     public int TheaterPort { get; init; } = Beach.TheaterPort;
+    public string GameServerAddress { get; init; } = "gameserver1.ps3.arcadia";
+    public int GameServerPort { get; init; } = 1003;
 }
 
 public record FeslSettings
