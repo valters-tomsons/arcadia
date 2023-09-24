@@ -1,4 +1,4 @@
-namespace Arcadia.Psn;
+namespace Arcadia.PSN;
 
 public enum TicketDataType
 {

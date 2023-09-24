@@ -1,6 +1,6 @@
 using System.Globalization;
 using Arcadia.EA;
-using Arcadia.Psn;
+using Arcadia.PSN;
 using Arcadia.Storage;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -26,6 +26,8 @@ public class FeslHandler
     private readonly Dictionary<string, object> _sessionCache = new();
     private TlsServerProtocol _network = null!;
     private string _clientEndpoint = null!;
+
+    private PSNTicket? _psnTicket;
 
     private uint _feslTicketId;
 
@@ -371,11 +373,11 @@ public class FeslHandler
         //     loginResponseData.Add("personaName", "arcadia_ps3");
         // }
 
-        var ticket = request.DataDict["ticket"] as string ?? string.Empty;
-        var ticketData = RPCNTicketDecoder.DecodeFromASCIIString(ticket);
-        var ticketUsername = ticketData.FirstOrDefault(x => x?.Type == TicketDataType.BString) as BStringData;
+        var loginTicket = request.DataDict["ticket"] as string ?? string.Empty;
+        var ticketData = TicketDecoder.DecodeFromASCIIString(loginTicket);
+        _psnTicket = new PSNTicket(ticketData);
 
-        _sessionCache["personaName"] = ticketUsername?.Value.TrimEnd('\0') ?? "0xDEADBEEF";
+        _sessionCache["personaName"] = _psnTicket.OnlineId;
         _sessionCache["LKEY"] = _sharedCounters.GetNextLkey();
         _sessionCache["UID"] = _sharedCounters.GetNextUserId();
 

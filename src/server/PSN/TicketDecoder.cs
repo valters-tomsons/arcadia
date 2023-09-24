@@ -1,23 +1,26 @@
 using System.Text;
 
-namespace Arcadia.Psn;
+namespace Arcadia.PSN;
 
-public static class RPCNTicketDecoder
+public static class TicketDecoder
 {
-    public static IEnumerable<TicketData?> DecodeFromASCIIString(string asciiString)
+    public static TicketData[] DecodeFromASCIIString(string asciiString)
     {
         var bytes = Convert.FromHexString(asciiString[1..]);
+        return DecodeFromBuffer(bytes).Where(x => x.Type != TicketDataType.Empty).ToArray();
+    }
 
-        using var stream = new MemoryStream(bytes);
+    private static IEnumerable<TicketData> DecodeFromBuffer(byte[] payload)
+    {
+        using var stream = new MemoryStream(payload);
         using var reader = new BinaryReader(stream);
 
         while(reader.BaseStream.Position < reader.BaseStream.Length)
         {
             var ticket = ReadTicketData(reader);
-            yield return ticket;
+            if (ticket is not null) yield return ticket;
         }
     }
-
 
     private static TicketData? ReadTicketData(BinaryReader reader)
     {
