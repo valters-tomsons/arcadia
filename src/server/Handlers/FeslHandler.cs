@@ -1,5 +1,6 @@
 using System.Globalization;
 using Arcadia.EA;
+using Arcadia.Psn;
 using Arcadia.Storage;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -343,7 +344,6 @@ public class FeslHandler
         var encryptedSet = request.DataDict.TryGetValue("returnEncryptedInfo", out var returnEncryptedInfo);
         _logger.LogTrace("returnEncryptedInfo: {returnEncryptedInfo} ({encryptedSet})", returnEncryptedInfo, encryptedSet);
 
-
         // var tosAccepted = request.DataDict.TryGetValue("tosVersion", out var tosAcceptedValue);
         // if (false)
         // {
@@ -371,9 +371,13 @@ public class FeslHandler
         //     loginResponseData.Add("personaName", "arcadia_ps3");
         // }
 
+        var ticket = request.DataDict["ticket"] as string ?? string.Empty;
+        var ticketData = RPCNTicketDecoder.DecodeFromASCIIString(ticket);
+        var ticketUsername = ticketData.FirstOrDefault(x => x.Type == TicketDataType.BString) as BStringData;
+
+        _sessionCache["personaName"] = ticketUsername?.Value ?? "0xDEADBEEF";
         _sessionCache["LKEY"] = _sharedCounters.GetNextLkey();
         _sessionCache["UID"] = _sharedCounters.GetNextUserId();
-        _sessionCache["personaName"] = "arcadia_ps3";
 
         _sharedCache.AddUserWithKey((string)_sessionCache["LKEY"], (string)_sessionCache["personaName"]);
 
