@@ -132,7 +132,7 @@ public class TheaterHandler
             ["TID"] = request.DataDict["TID"],
             ["MAX-PLAYERS"] = request.DataDict["MAX-PLAYERS"],
             ["EKEY"] = "",
-            ["UGID"] = request.DataDict["UGID"],
+            ["UGID"] = Guid.NewGuid().ToString(),
             ["JOIN"] = request.DataDict["JOIN"],
             ["SECRET"] = "",
             ["LID"] = 255,
@@ -246,10 +246,12 @@ public class TheaterHandler
 
     private async Task SendGDET(Packet request)
     {
+        _sessionCache["UGID"] = Guid.NewGuid().ToString();
+
         var serverInfo = new Dictionary<string, object>
         {
             ["LID"] = request.DataDict["LID"],
-            ["UGID"] = Guid.NewGuid().ToString(),
+            ["UGID"] = _sessionCache["UGID"],
             ["GID"] = request.DataDict["GID"],
             ["TID"] = request.DataDict["TID"]
         };
@@ -289,7 +291,7 @@ public class TheaterHandler
             ["PID"] = _sharedCounters.GetNextPid(),
             ["HUID"] = "201104017",
             ["EKEY"] = "",
-            ["UGID"] = Guid.NewGuid().ToString(),
+            ["UGID"] = _sessionCache["UGID"],
 
             ["INT-IP"] = _serverIp,
             ["INT-PORT"] = _serverPort,
