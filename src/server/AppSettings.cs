@@ -22,3 +22,8 @@ public record FeslSettings
     public bool MirrorCertificateStrings { get; init; }
     public bool EnableProxy { get; init; }
 }
+
+public record DnsSettings
+{
+    public bool EnableDns { get; init; }
+}
