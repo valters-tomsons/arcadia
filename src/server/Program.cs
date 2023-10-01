@@ -41,6 +41,7 @@ var host = Host.CreateDefaultBuilder()
         services.AddScoped<TheaterHandler>();
 
         services
+            .AddHostedService<DnsHostedService>()
             .AddHostedService<FeslHostedService>()
             .AddHostedService<TheaterHostedService>();
     })
