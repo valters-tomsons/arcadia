@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using System.Net.Sockets;
-using System.Text;
 using Arcadia.Handlers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -13,6 +12,8 @@ public class TheaterHostedService : IHostedService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IOptions<ArcadiaSettings> _settings;
+
+    private readonly IOptions<FeslSettings> _feslSettings;
     private readonly ILogger<TheaterHostedService> _logger;
 
     private readonly ConcurrentBag<Task> _activeConnections = new();
@@ -22,14 +23,14 @@ public class TheaterHostedService : IHostedService
     private CancellationTokenSource _cts = null!;
 
     private Task? _tcpServer;
-    private Task? _udpServer;
 
-    public TheaterHostedService(IOptions<ArcadiaSettings> settings, ILogger<TheaterHostedService> logger, IServiceScopeFactory scopeFactory)
+    public TheaterHostedService(IOptions<ArcadiaSettings> settings, ILogger<TheaterHostedService> logger, IServiceScopeFactory scopeFactory, IOptions<FeslSettings> feslSettings)
     {
         _logger = logger;
         _scopeFactory = scopeFactory;
 
         _settings = settings;
+        _feslSettings = feslSettings;
 
         _tcpListener = new TcpListener(System.Net.IPAddress.Any, _settings.Value.TheaterPort);
         _udpListener = new UdpClient(_settings.Value.TheaterPort);
@@ -38,6 +39,12 @@ public class TheaterHostedService : IHostedService
     public Task StartAsync(CancellationToken cancellationToken)
     {
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+        if (_feslSettings.Value.EnableProxy)
+        {
+            _logger.LogWarning("Proxying enabled, not hosting Theater!");
+            return Task.CompletedTask;
+        }
 
         _tcpListener.Start();
         _tcpServer = Task.Run(async () =>
@@ -56,17 +63,6 @@ public class TheaterHostedService : IHostedService
             }
         }, _cts.Token);
 
-        _udpServer = Task.Run(async () =>
-        {
-            _logger.LogInformation("Theater listening on port udp:{port}", _settings.Value.TheaterPort);
-
-            while (!_cts.Token.IsCancellationRequested)
-            {
-                var udpClient = await _udpListener.ReceiveAsync(_cts.Token);
-                _logger.LogInformation("UDP: {data}", Encoding.ASCII.GetString(udpClient.Buffer));
-            }
-        }, _cts.Token);
-
         return Task.CompletedTask;
     }
 
@@ -79,17 +75,11 @@ public class TheaterHostedService : IHostedService
         await handler.HandleClientConnection(networkStream, clientEndpoint);
     }
 
-    public async Task StopAsync(CancellationToken cancellationToken)
+    public Task StopAsync(CancellationToken cancellationToken)
     {
         _cts.Cancel();
         _tcpListener.Stop();
 
-        await Task.Delay(200, cancellationToken);
-
-        if (_tcpServer is not null || _tcpServer!.IsCompleted)
-        {
-            _logger.LogCritical("Waiting for connections to close...");
-            await _tcpServer.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
-        }
+        return Task.CompletedTask;
     }
 }
