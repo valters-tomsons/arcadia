@@ -11,7 +11,6 @@ public class DnsHostedService : IHostedService
 
     private readonly MasterFile? _masterFile;
     private readonly DnsServer? _server;
-    private Task? _serverTask;
 
     public DnsHostedService(IOptions<DnsSettings> settings, IOptions<ArcadiaSettings> arcadiaSettings, IOptions<FeslSettings> feslSettings, ILogger<DnsHostedService> logger)
     {
