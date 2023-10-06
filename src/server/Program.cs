@@ -35,6 +35,7 @@ var host = Host.CreateDefaultBuilder()
 
         services.Configure<ArcadiaSettings>(config.GetSection(nameof(ArcadiaSettings)));
         services.Configure<FeslSettings>(config.GetSection(nameof(FeslSettings)));
+        services.Configure<DnsSettings>(config.GetSection(nameof(DnsSettings)));
 
         services.AddScoped(_ => new Rc4TlsCrypto(true));
         services.AddScoped<FeslHandler>();
