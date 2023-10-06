@@ -23,7 +23,7 @@ public class DnsHostedService : IHostedService
         var fesl = feslSettings.Value;
 
         _masterFile = new MasterFile();
-        _server = new DnsServer(_masterFile);
+        _server = new DnsServer(_masterFile, "1.1.1.1");
 
         _masterFile.AddIPAddressResourceRecord(fesl.ServerAddress, "192.168.8.112");
 
