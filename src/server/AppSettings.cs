@@ -28,4 +28,5 @@ public record FeslSettings
 public record DnsSettings
 {
     public bool EnableDns { get; init; }
+    public string FeslAddress { get; init; } = string.Empty;
 }
