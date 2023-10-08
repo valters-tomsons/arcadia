@@ -1,4 +1,5 @@
 using System.Net.Sockets;
+using Arcadia.EA;
 using Org.BouncyCastle.Tls;
 using Org.BouncyCastle.Tls.Crypto.Impl.BC;
 
@@ -19,7 +20,7 @@ public class TlsClientProxy
     public async Task StartProxy(ArcadiaSettings config, FeslSettings proxyConfig)
     {
         InitializeUpstreamClient(config, proxyConfig);
-        await StartProxying();
+        await StartProxying(proxyConfig);
     }
 
     private void InitializeUpstreamClient(ArcadiaSettings config, FeslSettings proxyConfig)
@@ -45,7 +46,7 @@ public class TlsClientProxy
         }
     }
 
-    private async Task StartProxying()
+    private async Task StartProxying(FeslSettings proxyConfig)
     {
         var clientToFeslTask = Task.Run(() =>
         {
@@ -53,7 +54,7 @@ public class TlsClientProxy
             {
                 while (_arcadiaProtocol.IsConnected)
                 {
-                    ProxyApplicationData(_arcadiaProtocol, _upstreamProtocol!);
+                    ProxyApplicationData(_arcadiaProtocol, _upstreamProtocol!, proxyConfig);
                 }
             }
             catch { }
@@ -66,7 +67,7 @@ public class TlsClientProxy
             {
                 while (_arcadiaProtocol.IsConnected)
                 {
-                    ProxyApplicationData(_upstreamProtocol!, _arcadiaProtocol);
+                    ProxyApplicationData(_upstreamProtocol!, _arcadiaProtocol, proxyConfig);
                 }
             }
             catch { }
@@ -77,7 +78,7 @@ public class TlsClientProxy
         Console.WriteLine("Proxy connection closed, exiting...");
     }
 
-    private static void ProxyApplicationData(TlsProtocol source, TlsProtocol destination)
+    private static async void ProxyApplicationData(TlsProtocol source, TlsProtocol destination, FeslSettings proxyConfig)
     {
         var readBuffer = new byte[1514];
         int? read = 0;
@@ -90,10 +91,52 @@ public class TlsClientProxy
                 continue;
             }
 
-            Console.WriteLine($"Received {read} bytes from server");
+            if (!string.IsNullOrWhiteSpace(proxyConfig.ProxyOverrideClientTicket) || proxyConfig.LogPacketAnalysis)
+            {
+                var feslPacket = AnalyzeFeslPacket(readBuffer);
+
+                if (proxyConfig.LogPacketAnalysis)
+                {
+                    Console.WriteLine($"Proxying packet '{feslPacket?.Type}' with TXN={feslPacket?["TXN"]}");
+                }
+
+                if (feslPacket != null && feslPacket?.Type == "acct" && feslPacket?["TXN"] == "NuPS3Login")
+                {
+                    var packet = feslPacket.Value;
+                    var clientTicket = packet["ticket"];
+
+                    if (proxyConfig.LogPacketAnalysis)
+                    {
+                        Console.WriteLine($"Client ticket={clientTicket}");
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(clientTicket))
+                    {
+                        Console.WriteLine($"Overriding client ticket!");
+                        packet["ticket"] = proxyConfig.ProxyOverrideClientTicket;
+
+                        readBuffer = await packet.Serialize(packet.Id);
+                        read = readBuffer.Length;
+                    }
+                }
+            }
 
             destination.WriteApplicationData(readBuffer, 0, read.Value);
         }
+    }
+
+    private static Packet? AnalyzeFeslPacket(byte[] buffer)
+    {
+        var packet = new Packet(buffer);
+        if (!packet.DataDict.TryGetValue("TXN", out var txnObj) || txnObj == null)
+        {
+            return null;
+        }
+
+        var txn = txnObj as string;
+        if (string.IsNullOrWhiteSpace(txn)) return null;
+
+        return packet;
     }
 }
 
