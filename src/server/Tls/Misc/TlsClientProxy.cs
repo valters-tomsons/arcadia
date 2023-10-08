@@ -97,7 +97,8 @@ public class TlsClientProxy
 
                 if (proxyConfig.LogPacketAnalysis)
                 {
-                    Console.WriteLine($"Proxying packet '{feslPacket?.Type}' with TXN={feslPacket?["TXN"]}");
+                    var dataString = feslPacket?.DataDict.Select(x => $"{x.Key}={x.Value}").Aggregate((x, y) => $"{x}; {y}");
+                    Console.WriteLine($"Proxying packet '{feslPacket?.Type}' with TXN={feslPacket?["TXN"]}; Data={dataString}");
                 }
 
                 if (feslPacket != null && feslPacket?.Type == "acct" && feslPacket?["TXN"] == "NuPS3Login")
@@ -105,12 +106,12 @@ public class TlsClientProxy
                     var packet = feslPacket.Value;
                     var clientTicket = packet["ticket"];
 
-                    if (proxyConfig.LogPacketAnalysis)
+                    if (proxyConfig.LogPacketAnalysis && !string.IsNullOrWhiteSpace(clientTicket))
                     {
                         Console.WriteLine($"Client ticket={clientTicket}");
                     }
 
-                    if (!string.IsNullOrWhiteSpace(clientTicket))
+                    if (!string.IsNullOrWhiteSpace(clientTicket) && !string.IsNullOrWhiteSpace(proxyConfig.ProxyOverrideClientTicket))
                     {
                         Console.WriteLine($"Overriding client ticket!");
                         packet["ticket"] = proxyConfig.ProxyOverrideClientTicket;
