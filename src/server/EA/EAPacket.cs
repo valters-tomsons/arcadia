@@ -6,7 +6,7 @@ public readonly struct Packet
 {
     public string this[string key]
     {
-        get => DataDict.GetValueOrDefault("TXN") as string ?? string.Empty;
+        get => DataDict.GetValueOrDefault(key) as string ?? string.Empty;
         set => DataDict[key] = value;
     }
 
