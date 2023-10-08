@@ -104,6 +104,12 @@ public class FeslHostedService : IHostedService
         try
         {
             serverProtocol.Accept(connTls);
+
+            if (_feslSettings.Value.EnableProxy)
+            {
+                await HandleAsProxy(serverProtocol, crypto, _cts.Token);
+                return;
+            }
         }
         catch (Exception e)
         {
@@ -113,12 +119,6 @@ public class FeslHostedService : IHostedService
             serverProtocol.Close();
             connTls.Cancel();
 
-            return;
-        }
-
-        if (_feslSettings.Value.EnableProxy)
-        {
-            await HandleAsProxy(serverProtocol, crypto, _cts.Token);
             return;
         }
 

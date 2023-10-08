@@ -21,6 +21,8 @@ public record FeslSettings
 
     public bool MirrorCertificateStrings { get; init; }
     public bool EnableProxy { get; init; }
+    public bool LogPacketAnalysis { get; init; }
+    public string ProxyOverrideClientTicket { get; init; } = string.Empty;
 }
 
 public record DnsSettings

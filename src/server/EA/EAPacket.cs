@@ -4,6 +4,12 @@ namespace Arcadia.EA;
 
 public readonly struct Packet
 {
+    public string this[string key]
+    {
+        get => DataDict.GetValueOrDefault("TXN") as string ?? string.Empty;
+        set => DataDict[key] = value;
+    }
+
     public Packet(byte[] packet)
     {
         Type = Encoding.ASCII.GetString(packet, 0, 4);
