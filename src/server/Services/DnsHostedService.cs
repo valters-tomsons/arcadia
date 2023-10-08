@@ -25,12 +25,12 @@ public class DnsHostedService : IHostedService
         _masterFile = new MasterFile();
         _server = new DnsServer(_masterFile, "1.1.1.1");
 
-        _masterFile.AddIPAddressResourceRecord(fesl.ServerAddress, "192.168.8.112");
+        _masterFile.AddIPAddressResourceRecord(fesl.ServerAddress, options.FeslAddress);
 
         if (!feslSettings.Value.EnableProxy)
         {
-            _masterFile.AddIPAddressResourceRecord(arcadia.TheaterAddress, "192.168.8.112");
-            _masterFile.AddIPAddressResourceRecord(arcadia.GameServerAddress, "192.168.8.112");
+            _masterFile.AddIPAddressResourceRecord(arcadia.TheaterAddress, arcadia.TheaterAddress);
+            _masterFile.AddIPAddressResourceRecord(arcadia.GameServerAddress, arcadia.GameServerAddress);
         }
 
         _server.Listening += (sender, args) => _logger.LogInformation($"DNS server listening!");
