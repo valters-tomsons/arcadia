@@ -1,17 +1,18 @@
 using System.Net.Sockets;
-using Arcadia.EA;
+using Arcadia.PSN;
+using Arcadia.Tls;
 using Org.BouncyCastle.Tls;
 using Org.BouncyCastle.Tls.Crypto.Impl.BC;
 
-namespace Arcadia.Tls.Misc;
+namespace Arcadia.EA.Proxy;
 
-public class TlsClientProxy
+public class FeslProxy
 {
     private readonly TlsServerProtocol _arcadiaProtocol;
     private TlsClientProtocol? _upstreamProtocol;
     private readonly BcTlsCrypto _crypto;
 
-    public TlsClientProxy(TlsServerProtocol arcadiaProtocol, BcTlsCrypto crypto)
+    public FeslProxy(TlsServerProtocol arcadiaProtocol, BcTlsCrypto crypto)
     {
         _arcadiaProtocol = arcadiaProtocol;
         _crypto = crypto;
@@ -80,7 +81,7 @@ public class TlsClientProxy
 
     private static async void ProxyApplicationData(TlsProtocol source, TlsProtocol destination, FeslSettings proxyConfig)
     {
-        var readBuffer = new byte[1514];
+        var readBuffer = new byte[5120];
         int? read = 0;
 
         while (read == 0)
@@ -113,11 +114,23 @@ public class TlsClientProxy
 
                     if (!string.IsNullOrWhiteSpace(clientTicket) && !string.IsNullOrWhiteSpace(proxyConfig.ProxyOverrideClientTicket))
                     {
-                        Console.WriteLine($"Overriding client ticket!");
-                        packet["ticket"] = proxyConfig.ProxyOverrideClientTicket;
+                        try
+                        {
+                            var psnTicket = new PSNTicket(TicketDecoder.DecodeFromASCIIString(clientTicket));
+                            Console.WriteLine("Ticket detected, overriding...");
+                            Console.WriteLine($"Expires: {psnTicket.ExpireDate}");
+                            Console.WriteLine($"Issued: {psnTicket.IssuedDate}");
+                            Console.WriteLine($"User: {psnTicket.OnlineId}");
 
-                        readBuffer = await packet.Serialize(packet.Id);
-                        read = readBuffer.Length;
+                            packet["ticket"] = proxyConfig.ProxyOverrideClientTicket;
+
+                            readBuffer = await packet.Serialize(packet.Id);
+                            read = readBuffer.Length;
+                        }
+                        catch
+                        {
+                            Console.WriteLine($"Failed to override ticket!");
+                        }
                     }
                 }
             }
