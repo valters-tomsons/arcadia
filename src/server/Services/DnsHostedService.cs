@@ -19,13 +19,18 @@ public class DnsHostedService : IHostedService
         var options = settings.Value;
         if (!options.EnableDns) return;
 
+        _logger.LogInformation("Starting DNS server on port 53");
+
         var arcadia = arcadiaSettings.Value;
         var fesl = feslSettings.Value;
 
         _masterFile = new MasterFile();
         _server = new DnsServer(_masterFile, "1.1.1.1");
 
+        _masterFile.AddIPAddressResourceRecord("messaging.ea.com", "127.0.0.1");
+
         _masterFile.AddIPAddressResourceRecord(fesl.ServerAddress, options.FeslAddress);
+        _masterFile.AddIPAddressResourceRecord("beach-ps3.theater.ea.com", options.FeslAddress);
 
         if (!feslSettings.Value.EnableProxy)
         {
