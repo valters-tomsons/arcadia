@@ -105,12 +105,6 @@ public class FeslHostedService : IHostedService
         try
         {
             serverProtocol.Accept(connTls);
-
-            if (_feslSettings.Value.EnableProxy)
-            {
-                await HandleAsProxy(serverProtocol, crypto, _cts.Token);
-                return;
-            }
         }
         catch (Exception e)
         {
@@ -123,14 +117,20 @@ public class FeslHostedService : IHostedService
             return;
         }
 
+        if (_feslSettings.Value.EnableProxy)
+        {
+            await HandleAsProxy(scope.ServiceProvider, serverProtocol, crypto);
+            return;
+        }
+
         var handler = scope.ServiceProvider.GetRequiredService<FeslHandler>();
         await handler.HandleClientConnection(serverProtocol, clientEndpoint);
     }
 
-    private async Task HandleAsProxy(TlsServerProtocol protocol, Rc4TlsCrypto crypto, CancellationToken ct)
+    private async Task HandleAsProxy(IServiceProvider sp, TlsServerProtocol protocol, Rc4TlsCrypto crypto)
     {
-        var proxy = new FeslProxy(protocol, crypto);
-        await proxy.StartProxy(_settings.Value, _feslSettings.Value);
+        var proxy = sp.GetRequiredService<FeslProxy>();
+        await proxy.StartProxy(protocol, crypto);
     }
 
     public Task StopAsync(CancellationToken cancellationToken)

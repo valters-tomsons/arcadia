@@ -1,5 +1,7 @@
 using System.Net.Sockets;
 using Arcadia.Tls;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Org.BouncyCastle.Tls;
 using Org.BouncyCastle.Tls.Crypto.Impl.BC;
 
@@ -7,57 +9,67 @@ namespace Arcadia.EA.Proxy;
 
 public class FeslProxy
 {
-    private readonly TlsServerProtocol _arcadiaProtocol;
-    private TlsClientProtocol? _upstreamProtocol;
-    private readonly BcTlsCrypto _crypto;
+    private readonly ILogger<FeslProxy> _logger;
+    private readonly FeslSettings _settings;
 
-    public FeslProxy(TlsServerProtocol arcadiaProtocol, BcTlsCrypto crypto)
+    private TlsServerProtocol? _arcadiaProtocol;
+    private TlsClientProtocol? _upstreamProtocol;
+    private BcTlsCrypto? _crypto;
+
+    public FeslProxy(ILogger<FeslProxy> logger, IOptions<FeslSettings> settings)
+    {
+        _logger = logger;
+        _settings = settings.Value;
+    }
+
+    public async Task StartProxy(TlsServerProtocol arcadiaProtocol, BcTlsCrypto crypto)
     {
         _arcadiaProtocol = arcadiaProtocol;
         _crypto = crypto;
+
+        InitializeUpstreamClient();
+        await StartProxying();
     }
 
-    public async Task StartProxy(ArcadiaSettings config, FeslSettings proxyConfig)
+    private void InitializeUpstreamClient()
     {
-        InitializeUpstreamClient(config, proxyConfig);
-        await StartProxying(proxyConfig);
-    }
+        _logger.LogInformation($"Connecting to upstream {_settings.ServerAddress}:{_settings.ServerPort}");
 
-    private void InitializeUpstreamClient(ArcadiaSettings config, FeslSettings proxyConfig)
-    {
-        Console.WriteLine($"Connecting to upstream {proxyConfig.ServerAddress}:{proxyConfig.ServerPort}");
-
-        var upstreamTcpClient = new TcpClient(proxyConfig.ServerAddress, proxyConfig.ServerPort);
+        var upstreamTcpClient = new TcpClient(_settings.ServerAddress, _settings.ServerPort);
         var upstreamTcpStream = upstreamTcpClient.GetStream();
         _upstreamProtocol = new TlsClientProtocol(upstreamTcpStream);
 
-        var proxyTlsAuth = new ProxyTlsAuthentication();
-        var upstreamClient = new Ssl3TlsClient(_crypto, proxyTlsAuth);
+        var proxyTlsAuth = new ProxyTlsAuthentication(_logger);
+        var upstreamClient = new Ssl3TlsClient(_crypto!, proxyTlsAuth);
 
         try
         {
             _upstreamProtocol.Connect(upstreamClient);
-            Console.WriteLine("SSL Handshake with upstream successful!");
+            _logger.LogDebug("SSL Handshake with upstream successful!");
         }
         catch(Exception e)
         {
-            Console.WriteLine(e.Message);
-            throw new Exception($"Failed to connect to upstream {proxyConfig.ServerAddress}:{proxyConfig.ServerPort}");
+            _logger.LogError(e.Message);
+            throw new Exception($"Failed to connect to upstream {_settings.ServerAddress}:{_settings.ServerPort}");
         }
     }
 
-    private async Task StartProxying(FeslSettings proxyConfig)
+    private async Task StartProxying()
     {
         var clientToFeslTask = Task.Run(() =>
         {
             try
             {
-                while (_arcadiaProtocol.IsConnected)
+                while (_arcadiaProtocol!.IsConnected)
                 {
-                    ProxyApplicationData(_arcadiaProtocol, _upstreamProtocol!, proxyConfig);
+                    ProxyApplicationData(_arcadiaProtocol, _upstreamProtocol!);
                 }
             }
-            catch { }
+            catch (Exception e)
+            {
+                _logger.LogError(e, $"Failed to proxy data from client: {e.Message}");
+            }
+
             return Task.CompletedTask;
         });
 
@@ -65,20 +77,24 @@ public class FeslProxy
         {
             try
             {
-                while (_arcadiaProtocol.IsConnected)
+                while (_arcadiaProtocol!.IsConnected)
                 {
-                    ProxyApplicationData(_upstreamProtocol!, _arcadiaProtocol, proxyConfig);
+                    ProxyApplicationData(_upstreamProtocol!, _arcadiaProtocol);
                 }
             }
-            catch { }
+            catch (Exception e)
+            {
+                _logger.LogError(e, $"Failed to proxy data from upstream: {e.Message}");
+            }
             return Task.CompletedTask;
+
         });
 
-        await Task.WhenAll(clientToFeslTask, feslToClientTask);
-        Console.WriteLine("Proxy connection closed, exiting...");
+        await Task.WhenAny(clientToFeslTask, feslToClientTask);
+        _logger.LogInformation("Proxy connection closed, exiting...");
     }
 
-    private async void ProxyApplicationData(TlsProtocol source, TlsProtocol destination, FeslSettings proxyConfig)
+    private async void ProxyApplicationData(TlsProtocol source, TlsProtocol destination)
     {
         var readBuffer = new byte[5120];
         int? read = 0;
@@ -91,48 +107,41 @@ public class FeslProxy
                 continue;
             }
 
-            if (!string.IsNullOrWhiteSpace(proxyConfig.ProxyOverrideClientTicket) || proxyConfig.LogPacketAnalysis)
-            {
-                var feslPacket = AnalyzeFeslPacket(readBuffer);
+            var feslPacket = AnalyzeFeslPacket(readBuffer);
+            var dataString = feslPacket?.DataDict.Select(x => $"{x.Key}={x.Value}").Aggregate((x, y) => $"{x}; {y}");
+            _logger.LogDebug($"Proxying packet '{feslPacket?.Type}' with TXN={feslPacket?["TXN"]}; Data={dataString}");
 
-                if (proxyConfig.LogPacketAnalysis)
+            if (feslPacket != null && feslPacket?.Type == "acct" && feslPacket?["TXN"] == "NuPS3Login")
+            {
+                var packet = feslPacket.Value;
+                var clientTicket = packet["ticket"];
+
+                if (!string.IsNullOrWhiteSpace(clientTicket))
                 {
-                    var dataString = feslPacket?.DataDict.Select(x => $"{x.Key}={x.Value}").Aggregate((x, y) => $"{x}; {y}");
-                    Console.WriteLine($"Proxying packet '{feslPacket?.Type}' with TXN={feslPacket?["TXN"]}; Data={dataString}");
+                    _logger.LogTrace($"Client ticket={clientTicket}");
                 }
 
-                if (feslPacket != null && feslPacket?.Type == "acct" && feslPacket?["TXN"] == "NuPS3Login")
+                if (!string.IsNullOrWhiteSpace(clientTicket) && _settings.DumpClientTicket)
                 {
-                    var packet = feslPacket.Value;
-                    var clientTicket = packet["ticket"];
+                    _logger.LogCritical(clientTicket);
+                    throw new Exception("Ticket dumped, exiting...");
+                }
 
-                    if (proxyConfig.LogPacketAnalysis && !string.IsNullOrWhiteSpace(clientTicket))
+                if (!string.IsNullOrWhiteSpace(clientTicket) && !string.IsNullOrWhiteSpace(_settings.ProxyOverrideClientTicket))
+                {
+                    try
                     {
-                        Console.WriteLine($"Client ticket={clientTicket}");
+                        _logger.LogInformation("Overriding client ticket...");
+                        packet["ticket"] = _settings.ProxyOverrideClientTicket;
+
+                        var newBuffer = await packet.Serialize(packet.Id);
+
+                        newBuffer.CopyTo(readBuffer, 0);
+                        read = newBuffer.Length;
                     }
-
-                    if (!string.IsNullOrWhiteSpace(clientTicket) && proxyConfig.DumpClientTicket)
+                    catch (Exception e)
                     {
-                        Console.WriteLine(clientTicket);
-                        throw new Exception("Ticket dumped, exiting...");
-                    }
-
-                    if (!string.IsNullOrWhiteSpace(clientTicket) && !string.IsNullOrWhiteSpace(proxyConfig.ProxyOverrideClientTicket))
-                    {
-                        try
-                        {
-                            Console.WriteLine("Overriding client ticket...");
-                            packet["ticket"] = proxyConfig.ProxyOverrideClientTicket;
-
-                            var newBuffer = await packet.Serialize(packet.Id);
-
-                            newBuffer.CopyTo(readBuffer, 0);
-                            read = newBuffer.Length;
-                        }
-                        catch (Exception e)
-                        {
-                            Console.WriteLine($"Failed to override ticket: {e.Message}");
-                        }
+                        _logger.LogError(e, $"Failed to override ticket: {e.Message}");
                     }
                 }
             }
@@ -158,6 +167,13 @@ public class FeslProxy
 
 public class ProxyTlsAuthentication : TlsAuthentication
 {
+    private readonly ILogger _logger;
+
+    public ProxyTlsAuthentication(ILogger logger)
+    {
+        _logger = logger;
+    }
+
     public TlsCredentials GetClientCredentials(CertificateRequest certificateRequest)
     {
         throw new NotImplementedException();
@@ -165,6 +181,6 @@ public class ProxyTlsAuthentication : TlsAuthentication
 
     public void NotifyServerCertificate(TlsServerCertificate serverCertificate)
     {
-        Console.WriteLine("Ignoring server certificate...");
+        _logger.LogDebug("Ignoring server certificate...");
     }
 }

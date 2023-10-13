@@ -9,6 +9,7 @@ using Arcadia.EA;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 using Arcadia.Storage;
+using Arcadia.EA.Proxy;
 
 var config = new ConfigurationBuilder()
     .SetBasePath(Directory.GetCurrentDirectory())
@@ -45,6 +46,9 @@ var host = Host.CreateDefaultBuilder()
             .AddHostedService<DnsHostedService>()
             .AddHostedService<FeslHostedService>()
             .AddHostedService<TheaterHostedService>();
+
+        services.AddTransient<FeslProxy>();
+        services.AddTransient<TheaterProxy>();
     })
     .Build();
 
