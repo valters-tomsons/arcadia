@@ -19,8 +19,6 @@ public class DnsHostedService : IHostedService
         var options = settings.Value;
         if (!options.EnableDns) return;
 
-        _logger.LogInformation("Starting DNS server on port 53");
-
         var arcadia = arcadiaSettings.Value;
         var fesl = feslSettings.Value;
 
