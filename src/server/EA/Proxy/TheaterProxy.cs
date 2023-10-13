@@ -46,7 +46,7 @@ public class TheaterProxy
         {
             try
             {
-                byte[] buffer = new byte[5120];
+                byte[] buffer = new byte[8096];
                 int read;
 
                 while ((read = await _arcadiaStream!.ReadAsync(buffer, 0, buffer.Length)) > 0)
@@ -67,7 +67,7 @@ public class TheaterProxy
         {
             try
             {
-                byte[] buffer = new byte[5120];
+                byte[] buffer = new byte[8096];
                 int read;
 
                 while ((read = await _upstreamStream!.ReadAsync(buffer, 0, buffer.Length)) > 0)
@@ -84,7 +84,7 @@ public class TheaterProxy
             return Task.CompletedTask;
         });
 
-        await Task.WhenAll(clientToUpstreamTask, upstreamToClientTask);
+        await Task.WhenAny(clientToUpstreamTask, upstreamToClientTask);
         _logger.LogInformation("Proxy connection closed, exiting...");
     }
 }
