@@ -27,8 +27,6 @@ public class FeslHandler
     private TlsServerProtocol _network = null!;
     private string _clientEndpoint = null!;
 
-    private PSNTicket? _psnTicket;
-
     private uint _feslTicketId;
 
     public async Task HandleClientConnection(TlsServerProtocol network, string clientEndpoint)
@@ -375,9 +373,9 @@ public class FeslHandler
 
         var loginTicket = request.DataDict["ticket"] as string ?? string.Empty;
         var ticketData = TicketDecoder.DecodeFromASCIIString(loginTicket);
-        _psnTicket = new PSNTicket(ticketData);
+        var onlineId = (ticketData[5] as BStringData).Value.TrimEnd('\0');
 
-        _sessionCache["personaName"] = _psnTicket.OnlineId;
+        _sessionCache["personaName"] = onlineId;
         _sessionCache["LKEY"] = _sharedCounters.GetNextLkey();
         _sessionCache["UID"] = _sharedCounters.GetNextUserId();
 
