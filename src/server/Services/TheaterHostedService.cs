@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Net.Sockets;
 using Arcadia.Handlers;
+using Arcadia.EA.Proxy;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -40,12 +41,6 @@ public class TheaterHostedService : IHostedService
     {
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-        if (_feslSettings.Value.EnableProxy)
-        {
-            _logger.LogWarning("Proxying enabled, not hosting Theater!");
-            return Task.CompletedTask;
-        }
-
         _tcpListener.Start();
         _tcpServer = Task.Run(async () =>
         {
@@ -58,7 +53,7 @@ public class TheaterHostedService : IHostedService
 
                 _logger.LogInformation("Opening TCP connection from: {clientEndpoint}", clientEndpoint);
 
-                var connection = Task.Run(async () => await HandleConnection(tcpClient, clientEndpoint), _cts.Token);
+                var connection = Task.Run(async () => await HandleClient(tcpClient, clientEndpoint), _cts.Token);
                 _activeConnections.Add(connection);
             }
         }, _cts.Token);
@@ -66,13 +61,24 @@ public class TheaterHostedService : IHostedService
         return Task.CompletedTask;
     }
 
-    private async Task HandleConnection(TcpClient tcpClient, string clientEndpoint)
+    private async Task HandleClient(TcpClient tcpClient, string clientEndpoint)
     {
+        if (_feslSettings.Value.EnableProxy)
+        {
+            await HandleAsProxy(tcpClient, _cts.Token);
+        }
+
         using var scope = _scopeFactory.CreateAsyncScope();
         var networkStream = tcpClient.GetStream();
 
         var handler = scope.ServiceProvider.GetRequiredService<TheaterHandler>();
         await handler.HandleClientConnection(networkStream, clientEndpoint);
+    }
+
+    private async Task HandleAsProxy(TcpClient client, CancellationToken ct)
+    {
+        var proxy = new TheaterProxy(client);
+        await proxy.StartProxy(_settings.Value);
     }
 
     public Task StopAsync(CancellationToken cancellationToken)

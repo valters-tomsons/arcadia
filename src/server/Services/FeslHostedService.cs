@@ -4,13 +4,14 @@ using Arcadia.EA;
 using Arcadia.Handlers;
 using Arcadia.Tls;
 using Arcadia.Tls.Crypto;
-using Arcadia.Tls.Misc;
+using Arcadia.EA.Proxy;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Tls;
+using Arcadia.Tls.Misc;
 
 namespace Arcadia.Services;
 
@@ -128,7 +129,7 @@ public class FeslHostedService : IHostedService
 
     private async Task HandleAsProxy(TlsServerProtocol protocol, Rc4TlsCrypto crypto, CancellationToken ct)
     {
-        var proxy = new TlsClientProxy(protocol, crypto);
+        var proxy = new FeslProxy(protocol, crypto);
         await proxy.StartProxy(_settings.Value, _feslSettings.Value);
     }
 
