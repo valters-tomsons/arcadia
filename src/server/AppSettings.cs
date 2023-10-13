@@ -23,6 +23,7 @@ public record FeslSettings
     public bool EnableProxy { get; init; }
     public bool LogPacketAnalysis { get; init; }
     public string ProxyOverrideClientTicket { get; init; } = string.Empty;
+    public bool DumpClientTicket { get; init; }
 }
 
 public record DnsSettings
