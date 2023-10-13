@@ -99,7 +99,7 @@ public class FeslProxy
         var readBuffer = new byte[5120];
         int? read = 0;
 
-        while (read == 0)
+        while (source.IsConnected)
         {
             read = source.ReadApplicationData(readBuffer, 0, readBuffer.Length);
             if (read < 1)
