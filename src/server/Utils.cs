@@ -73,7 +73,9 @@ public static class Utils
     public static Dictionary<string, object> ParseFeslPacketToDict(byte[] data)
     {
         var dataString = Encoding.ASCII.GetString(data);
-        var dataSplit = dataString.Split('\n').Where(x => !x.Equals("\0")).ToArray();
+
+        var dataSplit = dataString.Split('\n').Where(x => !string.IsNullOrWhiteSpace(x.Replace("\0", string.Empty))).ToArray();
+        dataSplit = dataSplit.Select(x => x.Replace("\0", string.Empty)).ToArray();
 
         var dataDict = new Dictionary<string, object>();
         for (var i = 0; i < dataSplit.Length; i++)
