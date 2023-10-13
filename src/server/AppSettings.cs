@@ -22,8 +22,9 @@ public record FeslSettings
     public bool MirrorCertificateStrings { get; init; }
     public bool EnableProxy { get; init; }
     public bool LogPacketAnalysis { get; init; }
-    public string ProxyOverrideClientTicket { get; init; } = string.Empty;
     public bool DumpClientTicket { get; init; }
+    public string ProxyOverrideClientTicket { get; init; } = string.Empty;
+    public string ProxyOverrideClientMacAddr { get; init; } = string.Empty;
 }
 
 public record DnsSettings
