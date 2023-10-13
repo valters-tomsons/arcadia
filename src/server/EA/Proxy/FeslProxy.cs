@@ -1,5 +1,4 @@
 using System.Net.Sockets;
-using Arcadia.PSN;
 using Arcadia.Tls;
 using Org.BouncyCastle.Tls;
 using Org.BouncyCastle.Tls.Crypto.Impl.BC;
@@ -79,7 +78,7 @@ public class FeslProxy
         Console.WriteLine("Proxy connection closed, exiting...");
     }
 
-    private static async void ProxyApplicationData(TlsProtocol source, TlsProtocol destination, FeslSettings proxyConfig)
+    private async void ProxyApplicationData(TlsProtocol source, TlsProtocol destination, FeslSettings proxyConfig)
     {
         var readBuffer = new byte[5120];
         int? read = 0;
@@ -122,14 +121,17 @@ public class FeslProxy
                     {
                         try
                         {
+                            Console.WriteLine("Overriding client ticket...");
                             packet["ticket"] = proxyConfig.ProxyOverrideClientTicket;
 
-                            readBuffer = await packet.Serialize(packet.Id);
-                            read = readBuffer.Length;
+                            var newBuffer = await packet.Serialize(packet.Id);
+
+                            newBuffer.CopyTo(readBuffer, 0);
+                            read = newBuffer.Length;
                         }
-                        catch
+                        catch (Exception e)
                         {
-                            Console.WriteLine($"Failed to override ticket!");
+                            Console.WriteLine($"Failed to override ticket: {e.Message}");
                         }
                     }
                 }
