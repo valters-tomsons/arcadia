@@ -13,7 +13,7 @@ public static class Utils
 {
     public static async Task<(int, byte[])> ReadApplicationDataAsync(TlsServerProtocol network)
     {
-        var readBuffer = new byte[5120];
+        var readBuffer = new byte[8096];
         try
         {
             var read = await Task.Run(() => network.ReadApplicationData(readBuffer, 0, readBuffer.Length));

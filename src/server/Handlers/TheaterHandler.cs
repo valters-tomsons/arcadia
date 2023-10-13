@@ -49,7 +49,7 @@ public class TheaterHandler
         while (_network.CanRead)
         {
             int read;
-            byte[] readBuffer = new byte[5120];
+            byte[] readBuffer = new byte[8096];
 
             try
             {
