@@ -112,16 +112,16 @@ public class FeslProxy
                         Console.WriteLine($"Client ticket={clientTicket}");
                     }
 
+                    if (!string.IsNullOrWhiteSpace(clientTicket) && proxyConfig.DumpClientTicket)
+                    {
+                        Console.WriteLine(clientTicket);
+                        throw new Exception("Ticket dumped, exiting...");
+                    }
+
                     if (!string.IsNullOrWhiteSpace(clientTicket) && !string.IsNullOrWhiteSpace(proxyConfig.ProxyOverrideClientTicket))
                     {
                         try
                         {
-                            var psnTicket = new PSNTicket(TicketDecoder.DecodeFromASCIIString(clientTicket));
-                            Console.WriteLine("Ticket detected, overriding...");
-                            Console.WriteLine($"Expires: {psnTicket.ExpireDate}");
-                            Console.WriteLine($"Issued: {psnTicket.IssuedDate}");
-                            Console.WriteLine($"User: {psnTicket.OnlineId}");
-
                             packet["ticket"] = proxyConfig.ProxyOverrideClientTicket;
 
                             readBuffer = await packet.Serialize(packet.Id);
