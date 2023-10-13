@@ -63,22 +63,23 @@ public class TheaterHostedService : IHostedService
 
     private async Task HandleClient(TcpClient tcpClient, string clientEndpoint)
     {
+        using var scope = _scopeFactory.CreateAsyncScope();
+
         if (_feslSettings.Value.EnableProxy)
         {
-            await HandleAsProxy(tcpClient, _cts.Token);
+            await HandleAsProxy(scope.ServiceProvider, tcpClient, _cts.Token);
+            return;
         }
 
-        using var scope = _scopeFactory.CreateAsyncScope();
         var networkStream = tcpClient.GetStream();
-
         var handler = scope.ServiceProvider.GetRequiredService<TheaterHandler>();
         await handler.HandleClientConnection(networkStream, clientEndpoint);
     }
 
-    private async Task HandleAsProxy(TcpClient client, CancellationToken ct)
+    private async Task HandleAsProxy(IServiceProvider sp, TcpClient client, CancellationToken ct)
     {
-        var proxy = new TheaterProxy(client);
-        await proxy.StartProxy(_settings.Value);
+        var proxy = sp.GetRequiredService<TheaterProxy>();
+        await proxy.StartProxy(client);
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
