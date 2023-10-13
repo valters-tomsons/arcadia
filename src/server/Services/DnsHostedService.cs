@@ -23,7 +23,7 @@ public class DnsHostedService : IHostedService
         var fesl = feslSettings.Value;
 
         _masterFile = new MasterFile();
-        _server = new DnsServer(_masterFile, "1.1.1.1");
+        _server = new DnsServer(_masterFile, "1.1.1.1", port: options.DnsPort);
 
         _masterFile.AddIPAddressResourceRecord("messaging.ea.com", "127.0.0.1");
 
