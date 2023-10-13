@@ -96,30 +96,34 @@ public class FeslProxy
 
     private async void ProxyApplicationData(TlsProtocol source, TlsProtocol destination)
     {
-        var readBuffer = new byte[5120];
+        var readBuffer = new byte[8096];
         int? read = 0;
 
         while (source.IsConnected)
         {
-            read = source.ReadApplicationData(readBuffer, 0, readBuffer.Length);
-            if (read < 1)
+            try
+            {
+                read = source.ReadApplicationData(readBuffer, 0, readBuffer.Length);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to read proxy data");
+                return;
+            }
+
+            if (!(read > 0))
             {
                 continue;
             }
 
-            var feslPacket = AnalyzeFeslPacket(readBuffer);
+            var feslPacket = AnalyzeFeslPacket(readBuffer.AsSpan(0, read.Value).ToArray());
             var dataString = feslPacket?.DataDict.Select(x => $"{x.Key}={x.Value}").Aggregate((x, y) => $"{x}; {y}");
-            _logger.LogDebug($"Proxying packet '{feslPacket?.Type}' with TXN={feslPacket?["TXN"]}; Data={dataString}");
+            _logger.LogTrace($"Proxying id={feslPacket?.Id} len={feslPacket?.Length} {feslPacket?.Type}, data: {dataString}");
 
             if (feslPacket != null && feslPacket?.Type == "acct" && feslPacket?["TXN"] == "NuPS3Login")
             {
                 var packet = feslPacket.Value;
                 var clientTicket = packet["ticket"];
-
-                if (!string.IsNullOrWhiteSpace(clientTicket))
-                {
-                    _logger.LogTrace($"Client ticket={clientTicket}");
-                }
 
                 if (!string.IsNullOrWhiteSpace(clientTicket) && _settings.DumpClientTicket)
                 {
@@ -132,17 +136,28 @@ public class FeslProxy
                     try
                     {
                         _logger.LogInformation("Overriding client ticket...");
+
                         packet["ticket"] = _settings.ProxyOverrideClientTicket;
+                        packet["macAddr"] = _settings.ProxyOverrideClientMacAddr;
+
+                        var dataStringMod = packet.DataDict.Select(x => $"{x.Key}={x.Value}").Aggregate((x, y) => $"{x}; {y}");
+                        _logger.LogDebug($"Rewritten id={packet.Id} len={packet.Length} {packet.Type}, data: {dataStringMod}");
 
                         var newBuffer = await packet.Serialize(packet.Id);
 
-                        newBuffer.CopyTo(readBuffer, 0);
                         read = newBuffer.Length;
+                        Array.Copy(newBuffer, readBuffer, read.Value);
                     }
                     catch (Exception e)
                     {
                         _logger.LogError(e, $"Failed to override ticket: {e.Message}");
+                        return;
                     }
+                }
+
+                if (string.IsNullOrWhiteSpace(clientTicket))
+                {
+                    _logger.LogInformation("Received login!");
                 }
             }
 
