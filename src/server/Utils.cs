@@ -11,6 +11,16 @@ namespace Arcadia;
 
 public static class Utils
 {
+    public static byte[] HexStringToBytes(string value)
+    {
+        string cleanedRequest = value.Replace(" ", "").Replace("\n", "");
+        byte[] byteArray = Enumerable.Range(0, cleanedRequest.Length)
+                             .Where(x => x % 2 == 0)
+                             .Select(x => Convert.ToByte(cleanedRequest.Substring(x, 2), 16))
+                             .ToArray();
+        return byteArray;
+    }
+
     public static async Task<(int, byte[])> ReadApplicationDataAsync(TlsServerProtocol network)
     {
         var readBuffer = new byte[8096];
