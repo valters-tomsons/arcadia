@@ -1,6 +1,7 @@
 using System.Net.Sockets;
 using System.Text;
 using Arcadia.EA;
+using Arcadia.EA.Constants;
 using Arcadia.Storage;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -99,7 +100,7 @@ public class TheaterHandler
             ["PROT"] = request.DataDict["PROT"]
         };
 
-        var packet = new Packet("CONN", 0x00000000, response);
+        var packet = new Packet("CONN", TheaterTransmissionType.OkResponse, 0, response);
         var data = await packet.Serialize();
 
         await _network.WriteAsync(data);
@@ -118,7 +119,7 @@ public class TheaterHandler
             ["TID"] = request.DataDict["TID"]
         };
 
-        var packet = new Packet("USER", 0x00000000, response);
+        var packet = new Packet("USER", TheaterTransmissionType.OkResponse, 0, response);
         var data = await packet.Serialize();
 
         await _network.WriteAsync(data);
@@ -140,7 +141,7 @@ public class TheaterHandler
             ["GID"] = _sharedCounters.GetNextGameId()
         };
 
-        var packet = new Packet("CGAM", 0x00000000, response);
+        var packet = new Packet("CGAM", TheaterTransmissionType.OkResponse, 0, response);
         var data = await packet.Serialize();
 
         await _network.WriteAsync(data);
@@ -159,7 +160,7 @@ public class TheaterHandler
             ["GID"] = request.DataDict["GID"],
         };
 
-        var packet = new Packet("ECNL", 0x00000000, response);
+        var packet = new Packet("ECNL", TheaterTransmissionType.OkResponse, 0, response);
         var data = await packet.Serialize();
 
         await _network.WriteAsync(data);
@@ -175,7 +176,7 @@ public class TheaterHandler
             ["GID"] = request.DataDict["GID"]
         };
 
-        var packet = new Packet("EGAM", 0x00000000, response);
+        var packet = new Packet("EGAM", TheaterTransmissionType.OkResponse, 0, response);
         var data = await packet.Serialize();
 
         await _network.WriteAsync(data);
@@ -190,7 +191,7 @@ public class TheaterHandler
             ["TID"] = request.DataDict["TID"]
         };
 
-        var packet = new Packet("EGRS", 0x00000000, serverInfo);
+        var packet = new Packet("EGRS", TheaterTransmissionType.OkResponse, 0, serverInfo);
         var data = await packet.Serialize();
 
         await _network.WriteAsync(data);
@@ -237,7 +238,7 @@ public class TheaterHandler
             ["AP"] = 5
         };
 
-        var packet = new Packet("GDAT", 0x00000000, serverInfo);
+        var packet = new Packet("GDAT", TheaterTransmissionType.OkResponse, 0, serverInfo);
         var data = await packet.Serialize();
         await _network.WriteAsync(data);
 
@@ -261,7 +262,7 @@ public class TheaterHandler
             serverInfo.Add($"D-pdat{i}", "|0|0|0|0");
         }
 
-        var packet = new Packet("GDET", 0x00000000, serverInfo);
+        var packet = new Packet("GDET", TheaterTransmissionType.OkResponse, 0, serverInfo);
         var data = await packet.Serialize();
 
         _logger.LogTrace("Sending GDET to client at {endpoint}", _clientEndpoint);
@@ -276,7 +277,7 @@ public class TheaterHandler
             ["PID"] = request.DataDict["PID"],
         };
 
-        var packet = new Packet("PENT", 0x00000000, serverInfo);
+        var packet = new Packet("PENT", TheaterTransmissionType.OkResponse, 0, serverInfo);
         var data = await packet.Serialize();
 
         await _network.WriteAsync(data);
@@ -306,7 +307,7 @@ public class TheaterHandler
             ["GID"] = request.DataDict["GID"]
         };
 
-        var packet = new Packet("EGEG", 0x00000000, serverInfo);
+        var packet = new Packet("EGEG", TheaterTransmissionType.OkResponse, 0, serverInfo);
         var data = await packet.Serialize();
 
         _logger.LogTrace("Sending EGEG to client at {endpoint}", _clientEndpoint);
@@ -334,7 +335,7 @@ public class TheaterHandler
             ["GID"] = 801000
         };
 
-        var packet = new Packet("EGRQ", 0x00000000, serverInfo);
+        var packet = new Packet("EGRQ", TheaterTransmissionType.OkResponse, 0, serverInfo);
         var data = await packet.Serialize();
 
         _logger.LogTrace("Sending EGRQ to client at {endpoint}", _clientEndpoint);

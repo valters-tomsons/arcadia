@@ -26,6 +26,8 @@ public class EAPacketTests
         var packet = new Packet(Utils.HexStringToBytes(request));
 
         Assert.Equal("fsys", packet.Type);
+        Assert.Equal((uint)1, packet.Id);
+        Assert.Equal(0xc0000000, packet.TransmissionType);
         Assert.Equal("Hello", packet["TXN"]);
     }
 }
