@@ -1,4 +1,5 @@
 using System.Net.Sockets;
+using Arcadia.EA.Constants;
 using Arcadia.Tls;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -119,6 +120,71 @@ public class FeslProxy
             var feslPacket = AnalyzeFeslPacket(readBuffer.AsSpan(0, read.Value).ToArray());
             var dataString = feslPacket?.DataDict.Select(x => $"{x.Key}={x.Value}").Aggregate((x, y) => $"{x}; {y}");
             _logger.LogTrace($"Proxying id={feslPacket?.Id} len={feslPacket?.Length} {feslPacket?.Type}, data: {dataString}");
+
+            if (feslPacket != null && feslPacket?.Type == "fsys" && feslPacket?["TXN"] == "Hello")
+            {
+                var packet = feslPacket.Value;
+                var theaterIp = packet["theaterIp"];
+                var theaterPort = packet["theaterPort"];
+
+                if (!string.IsNullOrWhiteSpace(theaterIp) && !string.IsNullOrWhiteSpace(theaterPort) && (!string.IsNullOrWhiteSpace(_settings.ProxyOverrideTheaterIp) || _settings.ProxyOverrideTheaterPort != 0))
+                {
+                    _logger.LogInformation("Overriding server theater details...");
+
+                    if (!string.IsNullOrWhiteSpace(_settings.ProxyOverrideTheaterIp))
+                    {
+                        packet["theaterIp"] = _settings.ProxyOverrideTheaterIp;                        
+                    }
+
+                    if (_settings.ProxyOverrideTheaterPort != 0)
+                    {
+                        packet["theaterPort"] = _settings.ProxyOverrideTheaterPort.ToString();                        
+                    }
+                    
+                    var newBuffer = await packet.Serialize();
+
+                    read = newBuffer.Length;
+                    Array.Copy(newBuffer, readBuffer, read.Value);
+                    
+                    var dataStringMod = feslPacket?.DataDict.Select(x => $"{x.Key}={x.Value}").Aggregate((x, y) => $"{x}; {y}");
+                    _logger.LogTrace($"FESL packet with override id={feslPacket?.Id} len={feslPacket?.Length} {feslPacket?.Type}, data: {dataStringMod}");
+                }
+            }
+            
+            if (feslPacket != null && feslPacket?.Type == "pnow" && feslPacket?["TXN"] == "Status")
+            {
+                var packet = feslPacket.Value;
+                var sessionState = packet["sessionState"];
+
+                if (!string.IsNullOrWhiteSpace(sessionState) && _settings.ProxyOverridePlayNowGameGid != 0 && _settings.ProxyOverridePlayNowGameLid != 0)
+                {
+                    _logger.LogInformation("Overriding server play now response...");
+                    
+                    var pnowData = new Dictionary<string, object>
+                    {
+                        { "TXN", "Status" },
+                        { "id.id", packet["id.id"] },
+                        { "id.partition", packet["id.partition"] },
+                        { "sessionState", "COMPLETE" },
+                        { "props.{}", 2 },
+                        { "props.{resultType}", "JOIN" },
+                        { "props.{games}.[]", 1 },
+                        { "props.{games}.0.fit", 3349 },
+                        { "props.{games}.0.gid", _settings.ProxyOverridePlayNowGameGid },
+                        { "props.{games}.0.lid", _settings.ProxyOverridePlayNowGameLid }
+                    };
+
+                    var pnowPacket = new Packet("pnow", FeslTransmissionType.SinglePacketResponse, packet.Id, pnowData);
+                    
+                    var newBuffer = await pnowPacket.Serialize();
+
+                    read = newBuffer.Length;
+                    Array.Copy(newBuffer, readBuffer, read.Value);
+                    
+                    var dataStringMod = pnowPacket.DataDict.Select(x => $"{x.Key}={x.Value}").Aggregate((x, y) => $"{x}; {y}");
+                    _logger.LogTrace($"FESL packet with override id={pnowPacket.Id} len={pnowPacket.Length} {pnowPacket.Type}, data: {dataStringMod}");
+                }
+            }
 
             if (feslPacket != null && feslPacket?.Type == "acct" && feslPacket?["TXN"] == "NuPS3Login")
             {

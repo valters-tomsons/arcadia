@@ -24,6 +24,10 @@ public record FeslSettings
     public bool DumpClientTicket { get; init; }
     public string ProxyOverrideClientTicket { get; init; } = string.Empty;
     public string ProxyOverrideClientMacAddr { get; init; } = string.Empty;
+    public string ProxyOverrideTheaterIp { get; init; } = string.Empty;
+    public int ProxyOverrideTheaterPort { get; init; } = 0;
+    public int ProxyOverridePlayNowGameGid { get; init; } = 0;
+    public int ProxyOverridePlayNowGameLid { get; init; } = 0;
 }
 
 public record DnsSettings
