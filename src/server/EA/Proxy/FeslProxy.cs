@@ -143,7 +143,7 @@ public class FeslProxy
                         var dataStringMod = packet.DataDict.Select(x => $"{x.Key}={x.Value}").Aggregate((x, y) => $"{x}; {y}");
                         _logger.LogDebug($"Rewritten id={packet.Id} len={packet.Length} {packet.Type}, data: {dataStringMod}");
 
-                        var newBuffer = await packet.Serialize(packet.Id);
+                        var newBuffer = await packet.Serialize();
 
                         read = newBuffer.Length;
                         Array.Copy(newBuffer, readBuffer, read.Value);

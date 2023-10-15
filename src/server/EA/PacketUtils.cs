@@ -13,15 +13,17 @@ public static class PacketUtils
         return seed.ToString();
     }
 
-    public static byte[] GeneratePacketChecksum(string data, uint id)
+    public static byte[] BuildPacketHeader(string type, uint transmissionType, uint packetId, string data)
     {
-        byte[] packetIdBytes = GeneratePacketId(id);
-        byte[] packetLengthBytes = GeneratePacketLength(data);
+        var typeBytes = Encoding.ASCII.GetBytes(type);
+        // TODO Check if bitwise OR is enough or if we need to apply the bit mask first to not break anything with packet ids longer than 3 bytes
+        var transmissionTypePacketIdBytes = UintToBytes(transmissionType | packetId);
+        var packetLengthBytes = CalcPacketLength(data);
 
-        return packetIdBytes.Concat(packetLengthBytes).ToArray();
+        return typeBytes.Concat(transmissionTypePacketIdBytes).Concat(packetLengthBytes).ToArray();
     }
 
-    private static byte[] GeneratePacketLength(string packetData)
+    private static byte[] CalcPacketLength(string packetData)
     {
         var dataBytes = Encoding.ASCII.GetBytes(packetData);
 
@@ -34,9 +36,9 @@ public static class PacketUtils
         return bytes;
     }
 
-    private static byte[] GeneratePacketId(uint packetId)
+    private static byte[] UintToBytes(uint value)
     {
-        byte[] bytes = BitConverter.GetBytes(packetId);
+        byte[] bytes = BitConverter.GetBytes(value);
 
         if (BitConverter.IsLittleEndian)
             Array.Reverse(bytes);

@@ -1,5 +1,6 @@
 using System.Globalization;
 using Arcadia.EA;
+using Arcadia.EA.Constants;
 using Arcadia.PSN;
 using Arcadia.Storage;
 using Microsoft.Extensions.Logging;
@@ -55,10 +56,6 @@ public class FeslHandler
             }
 
             var reqPacket = new Packet(readBuffer[..read]);
-            if (reqPacket.Id != 0x80000000)
-            {
-                Interlocked.Increment(ref _feslTicketId);
-            }
 
             reqPacket.DataDict.TryGetValue("TXN", out var txn);
             var reqTxn = txn as string ?? string.Empty;
@@ -70,11 +67,11 @@ public class FeslHandler
 
             if (reqPacket.Type == "fsys" && reqTxn == "Hello")
             {
-                await HandleHello();
+                await HandleHello(reqPacket);
             }
             else if(reqPacket.Type == "pnow" && reqTxn == "Start")
             {
-                await HandlePlayNow();
+                await HandlePlayNow(reqPacket);
             }
             else if (reqPacket.Type == "fsys" && reqTxn == "MemCheck")
             {
@@ -82,7 +79,7 @@ public class FeslHandler
             }
             else if (reqPacket.Type == "fsys" && reqTxn == "GetPingSites")
             {
-                await HandleGetPingSites();
+                await HandleGetPingSites(reqPacket);
             }
             else if(reqPacket.Type == "acct" && reqTxn == "NuPS3Login")
             {
@@ -90,11 +87,11 @@ public class FeslHandler
             }
             else if(reqPacket.Type == "acct" && reqTxn == "NuGetTos")
             {
-                await HandleGetTos();
+                await HandleGetTos(reqPacket);
             }
             else if(reqPacket.Type == "acct" && reqTxn == "GetTelemetryToken")
             {
-                await HandleTelemetryToken();
+                await HandleTelemetryToken(reqPacket);
             }
             else if(reqPacket.Type == "acct" && reqTxn == "NuPS3AddAccount")
             {
@@ -110,11 +107,11 @@ public class FeslHandler
             }
             else if(reqPacket.Type == "pres" && reqTxn == "PresenceSubscribe")
             {
-                await HandlePresenceSubscribe();
+                await HandlePresenceSubscribe(reqPacket);
             }
             else if(reqPacket.Type == "pres" && reqTxn == "SetPresenceStatus")
             {
-                await HandleSetPresenceStatus();
+                await HandleSetPresenceStatus(reqPacket);
             }
             else if (reqPacket.Type == "rank" && reqTxn == "GetStats")
             {
@@ -128,20 +125,20 @@ public class FeslHandler
         }
     }
 
-    private async Task HandleTelemetryToken()
+    private async Task HandleTelemetryToken(Packet request)
     {
         var responseData = new Dictionary<string, object>
         {
             { "TXN", "GetTelemetryToken" },
         };
 
-        var packet = new Packet("acct", 0x80000000, responseData);
-        var response = await packet.Serialize(_feslTicketId);
+        var packet = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
+        var response = await packet.Serialize();
 
         _network.WriteApplicationData(response.AsSpan());
     }
 
-    private async Task HandlePlayNow()
+    private async Task HandlePlayNow(Packet request)
     {
         var pnowId = _sharedCounters.GetNextPnowId();
         var gid = _sharedCounters.GetNextGameId();
@@ -154,8 +151,8 @@ public class FeslHandler
             { "id.partition", "/ps3/BEACH" },
         };
 
-        var packet1 = new Packet("pnow", 0x80000000, data1);
-        var response1 = await packet1.Serialize(_feslTicketId);
+        var packet1 = new Packet("pnow", FeslTransmissionType.SinglePacketResponse, request.Id, data1);
+        var response1 = await packet1.Serialize();
         _network.WriteApplicationData(response1.AsSpan());
 
         var data2 = new Dictionary<string, object>
@@ -172,14 +169,15 @@ public class FeslHandler
             { "props.{games}.0.lid", lid }
         };
 
-        var packet2 = new Packet("pnow", 0x80000000, data2);
-        var response2 = await packet2.Serialize(_feslTicketId);
+        var packet2 = new Packet("pnow", FeslTransmissionType.SinglePacketResponse, request.Id, data2);
+        var response2 = await packet2.Serialize();
         _network.WriteApplicationData(response2.AsSpan());
 
     }
 
     private async Task HandleGetStats(Packet request)
     {
+        // TODO Not entirely sure if this works well with the game, since stats requests are usually sent as multi-packet queries with base64 encoded data
         var responseData = new Dictionary<string, object>
         {
             { "TXN", "GetStats" },
@@ -197,13 +195,13 @@ public class FeslHandler
         //     responseData.Add($"stats.{i}.value", 0.0);
         // }
 
-        var packet = new Packet("rank", 0x80000000, responseData);
-        var response = await packet.Serialize(_feslTicketId);
+        var packet = new Packet("rank", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
+        var response = await packet.Serialize();
 
         _network.WriteApplicationData(response.AsSpan());
     }
 
-    private async Task HandlePresenceSubscribe()
+    private async Task HandlePresenceSubscribe(Packet request)
     {
         var responseData = new Dictionary<string, object>
         {
@@ -214,26 +212,26 @@ public class FeslHandler
             { "responses.0.owner.id", _sessionCache["UID"] },
         };
 
-        var packet = new Packet("pres", 0x80000000, responseData);
-        var response = await packet.Serialize(_feslTicketId);
+        var packet = new Packet("pres", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
+        var response = await packet.Serialize();
 
         _network.WriteApplicationData(response.AsSpan());
     }
 
-    private async Task HandleSetPresenceStatus()
+    private async Task HandleSetPresenceStatus(Packet request)
     {
         var responseData = new Dictionary<string, object>
         {
             { "TXN", "SetPresenceStatus" },
         };
 
-        var packet = new Packet("pres", 0x80000000, responseData);
-        var response = await packet.Serialize(_feslTicketId);
+        var packet = new Packet("pres", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
+        var response = await packet.Serialize();
 
         _network.WriteApplicationData(response.AsSpan());
     }
 
-    private async Task HandleLookupUserInfo(Packet reqPacket)
+    private async Task HandleLookupUserInfo(Packet request)
     {
         var responseData = new Dictionary<string, object>
         {
@@ -242,8 +240,8 @@ public class FeslHandler
             { "userInfo.0.userName", _sessionCache["personaName"] },
         };
 
-        var packet = new Packet("acct", 0x80000000, responseData);
-        var response = await packet.Serialize(_feslTicketId);
+        var packet = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
+        var response = await packet.Serialize();
 
         _network.WriteApplicationData(response.AsSpan());
     }
@@ -272,13 +270,13 @@ public class FeslHandler
             _logger.LogWarning("Unknown association type: {assoType}", assoType);
         }
 
-        var packet = new Packet("asso", 0x80000000, responseData);
-        var response = await packet.Serialize(_feslTicketId);
+        var packet = new Packet("asso", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
+        var response = await packet.Serialize();
 
         _network.WriteApplicationData(response.AsSpan());
     }
 
-    private async Task HandleGetPingSites()
+    private async Task HandleGetPingSites(Packet request)
     {
         const string serverIp = "127.0.0.1";
 
@@ -292,13 +290,13 @@ public class FeslHandler
             { "minPingSitesToPing", "0"}
         };
 
-        var packet = new Packet("fsys", 0x80000000, responseData);
-        var response = await packet.Serialize(_feslTicketId);
+        var packet = new Packet("fsys", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
+        var response = await packet.Serialize();
 
         _network.WriteApplicationData(response.AsSpan());
     }
 
-    private async Task HandleHello()
+    private async Task HandleHello(Packet request)
     {
         var currentTime = DateTime.UtcNow.ToString("MMM-dd-yyyy HH:mm:ss 'UTC'", CultureInfo.InvariantCulture);
         var serverHelloData = new Dictionary<string, object>
@@ -314,16 +312,17 @@ public class FeslHandler
                     { "theaterPort", _settings.Value.TheaterPort }
                 };
 
-        var helloPacket = new Packet("fsys", 0x80000000, serverHelloData);
-        var helloResponse = await helloPacket.Serialize(_feslTicketId);
+        var helloPacket = new Packet("fsys", FeslTransmissionType.SinglePacketResponse, request.Id, serverHelloData);
+        var helloResponse = await helloPacket.Serialize();
 
         _network.WriteApplicationData(helloResponse.AsSpan());
 
         await SendMemCheck();
     }
 
-    private async Task HandleGetTos()
+    private async Task HandleGetTos(Packet request)
     {
+        // TODO Same as with stats, usually sent as multi-packed response
         const string tos = "Welcome to Arcadia!\nBeware, here be dragons!";
 
         var data = new Dictionary<string, object>
@@ -333,8 +332,8 @@ public class FeslHandler
             { "tos", $"{System.Net.WebUtility.UrlEncode(tos).Replace('+', ' ')}" },
         };
 
-        var packet = new Packet("acct", 0x80000000, data);
-        var response = await packet.Serialize(_feslTicketId);
+        var packet = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, data);
+        var response = await packet.Serialize();
 
         _network.WriteApplicationData(response.AsSpan());
     }
@@ -389,8 +388,8 @@ public class FeslHandler
             { "personaName", _sessionCache["personaName"] }
         };
 
-        var loginPacket = new Packet("acct", 0x80000000, loginResponseData);
-        var loginResponse = await loginPacket.Serialize(_feslTicketId);
+        var loginPacket = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
+        var loginResponse = await loginPacket.Serialize();
 
         _network.WriteApplicationData(loginResponse.AsSpan());
     }
@@ -407,8 +406,8 @@ public class FeslHandler
 
         _logger.LogDebug("Trying to register user {email} with password {pass}", email, pass);
 
-        var resultPacket = new Packet("acct", 0x80000000, data);
-        var response = await resultPacket.Serialize(_feslTicketId);
+        var resultPacket = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, data);
+        var response = await resultPacket.Serialize();
 
         _network.WriteApplicationData(response.AsSpan());
     }
@@ -428,8 +427,10 @@ public class FeslHandler
                     { "salt", PacketUtils.GenerateSalt() }
                 };
 
-        var memcheckPacket = new Packet("fsys", 0x80000000, memCheckData);
-        var memcheckResponse = await memcheckPacket.Serialize(_feslTicketId);
+        // FESL backend is requesting the client to respond to the memcheck, so this is a request
+        // But since memchecks are not part of the meaningful conversation with the client, they don't have a packed id
+        var memcheckPacket = new Packet("fsys", FeslTransmissionType.SinglePacketRequest, 0, memCheckData);
+        var memcheckResponse = await memcheckPacket.Serialize();
 
         _network.WriteApplicationData(memcheckResponse.AsSpan());
     }
