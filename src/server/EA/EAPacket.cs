@@ -19,31 +19,33 @@ public readonly struct Packet
 
         var bigEndianChecksum = (BitConverter.IsLittleEndian ? Checksum.Reverse().ToArray() : Checksum).AsSpan();
         Length = BitConverter.ToUInt32(bigEndianChecksum[..4]);
-        Id = BitConverter.ToUInt32(bigEndianChecksum[4..]);
+        var idAndTransmissionType = BitConverter.ToUInt32(bigEndianChecksum[4..]);
+        TransmissionType = idAndTransmissionType & 0xff000000;
+        Id = idAndTransmissionType & 0x00ffffff;
 
         Data = firstSplit[1];
         DataDict = Utils.ParseFeslPacketToDict(Data);
     }
 
-    public Packet(string type, uint packetId, Dictionary<string, object>? dataDict = null)
+    public Packet(string type, uint transmissionType, uint packetId, Dictionary<string, object>? dataDict = null)
     {
         Type = type.Trim();
+        TransmissionType = transmissionType;
         Id = packetId;
+        // TODO Packet length needs to be set here
         DataDict = dataDict ?? new Dictionary<string, object>();
     }
 
-    public async Task<byte[]> Serialize(uint ticketId = 0)
+    public async Task<byte[]> Serialize()
     {
         var data = Utils.DataDictToPacketString(DataDict).ToString();
-        var checksum = PacketUtils.GeneratePacketChecksum(data, Length + ticketId);
+        var header = PacketUtils.BuildPacketHeader(Type, TransmissionType, Id, data);
 
-        var typeBytes = Encoding.ASCII.GetBytes(Type);
         var dataBytes = Encoding.ASCII.GetBytes(data);
 
-        using var response = new MemoryStream(typeBytes.Length + checksum.Length + dataBytes.Length);
+        using var response = new MemoryStream(header.Length + dataBytes.Length);
 
-        await response.WriteAsync(typeBytes);
-        await response.WriteAsync(checksum);
+        await response.WriteAsync(header);
         await response.WriteAsync(dataBytes);
         await response.FlushAsync();
 
@@ -52,6 +54,7 @@ public readonly struct Packet
 
     public string Type { get; }
     public uint Id { get; }
+    public uint TransmissionType { get;  }
     public uint Length { get; }
     public Dictionary<string, object> DataDict { get; }
     public byte[]? Data { get; }
