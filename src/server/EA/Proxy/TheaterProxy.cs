@@ -36,7 +36,7 @@ public class TheaterProxy
 
     private void InitializeUpstreamClient()
     {
-        _upstreamClient = new TcpClient("beach-ps3.theater.ea.com", _config.TheaterPort);
+        _upstreamClient = new TcpClient(_config.TheaterAddress, _config.TheaterPort);
         _upstreamStream = _upstreamClient.GetStream();
     }
 
