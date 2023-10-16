@@ -26,6 +26,8 @@ public record FeslSettings
     public string ProxyOverrideClientMacAddr { get; init; } = string.Empty;
     public string ProxyOverrideTheaterIp { get; init; } = string.Empty;
     public int ProxyOverrideTheaterPort { get; init; } = 0;
+    public string ProxyOverrideAccountEmail { get; init; } = string.Empty;
+    public string ProxyOverrideAccountPassword { get; init; } = string.Empty;
     public int ProxyOverridePlayNowGameGid { get; init; } = 0;
     public int ProxyOverridePlayNowGameLid { get; init; } = 0;
 }
