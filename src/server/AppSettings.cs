@@ -41,3 +41,8 @@ public record DnsSettings
     public string FeslAddress { get; init; } = string.Empty;
     public int DnsPort { get; init; } = 53;
 }
+
+public record DebugSettings
+{
+    public bool WriteSslDebugKeys { get; init; }
+}

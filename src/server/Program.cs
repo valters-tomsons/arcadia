@@ -38,8 +38,9 @@ var host = Host.CreateDefaultBuilder()
         services.Configure<FeslSettings>(config.GetSection(nameof(FeslSettings)));
         services.Configure<DnsSettings>(config.GetSection(nameof(DnsSettings)));
         services.Configure<ProxySettings>(config.GetSection(nameof(ProxySettings)));
+        services.Configure<DebugSettings>(config.GetSection(nameof(DebugSettings)));
 
-        services.AddScoped(_ => new Rc4TlsCrypto(true));
+        services.AddScoped<Rc4TlsCrypto>();
         services.AddScoped<FeslHandler>();
         services.AddScoped<TheaterHandler>();
 
