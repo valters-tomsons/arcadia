@@ -18,7 +18,10 @@ public record FeslSettings
 
     // *must* match port of the original server, otherwise the client won't be able to connect
     public int ServerPort { get; init; } = Beach.FeslPort;
+}
 
+public record ProxySettings
+{
     public bool MirrorCertificateStrings { get; init; }
     public bool EnableProxy { get; init; }
     public bool DumpClientTicket { get; init; }

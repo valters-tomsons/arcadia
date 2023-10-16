@@ -13,8 +13,7 @@ public class TheaterHostedService : IHostedService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IOptions<ArcadiaSettings> _settings;
-
-    private readonly IOptions<FeslSettings> _feslSettings;
+    private readonly IOptions<ProxySettings> _proxySettings;
     private readonly ILogger<TheaterHostedService> _logger;
 
     private readonly ConcurrentBag<Task> _activeConnections = new();
@@ -25,13 +24,13 @@ public class TheaterHostedService : IHostedService
 
     private Task? _tcpServer;
 
-    public TheaterHostedService(IOptions<ArcadiaSettings> settings, ILogger<TheaterHostedService> logger, IServiceScopeFactory scopeFactory, IOptions<FeslSettings> feslSettings)
+    public TheaterHostedService(IOptions<ArcadiaSettings> settings, ILogger<TheaterHostedService> logger, IServiceScopeFactory scopeFactory, IOptions<ProxySettings> proxySettings)
     {
         _logger = logger;
         _scopeFactory = scopeFactory;
 
         _settings = settings;
-        _feslSettings = feslSettings;
+        _proxySettings = proxySettings;
 
         _tcpListener = new TcpListener(System.Net.IPAddress.Any, _settings.Value.TheaterPort);
         _udpListener = new UdpClient(_settings.Value.TheaterPort);
@@ -65,7 +64,7 @@ public class TheaterHostedService : IHostedService
     {
         using var scope = _scopeFactory.CreateAsyncScope();
 
-        if (_feslSettings.Value.EnableProxy)
+        if (_proxySettings.Value.EnableProxy)
         {
             await HandleAsProxy(scope.ServiceProvider, tcpClient, _cts.Token);
             return;

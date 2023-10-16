@@ -12,7 +12,7 @@ public class DnsHostedService : IHostedService
     private readonly MasterFile? _masterFile;
     private readonly DnsServer? _server;
 
-    public DnsHostedService(IOptions<DnsSettings> settings, IOptions<ArcadiaSettings> arcadiaSettings, IOptions<FeslSettings> feslSettings, ILogger<DnsHostedService> logger)
+    public DnsHostedService(IOptions<DnsSettings> settings, IOptions<ArcadiaSettings> arcadiaSettings, IOptions<FeslSettings> feslSettings, IOptions<ProxySettings> proxySettings, ILogger<DnsHostedService> logger)
     {
         _logger = logger;
 
@@ -21,18 +21,17 @@ public class DnsHostedService : IHostedService
 
         var arcadia = arcadiaSettings.Value;
         var fesl = feslSettings.Value;
+        var proxy = proxySettings.Value;
 
         _masterFile = new MasterFile();
         _server = new DnsServer(_masterFile, "1.1.1.1", port: options.DnsPort);
 
-        _masterFile.AddIPAddressResourceRecord("messaging.ea.com", "127.0.0.1");
-
         _masterFile.AddIPAddressResourceRecord(fesl.ServerAddress, options.FeslAddress);
         _masterFile.AddIPAddressResourceRecord("beach-ps3.theater.ea.com", options.FeslAddress);
+        _masterFile.AddIPAddressResourceRecord("messaging.ea.com", "127.0.0.1");
 
-        if (!feslSettings.Value.EnableProxy)
+        if (!proxy.EnableProxy)
         {
-            _masterFile.AddIPAddressResourceRecord(arcadia.TheaterAddress, arcadia.TheaterAddress);
             _masterFile.AddIPAddressResourceRecord(arcadia.GameServerAddress, arcadia.GameServerAddress);
         }
 

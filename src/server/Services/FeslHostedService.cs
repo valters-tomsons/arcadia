@@ -18,8 +18,8 @@ namespace Arcadia.Services;
 public class FeslHostedService : IHostedService
 {
     private readonly IServiceScopeFactory _scopeFactory;
-    private readonly IOptions<ArcadiaSettings> _settings;
     private readonly IOptions<FeslSettings> _feslSettings;
+    private readonly IOptions<ProxySettings> _proxySettings;
     private readonly ILogger<FeslHostedService> _logger;
     private readonly CertGenerator _certGenerator;
 
@@ -32,14 +32,14 @@ public class FeslHostedService : IHostedService
 
     private Task? _server;
 
-    public FeslHostedService(IOptions<FeslSettings> proxySettings, IOptions<ArcadiaSettings> settings, ILogger<FeslHostedService> logger, CertGenerator certGenerator, IServiceScopeFactory scopeFactory)
+    public FeslHostedService(IOptions<FeslSettings> proxySettings, ILogger<FeslHostedService> logger, IOptions<ProxySettings> proxy, CertGenerator certGenerator, IServiceScopeFactory scopeFactory)
     {
         _logger = logger;
         _scopeFactory = scopeFactory;
 
         _feslSettings = proxySettings;
-        _settings = settings;
         _certGenerator = certGenerator;
+        _proxySettings = proxy;
 
         _listener = new TcpListener(System.Net.IPAddress.Any, _feslSettings.Value.ServerPort);
     }
@@ -52,7 +52,7 @@ public class FeslHostedService : IHostedService
 
         _listener.Start();
 
-        if (_feslSettings.Value.EnableProxy)
+        if (_proxySettings.Value.EnableProxy)
         {
             _logger.LogWarning("Proxying enabled!");
         }
@@ -78,15 +78,14 @@ public class FeslHostedService : IHostedService
 
     private void PrepareCertificate()
     {
-        var proxySettings = _feslSettings.Value;
-
         var IssuerDN = "CN=OTG3 Certificate Authority, C=US, ST=California, L=Redwood City, O=\"Electronic Arts, Inc.\", OU=Online Technology Group, emailAddress=dirtysock-contact@ea.com";
         var SubjectDN = "C=US, ST=California, O=\"Electronic Arts, Inc.\", OU=Online Technology Group, CN=fesl.ea.com, emailAddress=fesl@ea.com";
 
-        if (proxySettings.MirrorCertificateStrings)
+        if (_proxySettings.Value.MirrorCertificateStrings && _proxySettings.Value.EnableProxy)
         {
-            (IssuerDN, SubjectDN) = TlsCertDumper.DumpPubFeslCert(proxySettings.ServerAddress, proxySettings.ServerPort);
-            _logger.LogWarning("Certificate strings copied from upstream: {address}", proxySettings.ServerAddress);
+            var feslSettings = _feslSettings.Value;
+            (IssuerDN, SubjectDN) = TlsCertDumper.DumpPubFeslCert(feslSettings.ServerAddress, feslSettings.ServerPort);
+            _logger.LogWarning("Certificate strings copied from upstream: {address}", feslSettings.ServerAddress);
         }
 
         (_feslCertKey, _feslPubCert) = _certGenerator.GenerateVulnerableCert(IssuerDN, SubjectDN);
@@ -117,7 +116,7 @@ public class FeslHostedService : IHostedService
             return;
         }
 
-        if (_feslSettings.Value.EnableProxy)
+        if (_proxySettings.Value.EnableProxy)
         {
             await HandleAsProxy(scope.ServiceProvider, serverProtocol, crypto);
             return;
