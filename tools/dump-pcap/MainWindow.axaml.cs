@@ -3,16 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Arcadia;
 using Arcadia.Tls.Crypto;
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
-using Org.BouncyCastle.Asn1.Pkcs;
-using Org.BouncyCastle.Crypto;
-using Org.BouncyCastle.Crypto.Parameters;
-using Org.BouncyCastle.Security;
-using Org.BouncyCastle.Tls;
-using Org.BouncyCastle.Tls.Crypto;
-using Org.BouncyCastle.Tls.Crypto.Impl.BC;
+using Microsoft.Extensions.Options;
 using PacketDotNet;
 using SharpPcap;
 using SharpPcap.LibPcap;
@@ -159,7 +154,8 @@ public partial class MainWindow : Window
 
     private void Decrypt(byte[] payload, Dictionary<string, string> sessionKeys)
     {
-        var crypto = new Rc4TlsCrypto();
+        var settings = new DebugSettings { WriteSslDebugKeys = true };
+        var crypto = new Rc4TlsCrypto(Options.Create(settings));
     }
 
     private bool IsSslV3Packet(byte[] payload)
