@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using Org.BouncyCastle.Tls;
 using Org.BouncyCastle.Tls.Crypto;
 using Org.BouncyCastle.Tls.Crypto.Impl.BC;
@@ -8,11 +9,9 @@ public class Rc4TlsCrypto : BcTlsCrypto
 {
     private readonly bool _writeSslKeyLog;
 
-    private const string SslKeyLogFileName = "sslkeylog.log";
-
-    public Rc4TlsCrypto(bool writeSslKeyLog = false)
+    public Rc4TlsCrypto(IOptions<DebugSettings> settings)
     {
-        _writeSslKeyLog = writeSslKeyLog;
+        _writeSslKeyLog = settings.Value.WriteSslDebugKeys;
     }
 
     public override TlsCipher CreateCipher(TlsCryptoParameters cryptoParams, int encryptionAlgorithm, int macAlgorithm)
