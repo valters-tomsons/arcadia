@@ -12,6 +12,7 @@ public class FeslProxy
 {
     private readonly ILogger<FeslProxy> _logger;
     private readonly FeslSettings _settings;
+    private readonly ProxySettings _proxySettings;
 
     private TlsServerProtocol? _arcadiaProtocol;
     private TlsClientProtocol? _upstreamProtocol;
@@ -19,10 +20,11 @@ public class FeslProxy
 
     private string? _personaName;
 
-    public FeslProxy(ILogger<FeslProxy> logger, IOptions<FeslSettings> settings)
+    public FeslProxy(ILogger<FeslProxy> logger, IOptions<FeslSettings> settings, IOptions<ProxySettings> proxySettings)
     {
         _logger = logger;
         _settings = settings.Value;
+        _proxySettings = proxySettings.Value;
     }
 
     public async Task StartProxy(TlsServerProtocol arcadiaProtocol, BcTlsCrypto crypto)
@@ -122,8 +124,8 @@ public class FeslProxy
             var feslPacket = AnalyzeFeslPacket(readBuffer.AsSpan(0, read.Value).ToArray());
             LogPacket("Proxying", feslPacket);
 
-            var enableTheaterOverride = !string.IsNullOrWhiteSpace(_settings.ProxyOverrideTheaterIp) ||
-                                        _settings.ProxyOverrideTheaterPort != 0;
+            var enableTheaterOverride = !string.IsNullOrWhiteSpace(_proxySettings.ProxyOverrideTheaterIp) ||
+                                        _proxySettings.ProxyOverrideTheaterPort != 0;
             if (enableTheaterOverride &&
                 feslPacket is { Type: "fsys", TransmissionType: FeslTransmissionType.SinglePacketResponse } &&
                 feslPacket?["TXN"] == "Hello")
@@ -132,14 +134,14 @@ public class FeslProxy
 
                 _logger.LogInformation("Overriding server theater details...");
 
-                if (!string.IsNullOrWhiteSpace(_settings.ProxyOverrideTheaterIp))
+                if (!string.IsNullOrWhiteSpace(_proxySettings.ProxyOverrideTheaterIp))
                 {
-                    packet["theaterIp"] = _settings.ProxyOverrideTheaterIp;
+                    packet["theaterIp"] = _proxySettings.ProxyOverrideTheaterIp;
                 }
 
-                if (_settings.ProxyOverrideTheaterPort != 0)
+                if (_proxySettings.ProxyOverrideTheaterPort != 0)
                 {
-                    packet["theaterPort"] = _settings.ProxyOverrideTheaterPort.ToString();
+                    packet["theaterPort"] = _proxySettings.ProxyOverrideTheaterPort.ToString();
                 }
 
                 var newBuffer = await packet.Serialize();
@@ -151,7 +153,7 @@ public class FeslProxy
             }
 
             var enablePlayNowGameOverride =
-                _settings.ProxyOverridePlayNowGameGid != 0 && _settings.ProxyOverridePlayNowGameLid != 0;
+                _proxySettings.ProxyOverridePlayNowGameGid != 0 && _proxySettings.ProxyOverridePlayNowGameLid != 0;
             if (enablePlayNowGameOverride &&
                 feslPacket is { Type: "pnow", TransmissionType: FeslTransmissionType.SinglePacketResponse } &&
                 feslPacket?["TXN"] == "Status")
@@ -170,8 +172,8 @@ public class FeslProxy
                     { "props.{resultType}", "JOIN" },
                     { "props.{games}.[]", 1 },
                     { "props.{games}.0.fit", 3349 },
-                    { "props.{games}.0.gid", _settings.ProxyOverridePlayNowGameGid },
-                    { "props.{games}.0.lid", _settings.ProxyOverridePlayNowGameLid }
+                    { "props.{games}.0.gid", _proxySettings.ProxyOverridePlayNowGameGid },
+                    { "props.{games}.0.lid", _proxySettings.ProxyOverridePlayNowGameLid }
                 };
 
                 var pnowPacket = new Packet("pnow", FeslTransmissionType.SinglePacketResponse, packet.Id, pnowData);
@@ -190,21 +192,19 @@ public class FeslProxy
                 var packet = feslPacket.Value;
                 var clientTicket = packet["ticket"];
 
-                if (!string.IsNullOrWhiteSpace(clientTicket) && _settings.DumpClientTicket)
+                if (!string.IsNullOrWhiteSpace(clientTicket) && _proxySettings.DumpClientTicket)
                 {
                     _logger.LogCritical(clientTicket);
                     throw new Exception("Ticket dumped, exiting...");
                 }
 
-                if (!string.IsNullOrWhiteSpace(clientTicket) &&
-                    !string.IsNullOrWhiteSpace(_settings.ProxyOverrideClientTicket))
+                if (!string.IsNullOrWhiteSpace(clientTicket) && !string.IsNullOrWhiteSpace(_proxySettings.ProxyOverrideClientTicket))
                 {
                     try
                     {
                         _logger.LogInformation("Overriding client ticket...");
 
-                        packet["ticket"] = _settings.ProxyOverrideClientTicket;
-                        packet["macAddr"] = _settings.ProxyOverrideClientMacAddr;
+                        packet["ticket"] = _proxySettings.ProxyOverrideClientTicket;
 
                         var newBuffer = await packet.Serialize();
 
@@ -226,15 +226,15 @@ public class FeslProxy
                 }
             }
 
-            var enableLoginOverride = !string.IsNullOrWhiteSpace(_settings.ProxyOverrideAccountEmail) &&
-                                      !string.IsNullOrWhiteSpace(_settings.ProxyOverrideAccountPassword);
+            var enableLoginOverride = !string.IsNullOrWhiteSpace(_proxySettings.ProxyOverrideAccountEmail) &&
+                                      !string.IsNullOrWhiteSpace(_proxySettings.ProxyOverrideAccountPassword);
             if (enableLoginOverride &&
                 feslPacket is { Type: "acct", TransmissionType: FeslTransmissionType.SinglePacketRequest } &&
                 feslPacket?["TXN"] == "NuPS3Login")
             {
                 var packet = feslPacket.Value;
-                var macAddr = !string.IsNullOrWhiteSpace(_settings.ProxyOverrideClientMacAddr)
-                    ? _settings.ProxyOverrideClientMacAddr
+                var macAddr = !string.IsNullOrWhiteSpace(_proxySettings.ProxyOverrideClientMacAddr)
+                    ? _proxySettings.ProxyOverrideClientMacAddr
                     : packet["macAddr"];
 
                 _logger.LogInformation("Overriding client login request...");
@@ -243,8 +243,8 @@ public class FeslProxy
                 {
                     { "TXN", "NuLogin" },
                     { "returnEncryptedInfo", 0 },
-                    { "nuid", _settings.ProxyOverrideAccountEmail },
-                    { "password", _settings.ProxyOverrideAccountPassword },
+                    { "nuid", _proxySettings.ProxyOverrideAccountEmail },
+                    { "password", _proxySettings.ProxyOverrideAccountPassword },
                     { "macAddr",  macAddr},
                 };
 
