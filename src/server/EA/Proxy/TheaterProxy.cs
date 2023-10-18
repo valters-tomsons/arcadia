@@ -37,6 +37,8 @@ public class TheaterProxy
 
     private void InitializeUpstreamClient()
     {
+        _logger.LogInformation($"Connecting to upstream {_arcadiaSettings.TheaterAddress}:{_arcadiaSettings.TheaterPort}");
+        
         _upstreamClient = new TcpClient(_arcadiaSettings.TheaterAddress, _arcadiaSettings.TheaterPort);
         _upstreamStream = _upstreamClient.GetStream();
     }
