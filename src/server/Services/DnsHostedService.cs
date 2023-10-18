@@ -12,11 +12,12 @@ public class DnsHostedService : IHostedService
     private readonly MasterFile? _masterFile;
     private readonly DnsServer? _server;
 
-    public DnsHostedService(IOptions<DnsSettings> settings, IOptions<ArcadiaSettings> arcadiaSettings, IOptions<FeslSettings> feslSettings, IOptions<ProxySettings> proxySettings, ILogger<DnsHostedService> logger)
+    public DnsHostedService(ILogger<DnsHostedService> logger, IOptions<ArcadiaSettings> arcadiaSettings,
+        IOptions<FeslSettings> feslSettings, IOptions<ProxySettings> proxySettings, IOptions<DnsSettings> dnsSettings)
     {
         _logger = logger;
 
-        var options = settings.Value;
+        var options = dnsSettings.Value;
         if (!options.EnableDns) return;
 
         var arcadia = arcadiaSettings.Value;

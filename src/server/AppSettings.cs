@@ -4,6 +4,7 @@ namespace Arcadia;
 
 public record ArcadiaSettings
 {
+    public string ListenAddress { get; init; } = System.Net.IPAddress.Loopback.ToString();
     public string TheaterAddress { get; init; } = "theater.ps3.arcadia";
     public int TheaterPort { get; init; } = Beach.TheaterPort;
     public string GameServerAddress { get; init; } = "gameserver1.ps3.arcadia";

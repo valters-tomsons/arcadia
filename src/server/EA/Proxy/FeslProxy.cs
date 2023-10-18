@@ -11,7 +11,8 @@ namespace Arcadia.EA.Proxy;
 public class FeslProxy
 {
     private readonly ILogger<FeslProxy> _logger;
-    private readonly FeslSettings _settings;
+    
+    private readonly FeslSettings _feslSettings;
     private readonly ProxySettings _proxySettings;
 
     private TlsServerProtocol? _arcadiaProtocol;
@@ -20,10 +21,10 @@ public class FeslProxy
 
     private string? _personaName;
 
-    public FeslProxy(ILogger<FeslProxy> logger, IOptions<FeslSettings> settings, IOptions<ProxySettings> proxySettings)
+    public FeslProxy(ILogger<FeslProxy> logger, IOptions<FeslSettings> feslSettings, IOptions<ProxySettings> proxySettings)
     {
         _logger = logger;
-        _settings = settings.Value;
+        _feslSettings = feslSettings.Value;
         _proxySettings = proxySettings.Value;
     }
 
@@ -38,9 +39,9 @@ public class FeslProxy
 
     private void InitializeUpstreamClient()
     {
-        _logger.LogInformation($"Connecting to upstream {_settings.ServerAddress}:{_settings.ServerPort}");
+        _logger.LogInformation($"Connecting to upstream {_feslSettings.ServerAddress}:{_feslSettings.ServerPort}");
 
-        var upstreamTcpClient = new TcpClient(_settings.ServerAddress, _settings.ServerPort);
+        var upstreamTcpClient = new TcpClient(_feslSettings.ServerAddress, _feslSettings.ServerPort);
         var upstreamTcpStream = upstreamTcpClient.GetStream();
         _upstreamProtocol = new TlsClientProtocol(upstreamTcpStream);
 
@@ -55,7 +56,7 @@ public class FeslProxy
         catch(Exception e)
         {
             _logger.LogError(e.Message);
-            throw new Exception($"Failed to connect to upstream {_settings.ServerAddress}:{_settings.ServerPort}");
+            throw new Exception($"Failed to connect to upstream {_feslSettings.ServerAddress}:{_feslSettings.ServerPort}");
         }
     }
 
