@@ -17,14 +17,17 @@ namespace Arcadia.Services;
 
 public class FeslHostedService : IHostedService
 {
-    private readonly IServiceScopeFactory _scopeFactory;
-    private readonly IOptions<FeslSettings> _feslSettings;
-    private readonly IOptions<ProxySettings> _proxySettings;
     private readonly ILogger<FeslHostedService> _logger;
-    private readonly CertGenerator _certGenerator;
+    
+    private readonly ArcadiaSettings _arcadiaSettings;
+    private readonly FeslSettings _feslSettings;
+    private readonly ProxySettings _proxySettings;
 
-    private readonly ConcurrentBag<Task> _activeConnections = new();
+    private readonly CertGenerator _certGenerator;
+    private readonly IServiceScopeFactory _scopeFactory;
+
     private readonly TcpListener _listener;
+    private readonly ConcurrentBag<Task> _activeConnections = new();
 
     private CancellationTokenSource _cts = null!;
     private AsymmetricKeyParameter _feslCertKey = null!;
@@ -32,16 +35,20 @@ public class FeslHostedService : IHostedService
 
     private Task? _server;
 
-    public FeslHostedService(IOptions<FeslSettings> proxySettings, ILogger<FeslHostedService> logger, IOptions<ProxySettings> proxy, CertGenerator certGenerator, IServiceScopeFactory scopeFactory)
+    public FeslHostedService(ILogger<FeslHostedService> logger, IOptions<ArcadiaSettings> arcadiaSettings,
+        IOptions<FeslSettings> feslSettings, IOptions<ProxySettings> proxySettings, CertGenerator certGenerator,
+        IServiceScopeFactory scopeFactory)
     {
         _logger = logger;
+        
+        _arcadiaSettings = arcadiaSettings.Value;
+        _feslSettings = feslSettings.Value;
+        _proxySettings = proxySettings.Value;
+
+        _certGenerator = certGenerator;
         _scopeFactory = scopeFactory;
 
-        _feslSettings = proxySettings;
-        _certGenerator = certGenerator;
-        _proxySettings = proxy;
-
-        _listener = new TcpListener(System.Net.IPAddress.Any, _feslSettings.Value.ServerPort);
+        _listener = new TcpListener(System.Net.IPAddress.Parse(_arcadiaSettings.ListenAddress), _feslSettings.ServerPort);
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -52,14 +59,14 @@ public class FeslHostedService : IHostedService
 
         _listener.Start();
 
-        if (_proxySettings.Value.EnableProxy)
+        if (_proxySettings.EnableProxy)
         {
             _logger.LogWarning("Proxying enabled!");
         }
 
         _server = Task.Run(async () =>
         {
-            _logger.LogInformation("Fesl listening on port tcp:{port}", _feslSettings.Value.ServerPort);
+            _logger.LogInformation("Fesl listening on {address}:{port}", _arcadiaSettings.ListenAddress, _feslSettings.ServerPort);
 
             while (!_cts.Token.IsCancellationRequested)
             {
@@ -81,11 +88,10 @@ public class FeslHostedService : IHostedService
         var IssuerDN = "CN=OTG3 Certificate Authority, C=US, ST=California, L=Redwood City, O=\"Electronic Arts, Inc.\", OU=Online Technology Group, emailAddress=dirtysock-contact@ea.com";
         var SubjectDN = "C=US, ST=California, O=\"Electronic Arts, Inc.\", OU=Online Technology Group, CN=fesl.ea.com, emailAddress=fesl@ea.com";
 
-        if (_proxySettings.Value.MirrorCertificateStrings && _proxySettings.Value.EnableProxy)
+        if (_proxySettings.MirrorCertificateStrings && _proxySettings.EnableProxy)
         {
-            var feslSettings = _feslSettings.Value;
-            (IssuerDN, SubjectDN) = TlsCertDumper.DumpPubFeslCert(feslSettings.ServerAddress, feslSettings.ServerPort);
-            _logger.LogWarning("Certificate strings copied from upstream: {address}", feslSettings.ServerAddress);
+            (IssuerDN, SubjectDN) = TlsCertDumper.DumpPubFeslCert(_feslSettings.ServerAddress, _feslSettings.ServerPort);
+            _logger.LogWarning("Certificate strings copied from upstream: {address}", _feslSettings.ServerAddress);
         }
 
         (_feslCertKey, _feslPubCert) = _certGenerator.GenerateVulnerableCert(IssuerDN, SubjectDN);
@@ -116,7 +122,7 @@ public class FeslHostedService : IHostedService
             return;
         }
 
-        if (_proxySettings.Value.EnableProxy)
+        if (_proxySettings.EnableProxy)
         {
             await HandleAsProxy(scope.ServiceProvider, serverProtocol, crypto);
             return;

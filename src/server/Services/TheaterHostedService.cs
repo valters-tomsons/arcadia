@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Net;
 using System.Net.Sockets;
 using Arcadia.Handlers;
 using Arcadia.EA.Proxy;
@@ -11,29 +12,33 @@ namespace Arcadia.Services;
 
 public class TheaterHostedService : IHostedService
 {
-    private readonly IServiceScopeFactory _scopeFactory;
-    private readonly IOptions<ArcadiaSettings> _settings;
-    private readonly IOptions<ProxySettings> _proxySettings;
     private readonly ILogger<TheaterHostedService> _logger;
 
-    private readonly ConcurrentBag<Task> _activeConnections = new();
+    private readonly ArcadiaSettings _arcadiaSettings;
+    private readonly ProxySettings _proxySettings;
+    
+    private readonly IServiceScopeFactory _scopeFactory;
+
     private readonly TcpListener _tcpListener;
+    private readonly ConcurrentBag<Task> _activeConnections = new();
     private readonly UdpClient _udpListener;
 
     private CancellationTokenSource _cts = null!;
 
     private Task? _tcpServer;
 
-    public TheaterHostedService(IOptions<ArcadiaSettings> settings, ILogger<TheaterHostedService> logger, IServiceScopeFactory scopeFactory, IOptions<ProxySettings> proxySettings)
+    public TheaterHostedService(ILogger<TheaterHostedService> logger, IOptions<ArcadiaSettings> arcadiaSettings,
+        IOptions<ProxySettings> proxySettings, IServiceScopeFactory scopeFactory)
     {
         _logger = logger;
         _scopeFactory = scopeFactory;
 
-        _settings = settings;
-        _proxySettings = proxySettings;
+        _arcadiaSettings = arcadiaSettings.Value;
+        _proxySettings = proxySettings.Value;
 
-        _tcpListener = new TcpListener(System.Net.IPAddress.Any, _settings.Value.TheaterPort);
-        _udpListener = new UdpClient(_settings.Value.TheaterPort);
+        var endpoint = new IPEndPoint(IPAddress.Parse(_arcadiaSettings.ListenAddress), _arcadiaSettings.TheaterPort);
+        _tcpListener = new TcpListener(endpoint);
+        _udpListener = new UdpClient(endpoint);
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -43,7 +48,7 @@ public class TheaterHostedService : IHostedService
         _tcpListener.Start();
         _tcpServer = Task.Run(async () =>
         {
-            _logger.LogInformation("Theater listening on port tcp:{port}", _settings.Value.TheaterPort);
+            _logger.LogInformation("Theater listening on {address}:{port}", _arcadiaSettings.ListenAddress, _arcadiaSettings.TheaterPort);
 
             while (!_cts.Token.IsCancellationRequested)
             {
@@ -64,7 +69,7 @@ public class TheaterHostedService : IHostedService
     {
         using var scope = _scopeFactory.CreateAsyncScope();
 
-        if (_proxySettings.Value.EnableProxy)
+        if (_proxySettings.EnableProxy)
         {
             await HandleAsProxy(scope.ServiceProvider, tcpClient, _cts.Token);
             return;

@@ -8,17 +8,18 @@ namespace Arcadia.EA.Proxy;
 public class TheaterProxy
 {
     private readonly ILogger<TheaterProxy> _logger;
-    private readonly ArcadiaSettings _config;
+    
+    private readonly ArcadiaSettings _arcadiaSettings;
 
     private TcpClient? _arcadiaClient;
     private TcpClient? _upstreamClient;
     private NetworkStream? _arcadiaStream;
     private NetworkStream? _upstreamStream;
 
-    public TheaterProxy(ILogger<TheaterProxy> logger, IOptions<ArcadiaSettings> config)
+    public TheaterProxy(ILogger<TheaterProxy> logger, IOptions<ArcadiaSettings> arcadiaSettings)
     {
         _logger = logger;
-        _config = config.Value;
+        _arcadiaSettings = arcadiaSettings.Value;
     }
 
     public async Task StartProxy(TcpClient client)
@@ -36,7 +37,7 @@ public class TheaterProxy
 
     private void InitializeUpstreamClient()
     {
-        _upstreamClient = new TcpClient(_config.TheaterAddress, _config.TheaterPort);
+        _upstreamClient = new TcpClient(_arcadiaSettings.TheaterAddress, _arcadiaSettings.TheaterPort);
         _upstreamStream = _upstreamClient.GetStream();
     }
 
