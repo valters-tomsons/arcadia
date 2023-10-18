@@ -36,6 +36,11 @@ public readonly struct Packet
         DataDict = dataDict ?? new Dictionary<string, object>();
     }
 
+    public Packet Clone()
+    {
+        return new Packet(Type, TransmissionType, Id, DataDict);
+    }
+
     public async Task<byte[]> Serialize()
     {
         var data = Utils.DataDictToPacketString(DataDict).ToString();

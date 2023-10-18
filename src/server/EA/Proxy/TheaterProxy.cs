@@ -85,6 +85,6 @@ public class TheaterProxy
         });
 
         await Task.WhenAny(clientToUpstreamTask, upstreamToClientTask);
-        _logger.LogInformation("Proxy connection closed, exiting...");
+        _logger.LogInformation("Proxy connection closed");
     }
 }

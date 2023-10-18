@@ -96,7 +96,7 @@ public class FeslProxy
         });
 
         await Task.WhenAny(clientToFeslTask, feslToClientTask);
-        _logger.LogInformation("Proxy connection closed, exiting...");
+        _logger.LogInformation("Proxy connection closed");
     }
 
     private async void ProxyApplicationData(TlsProtocol source, TlsProtocol destination)
@@ -121,242 +121,225 @@ public class FeslProxy
                 continue;
             }
 
-            var feslPacket = AnalyzeFeslPacket(readBuffer.AsSpan(0, read.Value).ToArray());
-            LogPacket("Proxying", feslPacket);
+            var incomingPacket = AnalyzeFeslPacket(readBuffer.AsSpan(0, read.Value).ToArray());
+            LogPacket("Proxying", incomingPacket);
 
-            var enableTheaterOverride = !string.IsNullOrWhiteSpace(_proxySettings.ProxyOverrideTheaterIp) ||
-                                        _proxySettings.ProxyOverrideTheaterPort != 0;
-            if (enableTheaterOverride &&
-                feslPacket is { Type: "fsys", TransmissionType: FeslTransmissionType.SinglePacketResponse } &&
-                feslPacket?["TXN"] == "Hello")
+            if (incomingPacket != null)
             {
-                var packet = feslPacket.Value;
-
-                _logger.LogInformation("Overriding server theater details...");
-
-                if (!string.IsNullOrWhiteSpace(_proxySettings.ProxyOverrideTheaterIp))
+                var (overridePacket, respond) = PotentiallyBuildOverridePacket(incomingPacket.Value);
+                if (overridePacket != null)
                 {
-                    packet["theaterIp"] = _proxySettings.ProxyOverrideTheaterIp;
+                    LogPacket("Packet after override", overridePacket.Value);
+                    
+                    var newBuffer = await overridePacket.Value.Serialize();
+
+                    read = newBuffer.Length;
+                    Array.Copy(newBuffer, readBuffer, read.Value);
                 }
 
-                if (_proxySettings.ProxyOverrideTheaterPort != 0)
+                if (respond)
                 {
-                    packet["theaterPort"] = _proxySettings.ProxyOverrideTheaterPort.ToString();
-                }
-
-                var newBuffer = await packet.Serialize();
-
-                read = newBuffer.Length;
-                Array.Copy(newBuffer, readBuffer, read.Value);
-                
-                LogPacket("Packet after override", packet);
-            }
-
-            var enablePlayNowGameOverride =
-                _proxySettings.ProxyOverridePlayNowGameGid != 0 && _proxySettings.ProxyOverridePlayNowGameLid != 0;
-            if (enablePlayNowGameOverride &&
-                feslPacket is { Type: "pnow", TransmissionType: FeslTransmissionType.SinglePacketResponse } &&
-                feslPacket?["TXN"] == "Status")
-            {
-                var packet = feslPacket.Value;
-
-                _logger.LogInformation("Overriding server play now response...");
-
-                var pnowData = new Dictionary<string, object>
-                {
-                    { "TXN", "Status" },
-                    { "id.id", packet["id.id"] },
-                    { "id.partition", packet["id.partition"] },
-                    { "sessionState", "COMPLETE" },
-                    { "props.{}", 2 },
-                    { "props.{resultType}", "JOIN" },
-                    { "props.{games}.[]", 1 },
-                    { "props.{games}.0.fit", 3349 },
-                    { "props.{games}.0.gid", _proxySettings.ProxyOverridePlayNowGameGid },
-                    { "props.{games}.0.lid", _proxySettings.ProxyOverridePlayNowGameLid }
-                };
-
-                var pnowPacket = new Packet("pnow", FeslTransmissionType.SinglePacketResponse, packet.Id, pnowData);
-
-                var newBuffer = await pnowPacket.Serialize();
-
-                read = newBuffer.Length;
-                Array.Copy(newBuffer, readBuffer, read.Value);
-                
-                LogPacket("Packet after override", pnowPacket);
-            }
-
-            if (feslPacket is { Type: "acct", TransmissionType: FeslTransmissionType.SinglePacketRequest } &&
-                feslPacket?["TXN"] == "NuPS3Login")
-            {
-                var packet = feslPacket.Value;
-                var clientTicket = packet["ticket"];
-
-                if (!string.IsNullOrWhiteSpace(clientTicket) && _proxySettings.DumpClientTicket)
-                {
-                    _logger.LogCritical(clientTicket);
-                    throw new Exception("Ticket dumped, exiting...");
-                }
-
-                if (!string.IsNullOrWhiteSpace(clientTicket) && !string.IsNullOrWhiteSpace(_proxySettings.ProxyOverrideClientTicket))
-                {
+                    LogPacket("Responding with packet", overridePacket);
                     try
                     {
-                        _logger.LogInformation("Overriding client ticket...");
-
-                        packet["ticket"] = _proxySettings.ProxyOverrideClientTicket;
-
-                        var newBuffer = await packet.Serialize();
-
-                        read = newBuffer.Length;
-                        Array.Copy(newBuffer, readBuffer, read.Value);
-
-                        LogPacket("Packet after override", packet);
+                        source.WriteApplicationData(readBuffer, 0, read.Value);
+                        return; // We want to consume the response, so skip sending it to the client
                     }
                     catch (Exception e)
                     {
-                        _logger.LogError(e, $"Failed to override ticket: {e.Message}");
+                        _logger.LogError(e, "Failed to write proxy data");
                         return;
                     }
                 }
-
-                if (string.IsNullOrWhiteSpace(clientTicket))
-                {
-                    _logger.LogInformation("Received login!");
-                }
             }
 
-            var enableLoginOverride = !string.IsNullOrWhiteSpace(_proxySettings.ProxyOverrideAccountEmail) &&
-                                      !string.IsNullOrWhiteSpace(_proxySettings.ProxyOverrideAccountPassword);
-            if (enableLoginOverride &&
-                feslPacket is { Type: "acct", TransmissionType: FeslTransmissionType.SinglePacketRequest } &&
-                feslPacket?["TXN"] == "NuPS3Login")
+            try
             {
-                var packet = feslPacket.Value;
-                var macAddr = !string.IsNullOrWhiteSpace(_proxySettings.ProxyOverrideClientMacAddr)
-                    ? _proxySettings.ProxyOverrideClientMacAddr
-                    : packet["macAddr"];
+                destination.WriteApplicationData(readBuffer, 0, read.Value);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to write proxy data");
+                return;
+            }
+        }
+    }
 
-                _logger.LogInformation("Overriding client login request...");
-                
-                var loginData = new Dictionary<string, object>
+    private (Packet?, bool) PotentiallyBuildOverridePacket(Packet originalPacket)
+    {
+        var type = originalPacket.Type;
+        var transmissionType = originalPacket.TransmissionType;
+        var txn = originalPacket["TXN"];
+        
+        var enableTheaterOverride = !string.IsNullOrWhiteSpace(_proxySettings.ProxyOverrideTheaterIp) ||
+                                    _proxySettings.ProxyOverrideTheaterPort != 0;
+        if (enableTheaterOverride &&
+            type == "fsys" &&
+            transmissionType == FeslTransmissionType.SinglePacketResponse &&
+            txn == "Hello")
+        {
+            _logger.LogInformation("Overriding server theater details...");
+
+            var overridePacket = originalPacket.Clone();
+            if (!string.IsNullOrWhiteSpace(_proxySettings.ProxyOverrideTheaterIp))
+            {
+                overridePacket["theaterIp"] = _proxySettings.ProxyOverrideTheaterIp;
+            }
+
+            if (_proxySettings.ProxyOverrideTheaterPort != 0)
+            {
+                overridePacket["theaterPort"] = _proxySettings.ProxyOverrideTheaterPort.ToString();
+            }
+            
+            return (overridePacket, false);
+        }
+
+        var enablePlayNowGameOverride =
+            _proxySettings.ProxyOverridePlayNowGameGid != 0 && _proxySettings.ProxyOverridePlayNowGameLid != 0;
+        if (enablePlayNowGameOverride &&
+            type == "pnow" &&
+            transmissionType == FeslTransmissionType.SinglePacketResponse &&
+            txn == "Status")
+        {
+            _logger.LogInformation("Overriding server play now response...");
+
+            var overridePacketData = new Dictionary<string, object>
+            {
+                { "TXN", "Status" },
+                { "id.id", originalPacket["id.id"] },
+                { "id.partition", originalPacket["id.partition"] },
+                { "sessionState", "COMPLETE" },
+                { "props.{}", 2 },
+                { "props.{resultType}", "JOIN" },
+                { "props.{games}.[]", 1 },
+                { "props.{games}.0.fit", 3349 },
+                { "props.{games}.0.gid", _proxySettings.ProxyOverridePlayNowGameGid },
+                { "props.{games}.0.lid", _proxySettings.ProxyOverridePlayNowGameLid }
+            };
+
+            var overridePacket = new Packet("pnow", FeslTransmissionType.SinglePacketResponse, originalPacket.Id, overridePacketData);
+            return (overridePacket, false);
+        }
+
+        if (type == "acct" &&
+            transmissionType == FeslTransmissionType.SinglePacketRequest &&
+            txn == "NuPS3Login")
+        {
+            var clientTicket = originalPacket["ticket"];
+            if (!string.IsNullOrWhiteSpace(clientTicket) && _proxySettings.DumpClientTicket)
+            {
+                _logger.LogCritical(clientTicket);
+                throw new Exception("Ticket dumped, exiting...");
+            }
+
+            if (!string.IsNullOrWhiteSpace(clientTicket) &&
+                !string.IsNullOrWhiteSpace(_proxySettings.ProxyOverrideClientTicket))
+            {
+                _logger.LogInformation("Overriding client ticket...");
+
+                var overrideTicket = originalPacket.Clone();
+                overrideTicket["ticket"] = _proxySettings.ProxyOverrideClientTicket;
+                return (overrideTicket, false);
+            }
+        }
+
+        var enableLoginOverride = !string.IsNullOrWhiteSpace(_proxySettings.ProxyOverrideAccountEmail) &&
+                                  !string.IsNullOrWhiteSpace(_proxySettings.ProxyOverrideAccountPassword);
+        if (enableLoginOverride &&
+            type == "acct" &&
+            transmissionType == FeslTransmissionType.SinglePacketRequest &&
+            txn == "NuPS3Login")
+        {
+            var macAddr = !string.IsNullOrWhiteSpace(_proxySettings.ProxyOverrideClientMacAddr)
+                ? _proxySettings.ProxyOverrideClientMacAddr
+                : originalPacket["macAddr"];
+
+            _logger.LogInformation("Overriding client login request...");
+
+            var overridePacketData = new Dictionary<string, object>
+            {
+                { "TXN", "NuLogin" },
+                { "returnEncryptedInfo", 0 },
+                { "nuid", _proxySettings.ProxyOverrideAccountEmail },
+                { "password", _proxySettings.ProxyOverrideAccountPassword },
+                { "macAddr", macAddr },
+            };
+
+            var overridePacket = new Packet("acct", FeslTransmissionType.SinglePacketRequest, originalPacket.Id, overridePacketData);
+            return (overridePacket, false);
+        }
+
+        if (enableLoginOverride &&
+            type == "acct" &&
+            transmissionType == FeslTransmissionType.SinglePacketResponse &&
+            txn == "NuLogin")
+        {
+            // Make sure response contains an lkey, indicating successful login
+            var lkey = originalPacket["lkey"];
+            if (!string.IsNullOrWhiteSpace(lkey))
+            {
+                _logger.LogInformation("Consuming server login response...");
+
+                var overridePacketData = new Dictionary<string, object>
                 {
-                    { "TXN", "NuLogin" },
-                    { "returnEncryptedInfo", 0 },
-                    { "nuid", _proxySettings.ProxyOverrideAccountEmail },
-                    { "password", _proxySettings.ProxyOverrideAccountPassword },
-                    { "macAddr",  macAddr},
+                    { "TXN", "NuGetPersonas" },
+                    { "namespace", "" },
                 };
 
-                var loginPacket = new Packet("acct", FeslTransmissionType.SinglePacketRequest, packet.Id, loginData);
-
-                var newBuffer = await loginPacket.Serialize();
-
-                read = newBuffer.Length;
-                Array.Copy(newBuffer, readBuffer, read.Value);
-
-                LogPacket("Packet after override", loginPacket);
+                var overridePacket = new Packet("acct", FeslTransmissionType.SinglePacketRequest, originalPacket.Id, overridePacketData);
+                return (overridePacket, true); // Directly respond to sender with override ticket
             }
-
-            if (enableLoginOverride &&
-                feslPacket is { Type: "acct", TransmissionType: FeslTransmissionType.SinglePacketResponse } &&
-                feslPacket?["TXN"] == "NuLogin")
-            {
-                var packet = feslPacket.Value;
-                var lkey = packet["lkey"];
-
-                // Make sure response contains an lkey, indicating successful login
-                if (!string.IsNullOrWhiteSpace(lkey))
-                {
-                    _logger.LogInformation("Consuming server login response...");
-
-                    var getPersonasData = new Dictionary<string, object>
-                    {
-                        { "TXN", "NuGetPersonas" },
-                        { "namespace", "" },
-                    };
-
-                    var getPersonasPacket = new Packet("acct", FeslTransmissionType.SinglePacketRequest, packet.Id,
-                        getPersonasData);
-
-                    var newBuffer = await getPersonasPacket.Serialize();
-
-                    read = newBuffer.Length;
-                    Array.Copy(newBuffer, readBuffer, read.Value);
-
-                    LogPacket("Replying with packet", getPersonasPacket);
-                    source.WriteApplicationData(readBuffer, 0, read.Value);
-                    continue; // We want to consume the response, so skip sending it to the client
-                }
-            }
-
-            if (enableLoginOverride &&
-                feslPacket is { Type: "acct", TransmissionType: FeslTransmissionType.SinglePacketResponse } &&
-                feslPacket?["TXN"] == "NuGetPersonas")
-            {
-                var packet = feslPacket.Value;
-                var personaName = packet["personas.0"];
-
-                // Ensure response contains a persona we can use
-                if (!string.IsNullOrWhiteSpace(personaName))
-                {
-                    _logger.LogInformation("Consuming server get personas response...");
-
-                    var personaLoginData = new Dictionary<string, object>
-                    {
-                        { "TXN", "NuLoginPersona" },
-                        { "name", personaName },
-                    };
-
-                    var personaLoginPacket = new Packet("acct", FeslTransmissionType.SinglePacketRequest, packet.Id,
-                        personaLoginData);
-
-                    var newBuffer = await personaLoginPacket.Serialize();
-
-                    read = newBuffer.Length;
-                    Array.Copy(newBuffer, readBuffer, read.Value);
-
-                    LogPacket("Replying with packet", personaLoginPacket);
-                    source.WriteApplicationData(readBuffer, 0, read.Value);
-                    _personaName = personaName;
-                    continue; // We want to consume the response, so skip sending it to the client
-                }
-            }
-
-            if (enableLoginOverride &&
-                feslPacket is { Type: "acct", TransmissionType: FeslTransmissionType.SinglePacketResponse } &&
-                feslPacket?["TXN"] == "NuLoginPersona")
-            {
-                var packet = feslPacket.Value;
-                var lkey = packet["lkey"];
-
-                // Ensure we have both an lkey in the response and a persona name we can use
-                if (!string.IsNullOrWhiteSpace(lkey) && !string.IsNullOrWhiteSpace(_personaName))
-                {
-                    _logger.LogInformation("Overriding server profile details...");
-
-                    var loginData = new Dictionary<string, object>
-                    {
-                        { "TXN", "PS3Login" },
-                        { "userId", packet["userId"] },
-                        { "personaName", _personaName },
-                        { "lkey", lkey }
-                    };
-
-                    var loginPacket = new Packet("acct", FeslTransmissionType.SinglePacketResponse, packet.Id,
-                        loginData);
-
-                    var newBuffer = await loginPacket.Serialize();
-
-                    read = newBuffer.Length;
-                    Array.Copy(newBuffer, readBuffer, read.Value);
-
-                    LogPacket("Packet after override", loginPacket);
-                }
-            }
-
-            destination.WriteApplicationData(readBuffer, 0, read.Value);
         }
+
+        if (enableLoginOverride &&
+            type == "acct" &&
+            transmissionType == FeslTransmissionType.SinglePacketResponse &&
+            txn == "NuGetPersonas")
+        {
+            // Ensure response contains a persona we can use
+            var personaName = originalPacket["personas.0"];
+            if (!string.IsNullOrWhiteSpace(personaName))
+            {
+                _logger.LogInformation("Consuming server get personas response...");
+                
+                _personaName = personaName;
+
+                var overridePacketData = new Dictionary<string, object>
+                {
+                    { "TXN", "NuLoginPersona" },
+                    { "name", _personaName },
+                };
+                
+                var overridePacket = new Packet("acct", FeslTransmissionType.SinglePacketRequest, originalPacket.Id, overridePacketData);
+                return (overridePacket, true); // Directly respond to sender with override ticket
+            }
+        }
+
+        if (enableLoginOverride &&
+            type == "acct" &&
+            transmissionType == FeslTransmissionType.SinglePacketResponse &&
+            txn == "NuLoginPersona")
+        {
+            // Ensure we have both an lkey in the response and a persona name we can use
+            var lkey = originalPacket["lkey"];
+            if (!string.IsNullOrWhiteSpace(lkey) && !string.IsNullOrWhiteSpace(_personaName))
+            {
+                _logger.LogInformation("Overriding server profile details...");
+
+                var overridePacketData = new Dictionary<string, object>
+                {
+                    { "TXN", "PS3Login" },
+                    { "userId", originalPacket["userId"] },
+                    { "personaName", _personaName },
+                    { "lkey", lkey }
+                };
+
+                var overridePacket = new Packet("acct", FeslTransmissionType.SinglePacketResponse, originalPacket.Id, overridePacketData);
+                return (overridePacket, false);
+            }
+        }
+        
+        return (null, false);
     }
 
     private void LogPacket(string msg, Packet? packet)
