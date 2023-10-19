@@ -30,6 +30,7 @@ public record ProxySettings
     public string ProxyOverrideClientMacAddr { get; init; } = string.Empty;
     public string ProxyOverrideTheaterIp { get; init; } = string.Empty;
     public int ProxyOverrideTheaterPort { get; init; } = 0;
+    public bool ProxyOverrideAccountIsXbox { get; init; } = false;
     public string ProxyOverrideAccountEmail { get; init; } = string.Empty;
     public string ProxyOverrideAccountPassword { get; init; } = string.Empty;
     public int ProxyOverridePlayNowGameGid { get; init; } = 0;

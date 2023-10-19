@@ -1,4 +1,5 @@
 using System.Net.Sockets;
+using System.Text.RegularExpressions;
 using Arcadia.EA.Constants;
 using Arcadia.Tls;
 using Microsoft.Extensions.Logging;
@@ -8,7 +9,7 @@ using Org.BouncyCastle.Tls.Crypto.Impl.BC;
 
 namespace Arcadia.EA.Proxy;
 
-public class FeslProxy
+public partial class FeslProxy
 {
     private readonly ILogger<FeslProxy> _logger;
     
@@ -20,6 +21,7 @@ public class FeslProxy
     private BcTlsCrypto? _crypto;
 
     private string? _personaName;
+    private string? _originalPartition;
 
     public FeslProxy(ILogger<FeslProxy> logger, IOptions<FeslSettings> feslSettings, IOptions<ProxySettings> proxySettings)
     {
@@ -127,12 +129,12 @@ public class FeslProxy
 
             if (incomingPacket != null)
             {
-                var (overridePacket, respond) = PotentiallyBuildOverridePacket(incomingPacket.Value);
-                if (overridePacket != null)
+                var (packet, numOverridesApplied, respond) = PotentiallyApplyOverridesToPacket(incomingPacket.Value);
+                if (numOverridesApplied > 0)
                 {
-                    LogPacket("Packet after override", overridePacket.Value);
+                    LogPacket($"Packet with {numOverridesApplied} override(s) applied", packet);
                     
-                    var newBuffer = await overridePacket.Value.Serialize();
+                    var newBuffer = await packet.Serialize();
 
                     read = newBuffer.Length;
                     Array.Copy(newBuffer, readBuffer, read.Value);
@@ -140,7 +142,7 @@ public class FeslProxy
 
                 if (respond)
                 {
-                    LogPacket("Responding with packet", overridePacket);
+                    LogPacket("Responding with packet", packet);
                     try
                     {
                         source.WriteApplicationData(readBuffer, 0, read.Value);
@@ -166,11 +168,13 @@ public class FeslProxy
         }
     }
 
-    private (Packet?, bool) PotentiallyBuildOverridePacket(Packet originalPacket)
+    private (Packet, int, bool) PotentiallyApplyOverridesToPacket(Packet originalPacket)
     {
-        var type = originalPacket.Type;
-        var transmissionType = originalPacket.TransmissionType;
-        var txn = originalPacket["TXN"];
+        var packet = originalPacket.Clone();
+        var type = packet.Type;
+        var transmissionType = packet.TransmissionType;
+        var txn = packet["TXN"];
+        var numOverridesApplied = 0;
         
         var enableTheaterOverride = !string.IsNullOrWhiteSpace(_proxySettings.ProxyOverrideTheaterIp) ||
                                     _proxySettings.ProxyOverrideTheaterPort != 0;
@@ -181,18 +185,64 @@ public class FeslProxy
         {
             _logger.LogInformation("Overriding server theater details...");
 
-            var overridePacket = originalPacket.Clone();
             if (!string.IsNullOrWhiteSpace(_proxySettings.ProxyOverrideTheaterIp))
             {
-                overridePacket["theaterIp"] = _proxySettings.ProxyOverrideTheaterIp;
+                packet["theaterIp"] = _proxySettings.ProxyOverrideTheaterIp;
+                numOverridesApplied++;
             }
 
             if (_proxySettings.ProxyOverrideTheaterPort != 0)
             {
-                overridePacket["theaterPort"] = _proxySettings.ProxyOverrideTheaterPort.ToString();
+                packet["theaterPort"] = _proxySettings.ProxyOverrideTheaterPort.ToString();
+                numOverridesApplied++;
             }
-            
-            return (overridePacket, false);
+        }
+
+        var enablePlatformOverride = _proxySettings.ProxyOverrideAccountIsXbox;
+        if (enablePlatformOverride && 
+            type == "fsys" &&
+            transmissionType == FeslTransmissionType.SinglePacketRequest &&
+            txn == "Hello")
+        {
+            var clientString = packet["clientString"];
+            if (!string.IsNullOrWhiteSpace(clientString))
+            {
+                _logger.LogInformation("Overriding client string...");
+                
+                packet["clientString"] = clientString.Replace("ps3", "360");
+                numOverridesApplied++;
+            }
+        }
+        
+        if (enablePlatformOverride &&
+            type == "pnow" &&
+            transmissionType == FeslTransmissionType.SinglePacketRequest &&
+            txn == "Start")
+        {
+            var partition = packet["partition.partition"];
+            if (!string.IsNullOrWhiteSpace(partition))
+            {
+                _logger.LogInformation("Overriding playnow request partition...");
+
+                _originalPartition = partition;
+
+                packet["partition.partition"] = PartitionRegex().Replace(partition, "/ps3/$1");
+                numOverridesApplied++;
+            }
+        }
+        
+        if (enablePlatformOverride &&
+            type == "pnow" &&
+            transmissionType == FeslTransmissionType.SinglePacketResponse &&
+            (txn == "Start" || txn == "Status"))
+        {
+            if (!string.IsNullOrWhiteSpace(_originalPartition))
+            {
+                _logger.LogInformation("Overriding playnow response partition...");
+
+                packet["id.partition"] = _originalPartition;
+                numOverridesApplied++;
+            }
         }
 
         var enablePlayNowGameOverride =
@@ -202,13 +252,13 @@ public class FeslProxy
             transmissionType == FeslTransmissionType.SinglePacketResponse &&
             txn == "Status")
         {
-            _logger.LogInformation("Overriding server play now response...");
+            _logger.LogInformation("Overriding play now response server...");
 
             var overridePacketData = new Dictionary<string, object>
             {
                 { "TXN", "Status" },
-                { "id.id", originalPacket["id.id"] },
-                { "id.partition", originalPacket["id.partition"] },
+                { "id.id", packet["id.id"] },
+                { "id.partition", packet["id.partition"] },
                 { "sessionState", "COMPLETE" },
                 { "props.{}", 2 },
                 { "props.{resultType}", "JOIN" },
@@ -218,15 +268,15 @@ public class FeslProxy
                 { "props.{games}.0.lid", _proxySettings.ProxyOverridePlayNowGameLid }
             };
 
-            var overridePacket = new Packet("pnow", FeslTransmissionType.SinglePacketResponse, originalPacket.Id, overridePacketData);
-            return (overridePacket, false);
+            packet = new Packet("pnow", FeslTransmissionType.SinglePacketResponse, packet.Id, overridePacketData);
+            numOverridesApplied++;
         }
 
         if (type == "acct" &&
             transmissionType == FeslTransmissionType.SinglePacketRequest &&
             txn == "NuPS3Login")
         {
-            var clientTicket = originalPacket["ticket"];
+            var clientTicket = packet["ticket"];
             if (!string.IsNullOrWhiteSpace(clientTicket) && _proxySettings.DumpClientTicket)
             {
                 _logger.LogCritical(clientTicket);
@@ -238,9 +288,8 @@ public class FeslProxy
             {
                 _logger.LogInformation("Overriding client ticket...");
 
-                var overrideTicket = originalPacket.Clone();
-                overrideTicket["ticket"] = _proxySettings.ProxyOverrideClientTicket;
-                return (overrideTicket, false);
+                packet["ticket"] = _proxySettings.ProxyOverrideClientTicket;
+                numOverridesApplied++;
             }
         }
 
@@ -253,7 +302,7 @@ public class FeslProxy
         {
             var macAddr = !string.IsNullOrWhiteSpace(_proxySettings.ProxyOverrideClientMacAddr)
                 ? _proxySettings.ProxyOverrideClientMacAddr
-                : originalPacket["macAddr"];
+                : packet["macAddr"];
 
             _logger.LogInformation("Overriding client login request...");
 
@@ -266,8 +315,8 @@ public class FeslProxy
                 { "macAddr", macAddr },
             };
 
-            var overridePacket = new Packet("acct", FeslTransmissionType.SinglePacketRequest, originalPacket.Id, overridePacketData);
-            return (overridePacket, false);
+            packet = new Packet("acct", FeslTransmissionType.SinglePacketRequest, packet.Id, overridePacketData);
+            numOverridesApplied++;
         }
 
         if (enableLoginOverride &&
@@ -276,7 +325,7 @@ public class FeslProxy
             txn == "NuLogin")
         {
             // Make sure response contains an lkey, indicating successful login
-            var lkey = originalPacket["lkey"];
+            var lkey = packet["lkey"];
             if (!string.IsNullOrWhiteSpace(lkey))
             {
                 _logger.LogInformation("Consuming server login response...");
@@ -287,8 +336,10 @@ public class FeslProxy
                     { "namespace", "" },
                 };
 
-                var overridePacket = new Packet("acct", FeslTransmissionType.SinglePacketRequest, originalPacket.Id, overridePacketData);
-                return (overridePacket, true); // Directly respond to sender with override ticket
+                packet = new Packet("acct", FeslTransmissionType.SinglePacketRequest, packet.Id, overridePacketData);
+                numOverridesApplied++;
+                
+                return (packet, numOverridesApplied, true); // Directly respond to sender with override ticket
             }
         }
 
@@ -298,7 +349,7 @@ public class FeslProxy
             txn == "NuGetPersonas")
         {
             // Ensure response contains a persona we can use
-            var personaName = originalPacket["personas.0"];
+            var personaName = packet["personas.0"];
             if (!string.IsNullOrWhiteSpace(personaName))
             {
                 _logger.LogInformation("Consuming server get personas response...");
@@ -311,8 +362,10 @@ public class FeslProxy
                     { "name", _personaName },
                 };
                 
-                var overridePacket = new Packet("acct", FeslTransmissionType.SinglePacketRequest, originalPacket.Id, overridePacketData);
-                return (overridePacket, true); // Directly respond to sender with override ticket
+                packet = new Packet("acct", FeslTransmissionType.SinglePacketRequest, packet.Id, overridePacketData);
+                numOverridesApplied++;
+                
+                return (packet, numOverridesApplied, true); // Directly respond to sender with override ticket
             }
         }
 
@@ -322,7 +375,7 @@ public class FeslProxy
             txn == "NuLoginPersona")
         {
             // Ensure we have both an lkey in the response and a persona name we can use
-            var lkey = originalPacket["lkey"];
+            var lkey = packet["lkey"];
             if (!string.IsNullOrWhiteSpace(lkey) && !string.IsNullOrWhiteSpace(_personaName))
             {
                 _logger.LogInformation("Overriding server profile details...");
@@ -330,17 +383,17 @@ public class FeslProxy
                 var overridePacketData = new Dictionary<string, object>
                 {
                     { "TXN", "PS3Login" },
-                    { "userId", originalPacket["userId"] },
+                    { "userId", packet["userId"] },
                     { "personaName", _personaName },
                     { "lkey", lkey }
                 };
 
-                var overridePacket = new Packet("acct", FeslTransmissionType.SinglePacketResponse, originalPacket.Id, overridePacketData);
-                return (overridePacket, false);
+                packet = new Packet("acct", FeslTransmissionType.SinglePacketResponse, packet.Id, overridePacketData);
+                numOverridesApplied++;
             }
         }
         
-        return (null, false);
+        return (packet, numOverridesApplied, false);
     }
 
     private void LogPacket(string msg, Packet? packet)
@@ -362,6 +415,9 @@ public class FeslProxy
 
         return packet;
     }
+
+    [GeneratedRegex("^/.*?/(.*)$")]
+    private static partial Regex PartitionRegex();
 }
 
 public class ProxyTlsAuthentication : TlsAuthentication
