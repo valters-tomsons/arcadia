@@ -39,7 +39,7 @@ public class FeslProxy
 
     private void InitializeUpstreamClient()
     {
-        _logger.LogInformation($"Connecting to upstream {_feslSettings.ServerAddress}:{_feslSettings.ServerPort}");
+        _logger.LogInformation("Connecting to upstream {ServerAddress}:{ServerPort}", _feslSettings.ServerAddress, _feslSettings.ServerPort);
 
         var upstreamTcpClient = new TcpClient(_feslSettings.ServerAddress, _feslSettings.ServerPort);
         var upstreamTcpStream = upstreamTcpClient.GetStream();
@@ -55,7 +55,7 @@ public class FeslProxy
         }
         catch(Exception e)
         {
-            _logger.LogError(e.Message);
+            _logger.LogError("Failed to connect to upstream: {Message}", e.Message);
             throw new Exception($"Failed to connect to upstream {_feslSettings.ServerAddress}:{_feslSettings.ServerPort}");
         }
     }
@@ -73,7 +73,7 @@ public class FeslProxy
             }
             catch (Exception e)
             {
-                _logger.LogError(e, $"Failed to proxy data from client: {e.Message}");
+                _logger.LogError(e, "Failed to proxy data from client: {Message}", e.Message);
             }
 
             return Task.CompletedTask;
@@ -90,7 +90,7 @@ public class FeslProxy
             }
             catch (Exception e)
             {
-                _logger.LogError(e, $"Failed to proxy data from upstream: {e.Message}");
+                _logger.LogError(e, "Failed to proxy data from upstream: {Message}", e.Message);
             }
             return Task.CompletedTask;
 
@@ -346,7 +346,7 @@ public class FeslProxy
     private void LogPacket(string msg, Packet? packet)
     {
         var dataStringMod = packet?.DataDict.Select(x => $"{x.Key}={x.Value}").Aggregate((x, y) => $"{x}; {y}");
-        _logger.LogTrace($"{msg} id={packet?.Id} len={packet?.Length} {packet?.Type}, data: {dataStringMod}");
+        _logger.LogTrace("{msg} id={Id} len={Length} {Type}, data: {dataString}", msg, packet?.Id, packet?.Length, packet?.Type, dataStringMod);
     }
 
     private static Packet? AnalyzeFeslPacket(byte[] buffer)

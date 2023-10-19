@@ -37,7 +37,7 @@ public class TheaterProxy
 
     private void InitializeUpstreamClient()
     {
-        _logger.LogInformation($"Connecting to upstream {_arcadiaSettings.TheaterAddress}:{_arcadiaSettings.TheaterPort}");
+        _logger.LogInformation("Connecting to upstream {TheaterAddress}:{TheaterPort}", _arcadiaSettings.TheaterAddress, _arcadiaSettings.TheaterPort);
         
         _upstreamClient = new TcpClient(_arcadiaSettings.TheaterAddress, _arcadiaSettings.TheaterPort);
         _upstreamStream = _upstreamClient.GetStream();
@@ -54,13 +54,13 @@ public class TheaterProxy
 
                 while ((read = await _arcadiaStream!.ReadAsync(buffer, 0, buffer.Length)) > 0)
                 {
-                    _logger.LogDebug($"Theater packet received from client: {Encoding.ASCII.GetString(buffer, 0, read)}");
+                    _logger.LogDebug("Theater packet received from client: {data}", Encoding.ASCII.GetString(buffer, 0, read));
                     await _upstreamStream!.WriteAsync(buffer, 0, read);
                 }
             }
             catch (Exception e)
             {
-                _logger.LogError(e, $"Failed to proxy data from client: {e.Message}");
+                _logger.LogError(e, "Failed to proxy data from client: {Message}", e.Message);
             }
 
             return Task.CompletedTask;
@@ -75,13 +75,13 @@ public class TheaterProxy
 
                 while ((read = await _upstreamStream!.ReadAsync(buffer, 0, buffer.Length)) > 0)
                 {
-                    _logger.LogDebug($"Theater packet received from server: {Encoding.ASCII.GetString(buffer, 0, read)}");
+                    _logger.LogDebug("Theater packet received from server: {data}", Encoding.ASCII.GetString(buffer, 0, read));
                     await _arcadiaStream!.WriteAsync(buffer, 0, read);
                 }
             }
             catch (Exception e)
             {
-                _logger.LogError(e, $"Failed to proxy data from upstream: {e.Message}");
+                _logger.LogError(e, "Failed to proxy data from upstream: {Message}", e.Message);
             }
 
             return Task.CompletedTask;

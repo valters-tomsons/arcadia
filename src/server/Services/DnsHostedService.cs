@@ -40,10 +40,10 @@ public class DnsHostedService : IHostedService
         // Block EA Telemetry (breaks BFBC1)
         // _masterFile.AddIPAddressResourceRecord("messaging.ea.com", "127.0.0.1");
 
-        _server.Listening += (sender, args) => _logger.LogInformation($"DNS server listening!");
-        _server.Requested += (sender, args) => _logger.LogDebug($"DNS request: {args.Request}");
-        _server.Responded += (sender, args) => _logger.LogDebug($"DNS response: {args.Response}");
-        _server.Errored += (sender, args) => _logger.LogError($"DNS error: {args.Exception}");
+        _server.Listening += (sender, args) => _logger.LogInformation("DNS server listening!");
+        _server.Requested += (sender, args) => _logger.LogDebug("DNS request: {Request}", args.Request);
+        _server.Responded += (sender, args) => _logger.LogDebug("DNS response: {Response}", args.Response);
+        _server.Errored += (sender, args) => _logger.LogError("DNS error: {Exception}", args.Exception);
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
