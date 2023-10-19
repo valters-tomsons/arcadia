@@ -6,9 +6,12 @@ public static class BadCompany
     public const int TheaterPort = 18805;
 }
 
-/// <summary>
-/// Constants for Battlefield 1943
-/// </summary>
+public static class Rome
+{
+    public const int FeslPort = 18121;
+    public const int TheaterPort = 18126;
+}
+
 public static class Beach
 {
     public const int FeslPort = 18231;
