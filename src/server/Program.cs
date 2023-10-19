@@ -19,6 +19,32 @@ var config = new ConfigurationBuilder()
 var host = Host.CreateDefaultBuilder()
     .ConfigureServices((_, services) =>
     {
+        services
+            .Configure<ArcadiaSettings>(config.GetSection(nameof(ArcadiaSettings)))
+            .Configure<FeslSettings>(config.GetSection(nameof(FeslSettings)))
+            .Configure<DnsSettings>(config.GetSection(nameof(DnsSettings)))
+            .Configure<ProxySettings>(config.GetSection(nameof(ProxySettings)))
+            .Configure<DebugSettings>(config.GetSection(nameof(DebugSettings)));
+
+        services
+            .AddSingleton<CertGenerator>()
+            .AddSingleton<SharedCounters>()
+            .AddSingleton<SharedCache>();
+
+        services
+            .AddScoped<Rc4TlsCrypto>()
+            .AddScoped<FeslHandler>()
+            .AddScoped<TheaterHandler>();
+
+        services
+            .AddTransient<FeslProxy>()
+            .AddTransient<TheaterProxy>();
+
+        services
+            .AddHostedService<DnsHostedService>()
+            .AddHostedService<FeslHostedService>()
+            .AddHostedService<TheaterHostedService>();
+
         services.AddLogging(log =>
         {
             log.ClearProviders();
@@ -29,28 +55,6 @@ var host = Host.CreateDefaultBuilder()
                 x.ColorBehavior = LoggerColorBehavior.Enabled;
             });
         });
-
-        services.AddSingleton<CertGenerator>();
-        services.AddSingleton<SharedCounters>();
-        services.AddSingleton<SharedCache>();
-
-        services.Configure<ArcadiaSettings>(config.GetSection(nameof(ArcadiaSettings)));
-        services.Configure<FeslSettings>(config.GetSection(nameof(FeslSettings)));
-        services.Configure<DnsSettings>(config.GetSection(nameof(DnsSettings)));
-        services.Configure<ProxySettings>(config.GetSection(nameof(ProxySettings)));
-        services.Configure<DebugSettings>(config.GetSection(nameof(DebugSettings)));
-
-        services.AddScoped<Rc4TlsCrypto>();
-        services.AddScoped<FeslHandler>();
-        services.AddScoped<TheaterHandler>();
-
-        services
-            .AddHostedService<DnsHostedService>()
-            .AddHostedService<FeslHostedService>()
-            .AddHostedService<TheaterHostedService>();
-
-        services.AddTransient<FeslProxy>();
-        services.AddTransient<TheaterProxy>();
     })
     .Build();
 
