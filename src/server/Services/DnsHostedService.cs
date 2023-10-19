@@ -27,14 +27,18 @@ public class DnsHostedService : IHostedService
         _masterFile = new MasterFile();
         _server = new DnsServer(_masterFile, "1.1.1.1", port: options.DnsPort);
 
-        _masterFile.AddIPAddressResourceRecord(fesl.ServerAddress, options.FeslAddress);
+        // Override EA backend domains
+        _masterFile.AddIPAddressResourceRecord("beach-ps3.fesl.ea.com", options.FeslAddress);
         _masterFile.AddIPAddressResourceRecord("beach-ps3.theater.ea.com", options.FeslAddress);
-        _masterFile.AddIPAddressResourceRecord("messaging.ea.com", "127.0.0.1");
 
-        if (!proxy.EnableProxy)
-        {
-            _masterFile.AddIPAddressResourceRecord(arcadia.GameServerAddress, arcadia.GameServerAddress);
-        }
+        _masterFile.AddIPAddressResourceRecord("bfbc-ps3.fesl.ea", options.FeslAddress);
+        _masterFile.AddIPAddressResourceRecord("bfbc-ps3.theater.ea.com", options.FeslAddress);
+
+        _masterFile.AddIPAddressResourceRecord("bfbc2-ps3.fesl.ea", options.FeslAddress);
+        _masterFile.AddIPAddressResourceRecord("bfbc2-ps3.theater.ea.com", options.FeslAddress);
+
+        // Block EA Telemetry
+        _masterFile.AddIPAddressResourceRecord("messaging.ea.com", "127.0.0.1");
 
         _server.Listening += (sender, args) => _logger.LogInformation($"DNS server listening!");
         _server.Requested += (sender, args) => _logger.LogDebug($"DNS request: {args.Request}");
