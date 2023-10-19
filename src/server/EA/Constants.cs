@@ -3,6 +3,7 @@ namespace Arcadia.EA.Constants;
 public static class BadCompany
 {
     public const int FeslPort = 18800;
+    public const int TheaterPort = 18805;
 }
 
 /// <summary>

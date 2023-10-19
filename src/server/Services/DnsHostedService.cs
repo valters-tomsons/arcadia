@@ -31,14 +31,14 @@ public class DnsHostedService : IHostedService
         _masterFile.AddIPAddressResourceRecord("beach-ps3.fesl.ea.com", options.FeslAddress);
         _masterFile.AddIPAddressResourceRecord("beach-ps3.theater.ea.com", options.FeslAddress);
 
-        _masterFile.AddIPAddressResourceRecord("bfbc-ps3.fesl.ea", options.FeslAddress);
+        _masterFile.AddIPAddressResourceRecord("bfbc-ps3.fesl.ea.com", options.FeslAddress);
         _masterFile.AddIPAddressResourceRecord("bfbc-ps3.theater.ea.com", options.FeslAddress);
 
-        _masterFile.AddIPAddressResourceRecord("bfbc2-ps3.fesl.ea", options.FeslAddress);
+        _masterFile.AddIPAddressResourceRecord("bfbc2-ps3.fesl.ea.com", options.FeslAddress);
         _masterFile.AddIPAddressResourceRecord("bfbc2-ps3.theater.ea.com", options.FeslAddress);
 
-        // Block EA Telemetry
-        _masterFile.AddIPAddressResourceRecord("messaging.ea.com", "127.0.0.1");
+        // Block EA Telemetry (breaks BFBC1)
+        // _masterFile.AddIPAddressResourceRecord("messaging.ea.com", "127.0.0.1");
 
         _server.Listening += (sender, args) => _logger.LogInformation($"DNS server listening!");
         _server.Requested += (sender, args) => _logger.LogDebug($"DNS request: {args.Request}");
