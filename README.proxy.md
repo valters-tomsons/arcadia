@@ -4,6 +4,10 @@ A proxy server allowing connection to official Battlefield 1943's backend servic
 
 **Note**: This project is not affiliated with EA or DICE.
 
+## Notice
+
+**Using this tool could be a violation of Battlefield 1943's terms of service and lead to account penalties, including bans. We accept no liability for any repercussions of its use.**
+
 ## Setup
 
 ### PS3
@@ -28,6 +32,7 @@ A proxy server allowing connection to official Battlefield 1943's backend servic
 
 ## Known Issues
 
-* Proxy will crash when client disconnects from backend (timeouts/network issues/RPCS3 is closed)
-* Sometimes login fails, just restart the proxy and try again. If it still fails, restart RPCS3 and try again.
+* Sometimes login fails, just restart the proxy and try again. If it still fails, restart RPCS3 and try again
 * Game will tell that your credentials are invalid, make sure you're using **EA account credentials** and not PSN credentials
+* Some menus may display your RPCN nickname instead of PSN
+* Friends list may not work properly
