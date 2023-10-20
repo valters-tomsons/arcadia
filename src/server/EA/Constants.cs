@@ -2,18 +2,24 @@ namespace Arcadia.EA.Constants;
 
 public static class BadCompany
 {
+    public const string FeslAddress = "bfbc-ps3.fesl.ea.com";
+    public const string TheaterAddress = "bfbc-ps3.theater.ea.com";
     public const int FeslPort = 18800;
     public const int TheaterPort = 18805;
 }
 
 public static class Rome
 {
+    public const string FeslAddress = "bfbc2-ps3.fesl.ea.com";
+    public const string TheaterAddress = "bfbc2-ps3.theater.ea.com";
     public const int FeslPort = 18121;
     public const int TheaterPort = 18126;
 }
 
 public static class Beach
 {
+    public const string FeslAddress = "beach-ps3.fesl.ea.com";
+    public const string TheaterAddress = "beach-ps3.theater.ea.com";
     public const int FeslPort = 18231;
     public const int TheaterPort = 18236;
 }
