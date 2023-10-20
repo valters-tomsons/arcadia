@@ -314,6 +314,13 @@ public partial class FeslProxy
                 { "password", _proxySettings.ProxyOverrideAccountPassword },
                 { "macAddr", macAddr },
             };
+            
+            // Add tosVersion param if present in the original packet, so this login can update the TOS version
+            var tosVersion = packet["tosVersion"];
+            if (!string.IsNullOrWhiteSpace(tosVersion))
+            {
+                overridePacketData["tosVersion"] = tosVersion;
+            }
 
             packet = new Packet("acct", FeslTransmissionType.SinglePacketRequest, packet.Id, overridePacketData);
             numOverridesApplied++;
