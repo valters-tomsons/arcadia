@@ -198,6 +198,43 @@ public partial class FeslProxy
             }
         }
 
+        var enableAddAccountOverride = !string.IsNullOrWhiteSpace(_proxySettings.ProxyOverrideAccountAddPersonaName) &&
+                                       !string.IsNullOrWhiteSpace(_proxySettings.ProxyOverrideAccountEmail) &&
+                                       !string.IsNullOrWhiteSpace(_proxySettings.ProxyOverrideAccountPassword);
+        if (enableAddAccountOverride &&
+            type == "acct" &&
+            transmissionType == FeslTransmissionType.SinglePacketRequest &&
+            txn == "NuPS3AddAccount")
+        {
+            _logger.LogInformation("Overriding client add account request...");
+
+            var rnd = new Random();
+            var overridePacketData = new Dictionary<string, object>
+            {
+                { "TXN", "NuAddAccount" },
+                { "nuid", _proxySettings.ProxyOverrideAccountEmail },
+                { "password", _proxySettings.ProxyOverrideAccountPassword },
+                { "globalOptin", 0 },
+                { "thirdPartyOptin", 0 },
+                { "parentalEmail", "" },
+                { "DOBDay", rnd.Next(1, 29) },
+                { "DOBMonth", rnd.Next(1, 13) },
+                { "DOBYear", rnd.Next(1985, 2002) }, // Anything older than 21
+                { "first_Name", "" },
+                { "last_Name", "" },
+                { "street", "" },
+                { "street2", "" },
+                { "state", "" },
+                { "zipCode", "" },
+                { "country", "us" },
+                { "language", "en" },
+                { "tosVersion", packet["tosVersion"] }
+            };
+
+            packet = new Packet("acct", FeslTransmissionType.SinglePacketRequest, packet.Id, overridePacketData);
+            numOverridesApplied++;
+        }
+
         var enablePlatformOverride = _proxySettings.ProxyOverrideAccountIsXbox;
         if (enablePlatformOverride && 
             type == "fsys" &&
@@ -326,16 +363,30 @@ public partial class FeslProxy
             numOverridesApplied++;
         }
 
-        if (enableLoginOverride &&
+        if ((enableAddAccountOverride || enableLoginOverride) &&
             type == "acct" &&
             transmissionType == FeslTransmissionType.SinglePacketResponse &&
-            txn == "NuLogin")
+            txn is "NuLogin" or "NuAddPersona")
         {
-            // Make sure response contains an lkey, indicating successful login
-            var lkey = packet["lkey"];
-            if (!string.IsNullOrWhiteSpace(lkey))
+            var consumeResponse = false;
+            var responseType = string.Empty;
+            switch (txn)
             {
-                _logger.LogInformation("Consuming server login response...");
+                // Make sure NuLogin response contains an lkey, indicating successful login
+                case "NuLogin" when !string.IsNullOrWhiteSpace(packet["lkey"]):
+                    consumeResponse = true;
+                    responseType = "login response";
+                    break;
+                // Make sure NuAddPersona response does not contain an error code (successful response contains just the TXN)
+                case "NuAddPersona" when string.IsNullOrWhiteSpace(packet["errorCode"]):
+                    consumeResponse = true;
+                    responseType = "add persona response";
+                    break;
+            }
+            
+            if (consumeResponse)
+            {
+                _logger.LogInformation("Consuming {ResponseType} response...", responseType);
 
                 var overridePacketData = new Dictionary<string, object>
                 {
@@ -350,7 +401,7 @@ public partial class FeslProxy
             }
         }
 
-        if (enableLoginOverride &&
+        if ((enableAddAccountOverride || enableLoginOverride) &&
             type == "acct" &&
             transmissionType == FeslTransmissionType.SinglePacketResponse &&
             txn == "NuGetPersonas")
@@ -372,6 +423,23 @@ public partial class FeslProxy
                 packet = new Packet("acct", FeslTransmissionType.SinglePacketRequest, packet.Id, overridePacketData);
                 numOverridesApplied++;
                 
+                return (packet, numOverridesApplied, true); // Directly respond to sender with override ticket
+            }
+            
+            // If enabled, attempt to add a persona
+            if (enableAddAccountOverride && string.IsNullOrWhiteSpace(packet["errorCode"]))
+            {
+                _logger.LogInformation("Consuming server get personas response...");
+                
+                var overridePacketData = new Dictionary<string, object>
+                {
+                    { "TXN", "NuAddPersona" },
+                    { "name", _proxySettings.ProxyOverrideAccountAddPersonaName },
+                };
+            
+                packet = new Packet("acct", FeslTransmissionType.SinglePacketRequest, packet.Id, overridePacketData);
+                numOverridesApplied++;
+            
                 return (packet, numOverridesApplied, true); // Directly respond to sender with override ticket
             }
         }
