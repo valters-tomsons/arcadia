@@ -11,14 +11,15 @@ using Microsoft.Extensions.Logging.Console;
 using Arcadia.Storage;
 using Arcadia.EA.Proxy;
 
-var config = new ConfigurationBuilder()
-    .SetBasePath(Directory.GetCurrentDirectory())
-    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
-    .Build();
-
 var host = Host.CreateDefaultBuilder()
-    .ConfigureServices((_, services) =>
+    .ConfigureAppConfiguration((_, config) => config
+        .SetBasePath(Directory.GetCurrentDirectory())
+        .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
+    )
+    .ConfigureServices((context, services) =>
     {
+        var config = context.Configuration;
+        
         services
             .Configure<ArcadiaSettings>(config.GetSection(nameof(ArcadiaSettings)))
             .Configure<FeslSettings>(config.GetSection(nameof(FeslSettings)))
@@ -54,6 +55,23 @@ var host = Host.CreateDefaultBuilder()
                 x.TimestampFormat = "[HH:mm:ss::fff] ";
                 x.ColorBehavior = LoggerColorBehavior.Enabled;
             });
+
+            services.Configure<LoggerFilterOptions>(x => x.AddFilter(nameof(Microsoft), LogLevel.Warning));
+
+            // GetSection is not working here for some reason
+            var fileLogging = config.GetValue<bool>($"{nameof(DebugSettings)}::{nameof(DebugSettings.EnableFileLogging)}");
+            if (fileLogging)
+            {
+                services.Configure<LoggerFilterOptions>(x =>
+                {
+                    x.AddFilter("Arcadia.Handlers.FeslHandler", LogLevel.Trace);
+                    x.AddFilter("Arcadia.Handlers.TheaterHandler", LogLevel.Trace);
+                    x.AddFilter("Arcadia.EA.Proxy.FeslProxy", LogLevel.Trace);
+                    x.AddFilter("Arcadia.EA.Proxy.TheaterProxy", LogLevel.Trace);
+                });
+
+                log.AddFile("arcadia.log", append: true);
+            }
         });
     })
     .Build();

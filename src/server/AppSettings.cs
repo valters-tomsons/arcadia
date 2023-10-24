@@ -48,4 +48,5 @@ public record DnsSettings
 public record DebugSettings
 {
     public bool WriteSslDebugKeys { get; init; }
+    public bool EnableFileLogging { get; init; }
 }
