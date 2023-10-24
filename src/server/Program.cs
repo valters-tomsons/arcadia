@@ -58,9 +58,8 @@ var host = Host.CreateDefaultBuilder()
 
             services.Configure<LoggerFilterOptions>(x => x.AddFilter(nameof(Microsoft), LogLevel.Warning));
 
-            // GetSection is not working here for some reason
-            var fileLogging = config.GetValue<bool>($"{nameof(DebugSettings)}::{nameof(DebugSettings.EnableFileLogging)}");
-            if (fileLogging)
+            var debugSettings = config.GetSection(nameof(DebugSettings)).Get<DebugSettings>()!;
+            if (debugSettings.EnableFileLogging)
             {
                 services.Configure<LoggerFilterOptions>(x =>
                 {
