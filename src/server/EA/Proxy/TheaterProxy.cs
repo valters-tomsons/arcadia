@@ -52,9 +52,9 @@ public class TheaterProxy
                 byte[] buffer = new byte[8096];
                 int read;
 
-                while ((read = await _arcadiaStream!.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                while ((read = await _arcadiaStream!.ReadAsync(buffer)) > 0)
                 {
-                    _logger.LogDebug("Theater packet received from client: {data}", Encoding.ASCII.GetString(buffer, 0, read));
+                    _logger.LogTrace("client packet: {data}", Encoding.ASCII.GetString(buffer, 0, read));
                     await _upstreamStream!.WriteAsync(buffer.AsMemory(0, read));
                 }
             }
@@ -73,9 +73,9 @@ public class TheaterProxy
                 byte[] buffer = new byte[8096];
                 int read;
 
-                while ((read = await _upstreamStream!.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                while ((read = await _upstreamStream!.ReadAsync(buffer)) > 0)
                 {
-                    _logger.LogDebug("Theater packet received from server: {data}", Encoding.ASCII.GetString(buffer, 0, read));
+                    _logger.LogTrace("server packet: {data}", Encoding.ASCII.GetString(buffer, 0, read));
                     await _arcadiaStream!.WriteAsync(buffer.AsMemory(0, read));
                 }
             }

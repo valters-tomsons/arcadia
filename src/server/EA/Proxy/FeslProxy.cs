@@ -70,7 +70,7 @@ public partial class FeslProxy
             {
                 while (_arcadiaProtocol!.IsConnected)
                 {
-                    ProxyApplicationData(_arcadiaProtocol, _upstreamProtocol!);
+                    ProxyApplicationData(_arcadiaProtocol, _upstreamProtocol!, "client");
                 }
             }
             catch (Exception e)
@@ -87,7 +87,7 @@ public partial class FeslProxy
             {
                 while (_arcadiaProtocol!.IsConnected)
                 {
-                    ProxyApplicationData(_upstreamProtocol!, _arcadiaProtocol);
+                    ProxyApplicationData(_upstreamProtocol!, _arcadiaProtocol, "server");
                 }
             }
             catch (Exception e)
@@ -102,7 +102,7 @@ public partial class FeslProxy
         _logger.LogInformation("Proxy connection closed");
     }
 
-    private async void ProxyApplicationData(TlsProtocol source, TlsProtocol destination)
+    private async void ProxyApplicationData(TlsProtocol source, TlsProtocol destination, string sourceName)
     {
         var readBuffer = new byte[8096];
         int? read = 0;
@@ -125,14 +125,14 @@ public partial class FeslProxy
             }
 
             var incomingPacket = AnalyzeFeslPacket(readBuffer.AsSpan(0, read.Value).ToArray());
-            LogPacket("Proxying", incomingPacket);
+            LogPacket("Proxying", incomingPacket, sourceName);
 
             if (incomingPacket != null)
             {
                 var (packet, numOverridesApplied, respond) = PotentiallyApplyOverridesToPacket(incomingPacket.Value);
                 if (numOverridesApplied > 0)
                 {
-                    LogPacket($"Packet with {numOverridesApplied} override(s) applied", packet);
+                    LogPacket($"Packet with {numOverridesApplied} override(s) applied", packet, sourceName);
                     
                     var newBuffer = await packet.Serialize();
 
@@ -142,7 +142,7 @@ public partial class FeslProxy
 
                 if (respond)
                 {
-                    LogPacket("Responding with packet", packet);
+                    LogPacket("Responding with packet", packet, sourceName);
                     try
                     {
                         source.WriteApplicationData(readBuffer, 0, read.Value);
@@ -471,10 +471,10 @@ public partial class FeslProxy
         return (packet, numOverridesApplied, false);
     }
 
-    private void LogPacket(string msg, Packet? packet)
+    private void LogPacket(string msg, Packet? packet, string sourceName)
     {
         var dataStringMod = packet?.DataDict.Select(x => $"{x.Key}={x.Value}").Aggregate((x, y) => $"{x}; {y}");
-        _logger.LogTrace("{msg} id={Id} len={Length} {Type}, data: {dataString}", msg, packet?.Id, packet?.Length, packet?.Type, dataStringMod);
+        _logger.LogTrace("{srcName} packet: {msg} id={Id} len={Length} {Type}, data: {dataString}", sourceName, msg, packet?.Id, packet?.Length, packet?.Type, dataStringMod);
     }
 
     private static Packet? AnalyzeFeslPacket(byte[] buffer)
