@@ -23,6 +23,9 @@ public partial class FeslProxy
     private string? _personaName;
     private string? _originalPartition;
 
+    private string? _clientString;
+    private bool _isBFBC;
+
     public FeslProxy(ILogger<FeslProxy> logger, IOptions<FeslSettings> feslSettings, IOptions<ProxySettings> proxySettings)
     {
         _logger = logger;
@@ -236,21 +239,20 @@ public partial class FeslProxy
         }
 
         var enablePlatformOverride = _proxySettings.ProxyOverrideAccountIsXbox;
-        if (enablePlatformOverride && 
-            type == "fsys" &&
+        if (type == "fsys" &&
             transmissionType == FeslTransmissionType.SinglePacketRequest &&
             txn == "Hello")
         {
-            var clientString = packet["clientString"];
-            if (!string.IsNullOrWhiteSpace(clientString))
+            _clientString = packet["clientString"];
+            if (enablePlatformOverride && !string.IsNullOrWhiteSpace(_clientString))
             {
                 _logger.LogInformation("Overriding client string...");
-                
-                packet["clientString"] = clientString.Replace("ps3", "360");
+
+                packet["clientString"] = _clientString.Replace("ps3", "360");
                 numOverridesApplied++;
             }
         }
-        
+
         if (enablePlatformOverride &&
             type == "pnow" &&
             transmissionType == FeslTransmissionType.SinglePacketRequest &&
@@ -311,7 +313,7 @@ public partial class FeslProxy
 
         if (type == "acct" &&
             transmissionType == FeslTransmissionType.SinglePacketRequest &&
-            txn == "NuPS3Login")
+            txn is "NuPS3Login" or "PS3Login")
         {
             var clientTicket = packet["ticket"];
             if (!string.IsNullOrWhiteSpace(clientTicket) && _proxySettings.DumpClientTicket)
@@ -335,7 +337,7 @@ public partial class FeslProxy
         if (enableLoginOverride &&
             type == "acct" &&
             transmissionType == FeslTransmissionType.SinglePacketRequest &&
-            txn == "NuPS3Login")
+            txn is "NuPS3Login" or "PS3Login")
         {
             var macAddr = !string.IsNullOrWhiteSpace(_proxySettings.ProxyOverrideClientMacAddr)
                 ? _proxySettings.ProxyOverrideClientMacAddr
@@ -343,11 +345,13 @@ public partial class FeslProxy
 
             _logger.LogInformation("Overriding client login request...");
 
+            _isBFBC = _clientString?.Contains("bfbc-") == true;
+
             var overridePacketData = new Dictionary<string, object>
             {
-                { "TXN", "NuLogin" },
+                { "TXN", _isBFBC ? "Login" : "NuLogin" },
                 { "returnEncryptedInfo", 0 },
-                { "nuid", _proxySettings.ProxyOverrideAccountEmail },
+                { _isBFBC ? "name" : "nuid", _proxySettings.ProxyOverrideAccountEmail },
                 { "password", _proxySettings.ProxyOverrideAccountPassword },
                 { "macAddr", macAddr },
             };
@@ -366,7 +370,7 @@ public partial class FeslProxy
         if ((enableAddAccountOverride || enableLoginOverride) &&
             type == "acct" &&
             transmissionType == FeslTransmissionType.SinglePacketResponse &&
-            txn is "NuLogin" or "NuAddPersona")
+            txn is "NuLogin" or "NuAddPersona" && !_isBFBC)
         {
             var consumeResponse = false;
             var responseType = string.Empty;
@@ -404,7 +408,7 @@ public partial class FeslProxy
         if ((enableAddAccountOverride || enableLoginOverride) &&
             type == "acct" &&
             transmissionType == FeslTransmissionType.SinglePacketResponse &&
-            txn == "NuGetPersonas")
+            txn == "NuGetPersonas" && !_isBFBC)
         {
             // Ensure response contains a persona we can use
             var personaName = packet["personas.0"];
@@ -457,7 +461,7 @@ public partial class FeslProxy
 
                 var overridePacketData = new Dictionary<string, object>
                 {
-                    { "TXN", "PS3Login" },
+                    { "TXN", _isBFBC ? "Login" : "PS3Login" },
                     { "userId", packet["userId"] },
                     { "personaName", _personaName },
                     { "lkey", lkey }
