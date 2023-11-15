@@ -20,3 +20,8 @@ beach-ps3.fesl.ea.com=127.0.0.1&&theater.ps3.arcadia=127.0.0.1
 ## Special Thanks
 
 * *[cetteup](https://github.com/cetteup)* - lot of proxy stuff, lots of knowledge of ea systems, lots of captures and for fixing my ea packet implementation! Thanks! 
+* Battlefield Modding Discord server
+
+## References
+
+* https://github.com/Tratos/BFBC2_MasterServer
