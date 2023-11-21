@@ -36,6 +36,7 @@ public record ProxySettings
     public string ProxyOverrideAccountAddPersonaName { get; init; } = string.Empty;
     public int ProxyOverridePlayNowGameGid { get; init; } = 0;
     public int ProxyOverridePlayNowGameLid { get; init; } = 0;
+    public int ProxyOverridePrivateMatchMinPlayers { get; init; } = 0;
 }
 
 public record DnsSettings

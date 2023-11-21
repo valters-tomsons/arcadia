@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using Arcadia.EA.Constants;
@@ -236,6 +237,22 @@ public partial class FeslProxy
 
             packet = new Packet("acct", FeslTransmissionType.SinglePacketRequest, packet.Id, overridePacketData);
             numOverridesApplied++;
+        }
+
+        var enablePrivateMatchMinPlayersOverride = _proxySettings.ProxyOverridePrivateMatchMinPlayers != 0;
+        if (enablePrivateMatchMinPlayersOverride &&
+            type == "rank" &&
+            transmissionType == FeslTransmissionType.SinglePacketResponse &&
+            txn == "GetStats")
+        {
+            var firstKey = packet["stats.1.key"];
+            if (firstKey == "pm_minplayers")
+            {
+                _logger.LogInformation("Overriding pm_minplayers...");
+                
+                packet["stats.1.value"] = _proxySettings.ProxyOverridePrivateMatchMinPlayers.ToString("0.0", CultureInfo.InvariantCulture);
+                numOverridesApplied++;
+            }
         }
 
         var enablePlatformOverride = _proxySettings.ProxyOverrideAccountIsXbox;
