@@ -16,14 +16,17 @@ public static class PacketUtils
     public static byte[] BuildPacketHeader(string type, uint transmissionType, uint packetId, string data)
     {
         var typeBytes = Encoding.ASCII.GetBytes(type);
-        // TODO Check if bitwise OR is enough or if we need to apply the bit mask first to not break anything with packet ids longer than 3 bytes
-        var transmissionTypePacketIdBytes = UintToBytes(transmissionType | packetId);
-        var packetLengthBytes = CalcPacketLength(data);
+
+        uint maskedTransmissionType = (transmissionType << 24) & 0xFF000000; // ensure it only occupies the high-order byte
+        uint maskedPacketId = packetId & 0x00FFFFFF; // make sure it fits in the lower 3 bytes
+        var transmissionTypePacketIdBytes = UintToBytes(maskedTransmissionType | maskedPacketId);
+
+        var packetLengthBytes = CalculatePacketLength(data);
 
         return typeBytes.Concat(transmissionTypePacketIdBytes).Concat(packetLengthBytes).ToArray();
     }
 
-    private static byte[] CalcPacketLength(string packetData)
+    private static byte[] CalculatePacketLength(string packetData)
     {
         var dataBytes = Encoding.ASCII.GetBytes(packetData);
 
