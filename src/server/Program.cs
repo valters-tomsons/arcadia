@@ -9,7 +9,6 @@ using Arcadia.EA;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 using Arcadia.Storage;
-using Arcadia.EA.Proxy;
 
 var host = Host.CreateDefaultBuilder()
     .ConfigureAppConfiguration((_, config) => config
@@ -24,7 +23,6 @@ var host = Host.CreateDefaultBuilder()
             .Configure<ArcadiaSettings>(config.GetSection(nameof(ArcadiaSettings)))
             .Configure<FeslSettings>(config.GetSection(nameof(FeslSettings)))
             .Configure<DnsSettings>(config.GetSection(nameof(DnsSettings)))
-            .Configure<ProxySettings>(config.GetSection(nameof(ProxySettings)))
             .Configure<DebugSettings>(config.GetSection(nameof(DebugSettings)));
 
         services
@@ -36,10 +34,6 @@ var host = Host.CreateDefaultBuilder()
             .AddScoped<Rc4TlsCrypto>()
             .AddScoped<FeslHandler>()
             .AddScoped<TheaterHandler>();
-
-        services
-            .AddTransient<FeslProxy>()
-            .AddTransient<TheaterProxy>();
 
         services
             .AddHostedService<DnsHostedService>()

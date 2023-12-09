@@ -2,7 +2,6 @@ using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using Arcadia.Handlers;
-using Arcadia.EA.Proxy;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -15,7 +14,6 @@ public class TheaterHostedService : IHostedService
     private readonly ILogger<TheaterHostedService> _logger;
 
     private readonly ArcadiaSettings _arcadiaSettings;
-    private readonly ProxySettings _proxySettings;
     
     private readonly IServiceScopeFactory _scopeFactory;
 
@@ -27,14 +25,12 @@ public class TheaterHostedService : IHostedService
 
     private Task? _tcpServer;
 
-    public TheaterHostedService(ILogger<TheaterHostedService> logger, IOptions<ArcadiaSettings> arcadiaSettings,
-        IOptions<ProxySettings> proxySettings, IServiceScopeFactory scopeFactory)
+    public TheaterHostedService(ILogger<TheaterHostedService> logger, IOptions<ArcadiaSettings> arcadiaSettings, IServiceScopeFactory scopeFactory)
     {
         _logger = logger;
         _scopeFactory = scopeFactory;
 
         _arcadiaSettings = arcadiaSettings.Value;
-        _proxySettings = proxySettings.Value;
 
         var endpoint = new IPEndPoint(IPAddress.Parse(_arcadiaSettings.ListenAddress), _arcadiaSettings.TheaterPort);
         _tcpListener = new TcpListener(endpoint);
@@ -69,21 +65,9 @@ public class TheaterHostedService : IHostedService
     {
         using var scope = _scopeFactory.CreateAsyncScope();
 
-        if (_proxySettings.EnableProxy)
-        {
-            await HandleAsProxy(scope.ServiceProvider, tcpClient, _cts.Token);
-            return;
-        }
-
         var networkStream = tcpClient.GetStream();
         var handler = scope.ServiceProvider.GetRequiredService<TheaterHandler>();
         await handler.HandleClientConnection(networkStream, clientEndpoint);
-    }
-
-    private async Task HandleAsProxy(IServiceProvider sp, TcpClient client, CancellationToken ct)
-    {
-        var proxy = sp.GetRequiredService<TheaterProxy>();
-        await proxy.StartProxy(client);
     }
 
     public Task StopAsync(CancellationToken cancellationToken)

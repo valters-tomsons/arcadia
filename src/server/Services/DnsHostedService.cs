@@ -13,7 +13,7 @@ public class DnsHostedService : IHostedService
     private readonly DnsServer? _server;
 
     public DnsHostedService(ILogger<DnsHostedService> logger, IOptions<ArcadiaSettings> arcadiaSettings,
-        IOptions<FeslSettings> feslSettings, IOptions<ProxySettings> proxySettings, IOptions<DnsSettings> dnsSettings)
+        IOptions<FeslSettings> feslSettings, IOptions<DnsSettings> dnsSettings)
     {
         _logger = logger;
 
@@ -22,7 +22,6 @@ public class DnsHostedService : IHostedService
 
         var arcadia = arcadiaSettings.Value;
         var fesl = feslSettings.Value;
-        var proxy = proxySettings.Value;
 
         _masterFile = new MasterFile();
         _server = new DnsServer(_masterFile, "1.1.1.1", port: options.DnsPort);

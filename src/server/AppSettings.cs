@@ -21,24 +21,6 @@ public record FeslSettings
     public int ServerPort { get; init; } = Beach.FeslPort;
 }
 
-public record ProxySettings
-{
-    public bool MirrorCertificateStrings { get; init; }
-    public bool EnableProxy { get; init; }
-    public bool DumpClientTicket { get; init; }
-    public string ProxyOverrideClientTicket { get; init; } = string.Empty;
-    public string ProxyOverrideClientMacAddr { get; init; } = string.Empty;
-    public string ProxyOverrideTheaterIp { get; init; } = string.Empty;
-    public int ProxyOverrideTheaterPort { get; init; } = 0;
-    public bool ProxyOverrideAccountIsXbox { get; init; } = false;
-    public string ProxyOverrideAccountEmail { get; init; } = string.Empty;
-    public string ProxyOverrideAccountPassword { get; init; } = string.Empty;
-    public string ProxyOverrideAccountAddPersonaName { get; init; } = string.Empty;
-    public int ProxyOverridePlayNowGameGid { get; init; } = 0;
-    public int ProxyOverridePlayNowGameLid { get; init; } = 0;
-    public int ProxyOverridePrivateMatchMinPlayers { get; init; } = 0;
-}
-
 public record DnsSettings
 {
     public bool EnableDns { get; init; }

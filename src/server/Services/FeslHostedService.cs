@@ -4,14 +4,12 @@ using Arcadia.EA;
 using Arcadia.Handlers;
 using Arcadia.Tls;
 using Arcadia.Tls.Crypto;
-using Arcadia.EA.Proxy;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Tls;
-using Arcadia.Tls.Misc;
 
 namespace Arcadia.Services;
 
@@ -21,7 +19,6 @@ public class FeslHostedService : IHostedService
     
     private readonly ArcadiaSettings _arcadiaSettings;
     private readonly FeslSettings _feslSettings;
-    private readonly ProxySettings _proxySettings;
 
     private readonly CertGenerator _certGenerator;
     private readonly IServiceScopeFactory _scopeFactory;
@@ -36,14 +33,12 @@ public class FeslHostedService : IHostedService
     private Task? _server;
 
     public FeslHostedService(ILogger<FeslHostedService> logger, IOptions<ArcadiaSettings> arcadiaSettings,
-        IOptions<FeslSettings> feslSettings, IOptions<ProxySettings> proxySettings, CertGenerator certGenerator,
-        IServiceScopeFactory scopeFactory)
+        IOptions<FeslSettings> feslSettings, CertGenerator certGenerator, IServiceScopeFactory scopeFactory)
     {
         _logger = logger;
         
         _arcadiaSettings = arcadiaSettings.Value;
         _feslSettings = feslSettings.Value;
-        _proxySettings = proxySettings.Value;
 
         _certGenerator = certGenerator;
         _scopeFactory = scopeFactory;
@@ -58,11 +53,6 @@ public class FeslHostedService : IHostedService
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
         _listener.Start();
-
-        if (_proxySettings.EnableProxy)
-        {
-            _logger.LogWarning("Proxying enabled!");
-        }
 
         _server = Task.Run(async () =>
         {
@@ -87,12 +77,6 @@ public class FeslHostedService : IHostedService
     {
         var IssuerDN = "CN=OTG3 Certificate Authority, C=US, ST=California, L=Redwood City, O=\"Electronic Arts, Inc.\", OU=Online Technology Group, emailAddress=dirtysock-contact@ea.com";
         var SubjectDN = "C=US, ST=California, O=\"Electronic Arts, Inc.\", OU=Online Technology Group, CN=fesl.ea.com, emailAddress=fesl@ea.com";
-
-        if (_proxySettings.MirrorCertificateStrings && _proxySettings.EnableProxy)
-        {
-            (IssuerDN, SubjectDN) = TlsCertDumper.DumpPubFeslCert(_feslSettings.ServerAddress, _feslSettings.ServerPort);
-            _logger.LogWarning("Certificate strings copied from upstream: {address}", _feslSettings.ServerAddress);
-        }
 
         (_feslCertKey, _feslPubCert) = _certGenerator.GenerateVulnerableCert(IssuerDN, SubjectDN);
     }
@@ -122,20 +106,8 @@ public class FeslHostedService : IHostedService
             return;
         }
 
-        if (_proxySettings.EnableProxy)
-        {
-            await HandleAsProxy(scope.ServiceProvider, serverProtocol, crypto);
-            return;
-        }
-
         var handler = scope.ServiceProvider.GetRequiredService<FeslHandler>();
         await handler.HandleClientConnection(serverProtocol, clientEndpoint);
-    }
-
-    private async Task HandleAsProxy(IServiceProvider sp, TlsServerProtocol protocol, Rc4TlsCrypto crypto)
-    {
-        var proxy = sp.GetRequiredService<FeslProxy>();
-        await proxy.StartProxy(protocol, crypto);
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
