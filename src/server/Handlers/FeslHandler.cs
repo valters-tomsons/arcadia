@@ -391,6 +391,29 @@ public class FeslHandler
         _network.WriteApplicationData(loginResponse.AsSpan());
     }
 
+    private async Task SendInvalidLogin(Packet request)
+    {
+        var loginResponseData = new Dictionary<string, object>
+        {
+            { "TXN", "NuPS3Login" },
+            { "localizedMessage", "Nope" },
+            { "errorContainer.[]", 0 },
+            { "errorCode", 101 }
+            // 101: unknown user
+            // 102: account disabled
+            // 103: account banned
+            // 120: account not entitled
+            // 121: too many login attempts
+            // 122: invalid password
+            // 123: game has not been registered (?)
+        };
+
+        var loginPacket = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
+        var loginResponse = await loginPacket.Serialize();
+
+        _network.WriteApplicationData(loginResponse.AsSpan());
+    }
+
     private async Task HandleAddAccount(Packet request)
     {
         var data = new Dictionary<string, object>
