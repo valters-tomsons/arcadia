@@ -60,10 +60,7 @@ public class FeslHandler
             reqPacket.DataDict.TryGetValue("TXN", out var txn);
             var reqTxn = txn as string ?? string.Empty;
 
-            if (reqTxn != "MemCheck")
-            {
                 _logger.LogDebug("Type: {type} | TXN: {txn}", reqPacket.Type, reqTxn);
-            }
 
             if (reqPacket.Type == "fsys" && reqTxn == "Hello")
             {
