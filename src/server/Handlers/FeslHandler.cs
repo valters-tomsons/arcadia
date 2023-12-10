@@ -432,7 +432,7 @@ public class FeslHandler
         _network.WriteApplicationData(response.AsSpan());
     }
 
-    private Task HandleMemCheck()
+    private static Task HandleMemCheck()
     {
         return Task.CompletedTask;
     }
