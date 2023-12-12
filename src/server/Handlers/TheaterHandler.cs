@@ -38,7 +38,8 @@ public class TheaterHandler
             ["EGAM"] = HandleEGAM,
             ["EGRS"] = HandleEGRS,
             ["PENT"] = HandlePENT,
-            ["GDAT"] = HandleGDAT
+            ["GDAT"] = HandleGDAT,
+            ["UBRA"] = HandleUBRA,
         };
     }
 
@@ -277,6 +278,22 @@ public class TheaterHandler
         };
 
         var packet = new Packet("PENT", TheaterTransmissionType.OkResponse, 0, serverInfo);
+        var data = await packet.Serialize();
+
+        await _network.WriteAsync(data);
+    }
+
+    private async Task HandleUBRA(Packet request)
+    {
+        var serverInfo = new Dictionary<string, object>
+        {
+            ["GID"] = request["GID"],
+            ["START"] = request["START"],
+            ["TID"] = request["TID"],
+            ["LID"] = request["LID"]
+        };
+
+        var packet = new Packet(request.Type, TheaterTransmissionType.OkResponse, 0, serverInfo);
         var data = await packet.Serialize();
 
         await _network.WriteAsync(data);
