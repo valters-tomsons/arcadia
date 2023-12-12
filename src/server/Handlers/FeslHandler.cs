@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using Arcadia.EA;
 using Arcadia.EA.Constants;
 using Arcadia.PSN;
@@ -60,7 +61,8 @@ public class FeslHandler
             reqPacket.DataDict.TryGetValue("TXN", out var txn);
             var reqTxn = txn as string ?? string.Empty;
 
-                _logger.LogDebug("Type: {type} | TXN: {txn}", reqPacket.Type, reqTxn);
+            _logger.LogDebug("Incoming Type: {type} | TXN: {txn}", reqPacket.Type, reqTxn);
+            _logger.LogTrace("data:{data}", Encoding.ASCII.GetString(readBuffer[..read]));
 
             if (reqPacket.Type == "fsys" && reqTxn == "Hello")
             {

@@ -67,12 +67,11 @@ public class TheaterHandler
                 continue;
             }
 
-
             var packet = new Packet(readBuffer[..read]);
             var type = packet.Type;
 
-            _logger.LogDebug("Type: {type}", type);
-            _logger.LogTrace("Data: {data}", Encoding.ASCII.GetString(readBuffer[..read]));
+            _logger.LogDebug("Incoming Type: {type}", type);
+            _logger.LogTrace("data:{data}", Encoding.ASCII.GetString(readBuffer[..read]));
 
             _handlers.TryGetValue(type, out var handler);
 
