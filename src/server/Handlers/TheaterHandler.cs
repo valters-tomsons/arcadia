@@ -22,6 +22,8 @@ public class TheaterHandler
 
     private readonly Dictionary<string, object> _sessionCache = new();
 
+    private int _brackets = 0;
+
     public TheaterHandler(ILogger<TheaterHandler> logger, SharedCounters sharedCounters, SharedCache sharedCache, IOptions<ArcadiaSettings> arcadiaSettings)
     {
         _logger = logger;
@@ -40,6 +42,7 @@ public class TheaterHandler
             ["PENT"] = HandlePENT,
             ["GDAT"] = HandleGDAT,
             ["UBRA"] = HandleUBRA,
+            ["UGAM"] = HandleUGAM,
         };
     }
 
@@ -285,18 +288,31 @@ public class TheaterHandler
 
     private async Task HandleUBRA(Packet request)
     {
-        var serverInfo = new Dictionary<string, object>
+        if (request["START"] != "1")
         {
-            ["GID"] = request["GID"],
-            ["START"] = request["START"],
-            ["TID"] = request["TID"],
-            ["LID"] = request["LID"]
-        };
+            var originalTid = (request.DataDict["TID"] as int?) - (_brackets / 2) ?? 0;
+            for (var i = 0; i < _brackets; i++)
+            {
+                var data = new Dictionary<string, object>
+                {
+                    ["TID"] = originalTid + i
+                };
 
-        var packet = new Packet(request.Type, TheaterTransmissionType.OkResponse, 0, serverInfo);
-        var data = await packet.Serialize();
+                var packet = new Packet(request.Type, TheaterTransmissionType.OkResponse, 0, data);
+                await _network.WriteAsync(await packet.Serialize());
+                Interlocked.Decrement(ref _brackets);
+            }
+        }
+        else
+        {
+            Interlocked.Add(ref _brackets, 2);
+        }
+    }
 
-        await _network.WriteAsync(data);
+    private Task HandleUGAM(Packet request)
+    {
+        _logger.LogInformation("Server is trying to update information");
+        return Task.CompletedTask;
     }
 
     private async Task SendEGEG(Packet request)
