@@ -130,9 +130,7 @@ public class FeslHandler
         };
 
         var packet = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
-        var response = await packet.Serialize();
-
-        _network.WriteApplicationData(response.AsSpan());
+        await SendPacket(packet);
     }
 
     private async Task HandlePlayNow(Packet request)
@@ -149,8 +147,7 @@ public class FeslHandler
         };
 
         var packet1 = new Packet("pnow", FeslTransmissionType.SinglePacketResponse, request.Id, data1);
-        var response1 = await packet1.Serialize();
-        _network.WriteApplicationData(response1.AsSpan());
+        await SendPacket(packet1);
 
         var data2 = new Dictionary<string, object>
         {
@@ -167,9 +164,7 @@ public class FeslHandler
         };
 
         var packet2 = new Packet("pnow", FeslTransmissionType.SinglePacketResponse, request.Id, data2);
-        var response2 = await packet2.Serialize();
-        _network.WriteApplicationData(response2.AsSpan());
-
+        await SendPacket(packet2);
     }
 
     private async Task HandleGetStats(Packet request)
@@ -193,9 +188,7 @@ public class FeslHandler
         // }
 
         var packet = new Packet("rank", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
-        var response = await packet.Serialize();
-
-        _network.WriteApplicationData(response.AsSpan());
+        await SendPacket(packet);
     }
 
     private async Task HandlePresenceSubscribe(Packet request)
@@ -210,9 +203,7 @@ public class FeslHandler
         };
 
         var packet = new Packet("pres", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
-        var response = await packet.Serialize();
-
-        _network.WriteApplicationData(response.AsSpan());
+        await SendPacket(packet);
     }
 
     private async Task HandleSetPresenceStatus(Packet request)
@@ -223,9 +214,7 @@ public class FeslHandler
         };
 
         var packet = new Packet("pres", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
-        var response = await packet.Serialize();
-
-        _network.WriteApplicationData(response.AsSpan());
+        await SendPacket(packet);
     }
 
     private async Task HandleLookupUserInfo(Packet request)
@@ -238,9 +227,7 @@ public class FeslHandler
         };
 
         var packet = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
-        var response = await packet.Serialize();
-
-        _network.WriteApplicationData(response.AsSpan());
+        await SendPacket(packet);
     }
 
     private async Task HandleGetAssociations(Packet request)
@@ -268,9 +255,7 @@ public class FeslHandler
         }
 
         var packet = new Packet("asso", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
-        var response = await packet.Serialize();
-
-        _network.WriteApplicationData(response.AsSpan());
+        await SendPacket(packet);
     }
 
     private async Task HandleGetPingSites(Packet request)
@@ -288,9 +273,7 @@ public class FeslHandler
         };
 
         var packet = new Packet("fsys", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
-        var response = await packet.Serialize();
-
-        _network.WriteApplicationData(response.AsSpan());
+        await SendPacket(packet);
     }
 
     private async Task HandleHello(Packet request)
@@ -310,10 +293,7 @@ public class FeslHandler
                 };
 
         var helloPacket = new Packet("fsys", FeslTransmissionType.SinglePacketResponse, request.Id, serverHelloData);
-        var helloResponse = await helloPacket.Serialize();
-
-        _network.WriteApplicationData(helloResponse.AsSpan());
-
+        await SendPacket(helloPacket);
         await SendMemCheck();
     }
 
@@ -330,9 +310,7 @@ public class FeslHandler
         };
 
         var packet = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, data);
-        var response = await packet.Serialize();
-
-        _network.WriteApplicationData(response.AsSpan());
+        await SendPacket(packet);
     }
 
     private async Task HandleLogin(Packet request)
@@ -386,9 +364,7 @@ public class FeslHandler
         };
 
         var loginPacket = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
-        var loginResponse = await loginPacket.Serialize();
-
-        _network.WriteApplicationData(loginResponse.AsSpan());
+        await SendPacket(loginPacket);
     }
 
     private async Task SendInvalidLogin(Packet request)
@@ -409,9 +385,7 @@ public class FeslHandler
         };
 
         var loginPacket = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
-        var loginResponse = await loginPacket.Serialize();
-
-        _network.WriteApplicationData(loginResponse.AsSpan());
+        await SendPacket(loginPacket);
     }
 
     private async Task HandleAddAccount(Packet request)
@@ -427,9 +401,7 @@ public class FeslHandler
         _logger.LogDebug("Trying to register user {email} with password {pass}", email, pass);
 
         var resultPacket = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, data);
-        var response = await resultPacket.Serialize();
-
-        _network.WriteApplicationData(response.AsSpan());
+        await SendPacket(resultPacket );
     }
 
     private static Task HandleMemCheck()
@@ -450,8 +422,12 @@ public class FeslHandler
         // FESL backend is requesting the client to respond to the memcheck, so this is a request
         // But since memchecks are not part of the meaningful conversation with the client, they don't have a packed id
         var memcheckPacket = new Packet("fsys", FeslTransmissionType.SinglePacketRequest, 0, memCheckData);
-        var memcheckResponse = await memcheckPacket.Serialize();
+        await SendPacket(memcheckPacket);
+    }
 
-        _network.WriteApplicationData(memcheckResponse.AsSpan());
+    private async Task SendPacket(Packet packet)
+    {
+        var serializedData = await packet.Serialize();
+        _network.WriteApplicationData(serializedData.AsSpan());
     }
 }
