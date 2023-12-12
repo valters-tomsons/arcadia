@@ -4,6 +4,8 @@ namespace Arcadia.EA;
 
 public readonly struct Packet
 {
+    public string TXN => DataDict["TXN"] as string ?? string.Empty;
+
     public string this[string key]
     {
         get => DataDict.GetValueOrDefault(key) as string ?? string.Empty;
