@@ -82,7 +82,19 @@ public class FeslHandler
             }
             else if(reqPacket.Type == "acct" && reqTxn == "NuPS3Login")
             {
-                await HandleLogin(reqPacket);
+                await HandleNuPs3Login(reqPacket);
+            }
+            else if(reqPacket.Type == "acct" && reqTxn == "NuLogin")
+            {
+                await HandleNuLogin(reqPacket);
+            }
+            else if(reqPacket.Type == "acct" && reqTxn == "NuGetPersonas")
+            {
+                await HandleNuGetPersonas(reqPacket);
+            }
+            else if(reqPacket.Type == "acct" && reqTxn == "NuLoginPersona")
+            {
+                await HandleNuLoginPersona(reqPacket);
             }
             else if(reqPacket.Type == "acct" && reqTxn == "NuGetTos")
             {
@@ -315,11 +327,55 @@ public class FeslHandler
         await SendPacket(packet);
     }
 
-    private async Task HandleLogin(Packet request)
+    private async Task HandleNuLogin(Packet request)
     {
-        var encryptedSet = request.DataDict.TryGetValue("returnEncryptedInfo", out var returnEncryptedInfo);
-        _logger.LogTrace("returnEncryptedInfo: {returnEncryptedInfo} ({encryptedSet})", returnEncryptedInfo, encryptedSet);
+        _sessionCache["personaName"] = request["nuid"];
 
+        var loginResponseData = new Dictionary<string, object>
+        {
+            { "TXN", request.TXN },
+            { "encryptedLoginInfo", "Ciyvab0tregdVsBtboIpeChe4G6uzC1v5_-SIxmvSL" + "bjbfvmobxvmnawsthtgggjqtoqiatgilpigaqqzhejglhbaokhzltnstufrfouwrvzyphyrspmnzprxcocyodg" }
+        };
+
+        var loginPacket = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
+        await SendPacket(loginPacket);
+    }
+
+    private async Task HandleNuGetPersonas(Packet request)
+    {
+        var loginResponseData = new Dictionary<string, object>
+        {
+            { "TXN", request.TXN },
+            { "personas.[]", 1 },
+            { "personas.0", _sessionCache["personaName"] },
+        };
+
+        var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
+        await SendPacket(packet);
+    }
+    
+    private async Task HandleNuLoginPersona(Packet request)
+    {
+        _sessionCache["LKEY"] = _sharedCounters.GetNextLkey();
+
+        var uid = _sharedCounters.GetNextUserId();
+        _sessionCache["UID"] = uid;
+
+        _sharedCache.AddUserWithKey((string)_sessionCache["LKEY"], (string)_sessionCache["personaName"]);
+        var loginResponseData = new Dictionary<string, object>
+        {
+            { "TXN", request.TXN },
+            { "lkey", _sessionCache["LKEY"] },
+            { "profileId", uid },
+            { "userId", uid },
+        };
+
+        var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
+        await SendPacket(packet);
+    }
+
+    private async Task HandleNuPs3Login(Packet request)
+    {
         // var tosAccepted = request.DataDict.TryGetValue("tosVersion", out var tosAcceptedValue);
         // if (false)
         // {
@@ -337,15 +393,6 @@ public class FeslHandler
         //     loginResponseData.Add( "errorCode", 101 );
         // }
         // else
-        // {
-        //     const string keyTempl = "W5NyZzx{0}Cki6GQAAKDw.";
-        //     var lkey = string.Format(keyTempl, "SaUr4131g");
-
-        //     loginResponseData.Add("lkey", lkey);
-        //     loginResponseData.Add("TXN", "NuPS3Login");
-        //     loginResponseData.Add("userId", 1000000000000);
-        //     loginResponseData.Add("personaName", "arcadia_ps3");
-        // }
 
         var loginTicket = request.DataDict["ticket"] as string ?? string.Empty;
         var ticketData = TicketDecoder.DecodeFromASCIIString(loginTicket);
@@ -377,6 +424,7 @@ public class FeslHandler
             { "localizedMessage", "Nope" },
             { "errorContainer.[]", 0 },
             { "errorCode", 101 }
+
             // 101: unknown user
             // 102: account disabled
             // 103: account banned
