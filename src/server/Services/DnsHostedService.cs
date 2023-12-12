@@ -26,13 +26,14 @@ public class DnsHostedService : IHostedService
         _masterFile = new MasterFile();
         _server = new DnsServer(_masterFile, "1.1.1.1", port: options.DnsPort);
 
-        // Override EA backend domains
+        // Arcadia services
+        _masterFile.AddIPAddressResourceRecord("theater.ps3.arcadia", options.FeslAddress);
+
+        // Override EA PS3 backends
         _masterFile.AddIPAddressResourceRecord("beach-ps3.fesl.ea.com", options.FeslAddress);
         _masterFile.AddIPAddressResourceRecord("beach-ps3.theater.ea.com", options.FeslAddress);
-
         _masterFile.AddIPAddressResourceRecord("bfbc-ps3.fesl.ea.com", options.FeslAddress);
         _masterFile.AddIPAddressResourceRecord("bfbc-ps3.theater.ea.com", options.FeslAddress);
-
         _masterFile.AddIPAddressResourceRecord("bfbc2-ps3.fesl.ea.com", options.FeslAddress);
         _masterFile.AddIPAddressResourceRecord("bfbc2-ps3.theater.ea.com", options.FeslAddress);
 
