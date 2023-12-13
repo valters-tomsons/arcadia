@@ -8,6 +8,7 @@ public class SharedCounters
     private long _gameId = 800000;
     private long _pnowId = 350000;
     private long _pid = 60;
+    private long _lid = 255;
 
     private static Random _random = new();
 
@@ -39,6 +40,11 @@ public class SharedCounters
     public long GetNextPid()
     {
         return Interlocked.Increment(ref _pid);
+    }
+
+    public long GetNextLid()
+    {
+        return Interlocked.Increment(ref _lid);
     }
 
     public string GetNextLkey()
