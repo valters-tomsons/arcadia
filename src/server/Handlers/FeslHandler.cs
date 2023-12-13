@@ -57,9 +57,7 @@ public class FeslHandler
             }
 
             var reqPacket = new Packet(readBuffer[..read]);
-
-            reqPacket.DataDict.TryGetValue("TXN", out var txn);
-            var reqTxn = txn as string ?? string.Empty;
+            var reqTxn = reqPacket.TXN;
 
             _logger.LogDebug("Incoming Type: {type} | TXN: {txn}", reqPacket.Type, reqTxn);
             _logger.LogTrace("data:{data}", Encoding.ASCII.GetString(readBuffer[..read]));
@@ -115,6 +113,10 @@ public class FeslHandler
             else if(reqPacket.Type == "acct" && reqTxn == "NuGetEntitlements")
             {
                 await HandleNuGetEntitlements(reqPacket);
+            }
+            else if(reqPacket.Type == "acct" && reqTxn == "GetLockerURL")
+            {
+                await HandleGetLockerUrl(reqPacket);
             }
             else if(reqPacket.Type == "asso" && reqTxn == "GetAssociations")
             {
@@ -384,6 +386,18 @@ public class FeslHandler
         {
             { "TXN", request.TXN },
             { "entitlements.[]", 0 }
+        };
+
+        var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
+        await SendPacket(packet);
+    }
+
+    private async Task HandleGetLockerUrl(Packet request)
+    {
+        var loginResponseData = new Dictionary<string, object>
+        {
+            { "TXN", request.TXN },
+            { "url", "http://127.0.0.1/arcadia.jsp" }
         };
 
         var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
