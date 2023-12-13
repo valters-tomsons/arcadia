@@ -6,7 +6,7 @@ public record ArcadiaSettings
 {
     public string ListenAddress { get; init; } = System.Net.IPAddress.Loopback.ToString();
     public string TheaterAddress { get; init; } = "theater.ps3.arcadia";
-    public int TheaterPort { get; init; } = Beach.TheaterPort;
+    public int TheaterPort { get; init; } = Rome.TheaterServerPortPc;
     public string GameServerAddress { get; init; } = "gameserver1.ps3.arcadia";
     public int GameServerPort { get; init; } = 1003;
 }
@@ -18,7 +18,7 @@ public record FeslSettings
     public string ServerAddress { get; init; } = "beach-ps3.fesl.ea.com";
 
     // *must* match port of the original server, otherwise the client won't be able to connect
-    public int ServerPort { get; init; } = Beach.FeslPort;
+    public int ServerPort { get; init; } = Rome.FeslClientPortPs3;
 }
 
 public record DnsSettings

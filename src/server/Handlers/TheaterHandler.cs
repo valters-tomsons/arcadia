@@ -131,17 +131,22 @@ public class TheaterHandler
     // CreateGame
     private async Task HandleCGAM(Packet request)
     {
+        var gid = _sharedCounters.GetNextGameId();
+        var lid = _sharedCounters.GetNextLid();
+
+        _sharedCache.UpsertGameServerDataByGid(gid, request.DataDict);
+
         var response = new Dictionary<string, object>
         {
-            ["TID"] = request.DataDict["TID"],
-            ["MAX-PLAYERS"] = request.DataDict["MAX-PLAYERS"],
+            ["TID"] = request["TID"],
+            ["MAX-PLAYERS"] = request["MAX-PLAYERS"],
             ["EKEY"] = "",
             ["UGID"] = Guid.NewGuid().ToString(),
             ["JOIN"] = request.DataDict["JOIN"],
             ["SECRET"] = "",
-            ["LID"] = 255,
+            ["LID"] = lid,
             ["J"] = request.DataDict["JOIN"],
-            ["GID"] = _sharedCounters.GetNextGameId()
+            ["GID"] = gid
         };
 
         var packet = new Packet("CGAM", TheaterTransmissionType.OkResponse, 0, response);
@@ -204,68 +209,94 @@ public class TheaterHandler
 
     private async Task HandleGDAT(Packet request)
     {
-        var serverInfo = new Dictionary<string, object>
+        var serverGid = long.Parse(request["GID"]);
+        var serverInfo = _sharedCache.GetGameServerDataByGid(serverGid);
+
+        if (serverInfo is null)
         {
-            ["JP"] = 1,
-            ["B-U-location"] = "nrt",
-            ["HN"] = "beach.server.p",
-            ["B-U-level"] = "levels/coral_sea",
-            ["N"] = "nrtps3313601",
+            _logger.LogWarning("Almost sent GDAT for a non-existant server!");
+            return;
+        }
+
+        var serverInfoResponse = new Dictionary<string, object>
+        {
+            ["TID"] = request["TID"],
+            ["LID"] = serverInfo["LID"],
+            ["GID"] = serverInfo["GID"],
+
+            ["HU"] = "1000000000001",
+            ["HN"] = "bfbc.server.ps3@ea.com",
+
             ["I"] = _arcadiaSettings.Value.GameServerAddress,
-            ["J"] = 0,
-            ["HU"] = 201104017,
-            ["B-U-Time"] = "T%3a0.00 S%3a 6.65 L%3a 0.00",
-            ["V"] = "1.0",
-            ["B-U-gamemode"] = "CONQUEST",
-            ["B-U-trial"] = "RETAIL",
-            ["P"] = "38681",
-            ["B-U-balance"] = "NORMAL",
-            ["B-U-hash"] = "2AC3F219-3614-F46A-843B-A02E03E849E1",
-            ["B-numObservers"] = 0,
-            ["TYPE"] = "G",
-            ["LID"] = request.DataDict["LID"],
-            ["B-U-Frames"] = "T%3a 300 B%3a 0",
-            ["B-version"] = "RETAIL421378",
-            ["QP"] = 0,
-            ["MP"] = 24,
-            ["B-U-type"] = "RANKED",
-            ["B-U-playgroup"] = "YES",
-            ["B-U-public"] = "YES",
-            ["GID"] = request.DataDict["GID"],
+            ["P"] = serverInfo["PORT"],
+
+            ["N"] = serverInfo["NAME"],
+            ["AP"] = 0,
+            ["MP"] = serverInfo["MAX-PLAYERS"],
+            ["QP"] = serverInfo["B-U-QueueLength"],
+            ["JP"] = 1,
             ["PL"] = "PS3",
-            ["B-U-elo"] = 1520,
-            ["B-maxObservers"] = 0,
+
             ["PW"] = 0,
-            ["TID"] = request.DataDict["TID"],
-            ["B-U-coralsea"] = "YES",
-            ["AP"] = 5
+            ["TYPE"] = serverInfo["TYPE"],
+            ["J"] = serverInfo["JOIN"],
+
+            ["B-U-Softcore"] = serverInfo["B-U-Softcore"],
+            ["B-U-Hardcore"] = serverInfo["B-U-Hardcore"],
+            ["B-U-HasPassword"] = serverInfo["B-U-HasPassword"],
+            ["B-U-Punkbuster"] = serverInfo["B-U-Punkbuster"],
+            ["B-U-EA"] = serverInfo["B-U-EA"],
+            ["B-version"] = serverInfo["B-version"],
+            ["V"] = "851434",
+            ["B-U-level"] = serverInfo["B-U-level"],
+            ["B-U-gamemode"] = serverInfo["B-U-gamemode"],
+            ["B-U-sguid"] = serverInfo["B-U-sguid"],
+            ["B-U-Time"] = serverInfo["B-U-Time"],
+            ["B-U-hash"] = serverInfo["B-U-hash"],
+            ["B-U-region"] = serverInfo["B-U-region"],
+            ["B-U-public"] = serverInfo["B-U-public"],
+            ["B-U-elo"] = serverInfo["B-U-elo"],
+            ["B-numObservers"] = serverInfo["B-numObservers"],
+            ["B-maxObservers"] = serverInfo["B-maxObservers"],
+            ["B-U-Provider"] = serverInfo["B-U-Provider"],
+            ["B-U-gameMod"] = serverInfo["B-U-gameMod"],
+            ["B-U-QueueLength"] = serverInfo["B-U-QueueLength"]
         };
 
-        var packet = new Packet("GDAT", TheaterTransmissionType.OkResponse, 0, serverInfo);
+        var packet = new Packet("GDAT", TheaterTransmissionType.OkResponse, 0, serverInfoResponse);
         var data = await packet.Serialize();
         await _network.WriteAsync(data);
 
-        await SendGDET(request);
+        await SendGDET(request, serverInfo);
     }
 
-    private async Task SendGDET(Packet request)
+    private async Task SendGDET(Packet request, IDictionary<string, object> serverInfo)
     {
         _sessionCache["UGID"] = Guid.NewGuid().ToString();
 
-        var serverInfo = new Dictionary<string, object>
+        var responseData = new Dictionary<string, object>
         {
             ["LID"] = request.DataDict["LID"],
-            ["UGID"] = _sessionCache["UGID"],
             ["GID"] = request.DataDict["GID"],
-            ["TID"] = request.DataDict["TID"]
+            ["TID"] = request.DataDict["TID"],
+            ["UGID"] = _sessionCache["UGID"],
+            ["D-AutoBalance"] = serverInfo["D-AutoBalance"],
+            ["D-Crosshair"] = serverInfo["D-Crosshair"],
+            ["D-FriendlyFire"] = serverInfo["D-FriendlyFire"],
+            ["D-KillCam"] = serverInfo["D-KillCam"],
+            ["D-Minimap"] = serverInfo["D-Minimap"],
+            ["D-MinimapSpotting"] = serverInfo["D-MinimapSpotting"],
+            ["D-ServerDescriptionCount"] = 0,
+            ["D-ThirdPersonVehicleCameras"] = serverInfo["D-ThirdPersonVehicleCameras"],
+            ["D-ThreeDSpotting"] = serverInfo["D-ThreeDSpotting"]
         };
 
         for (var i = 0; i < 24; i++)
         {
-            serverInfo.Add($"D-pdat{i}", "|0|0|0|0");
+            responseData.Add($"D-pdat{i}", "|0|0|0|0");
         }
 
-        var packet = new Packet("GDET", TheaterTransmissionType.OkResponse, 0, serverInfo);
+        var packet = new Packet("GDET", TheaterTransmissionType.OkResponse, 0, responseData);
         var data = await packet.Serialize();
 
         _logger.LogTrace("Sending GDET to client at {endpoint}", _clientEndpoint);
@@ -311,7 +342,9 @@ public class TheaterHandler
 
     private Task HandleUGAM(Packet request)
     {
-        _logger.LogInformation("Server is trying to update information");
+        var gid = long.Parse(request["GID"]);
+        _logger.LogInformation("Server GID={gid} updating info!", gid);
+        _sharedCache.UpsertGameServerDataByGid(gid, request.DataDict);
         return Task.CompletedTask;
     }
 

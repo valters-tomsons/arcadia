@@ -114,9 +114,21 @@ public class FeslHandler
             {
                 await HandleNuGetEntitlements(reqPacket);
             }
+            else if(reqPacket.Type == "acct" && reqTxn == "NuGrantEntitlement")
+            {
+                await HandleNuGrantEntitlement(reqPacket);
+            }
             else if(reqPacket.Type == "acct" && reqTxn == "GetLockerURL")
             {
                 await HandleGetLockerUrl(reqPacket);
+            }
+            else if(reqPacket.Type == "recp" && reqTxn == "GetRecord")
+            {
+                await HandleGetRecord(reqPacket);
+            }
+            else if(reqPacket.Type == "recp" && reqTxn == "GetRecordAsMap")
+            {
+                await HandleGetRecordAsMap(reqPacket);
             }
             else if(reqPacket.Type == "asso" && reqTxn == "GetAssociations")
             {
@@ -155,9 +167,9 @@ public class FeslHandler
 
     private async Task HandlePlayNow(Packet request)
     {
+        var servers = _sharedCache.ListServersGIDs();
+        var serverData = _sharedCache.GetGameServerDataByGid(servers.First());
         var pnowId = _sharedCounters.GetNextPnowId();
-        var gid = _sharedCounters.GetNextGameId();
-        var lid = _sharedCounters.GetNextLobbyId();
 
         var data1 = new Dictionary<string, object>
         {
@@ -179,13 +191,51 @@ public class FeslHandler
             { "props.{resultType}", "JOIN" },
             { "props.{avgFit}", "0.8182313914386985" },
             { "props.{games}.[]", 1 },
-            { "props.{games}.0.gid", gid },
-            { "props.{games}.0.lid", lid }
+            { "props.{games}.0.gid", serverData["GID"] },
+            { "props.{games}.0.lid", serverData["LID"] }
         };
 
         var packet2 = new Packet("pnow", FeslTransmissionType.SinglePacketResponse, request.Id, data2);
         await SendPacket(packet2);
     }
+
+    private async Task HandleGetRecord(Packet request)
+    {
+        var responseData = new Dictionary<string, object>
+        {
+            { "TXN", request.TXN },
+            {"localizedMessage", "Nope" },
+            {"errorContainer.[]", 0 },
+            {"errorCode", 5000 },
+
+        };
+
+        await SendPacket(new Packet("recp", FeslTransmissionType.SinglePacketResponse, request.Id, responseData));
+    }
+
+    private async Task HandleGetRecordAsMap(Packet request)
+    {
+        var responseData = new Dictionary<string, object>
+        {
+            { "TXN", request.TXN },
+            {"TTL", 0 },
+            {"state", 1 },
+            {"values.{}", 0 }
+        };
+
+        await SendPacket(new Packet("recp", FeslTransmissionType.SinglePacketResponse, request.Id, responseData));
+    }
+
+    private async Task HandleNuGrantEntitlement(Packet request)
+    {
+        var responseData = new Dictionary<string, object>
+        {
+            { "TXN", request.TXN }
+        };
+
+        await SendPacket(new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, responseData));
+    }
+
 
     private async Task HandleGetStats(Packet request)
     {
