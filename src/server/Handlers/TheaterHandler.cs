@@ -140,12 +140,12 @@ public class TheaterHandler
         {
             ["TID"] = request["TID"],
             ["MAX-PLAYERS"] = request["MAX-PLAYERS"],
-            ["EKEY"] = "",
+            ["EKEY"] = "AIBSgPFqRDg0TfdXW1zUGa4%3d",
             ["UGID"] = Guid.NewGuid().ToString(),
-            ["JOIN"] = request.DataDict["JOIN"],
-            ["SECRET"] = "",
+            ["JOIN"] = request["JOIN"],
+            ["SECRET"] = request["SECRET"],
             ["LID"] = lid,
-            ["J"] = request.DataDict["JOIN"],
+            ["J"] = request["JOIN"],
             ["GID"] = gid
         };
 
