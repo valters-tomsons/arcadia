@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Net.Sockets;
 using Arcadia.EA;
+using Arcadia.EA.Constants;
 using Arcadia.Handlers;
 using Arcadia.Tls;
 using Arcadia.Tls.Crypto;
@@ -23,14 +24,14 @@ public class FeslHostedService : IHostedService
     private readonly CertGenerator _certGenerator;
     private readonly IServiceScopeFactory _scopeFactory;
 
-    private readonly TcpListener _listener;
+    private readonly ConcurrentBag<TcpListener> _listeners = new();
     private readonly ConcurrentBag<Task> _activeConnections = new();
 
     private CancellationTokenSource _cts = null!;
     private AsymmetricKeyParameter _feslCertKey = null!;
     private Certificate _feslPubCert = null!;
 
-    private Task? _server;
+    private ConcurrentBag<Task?> _servers = new();
 
     public FeslHostedService(ILogger<FeslHostedService> logger, IOptions<ArcadiaSettings> arcadiaSettings,
         IOptions<FeslSettings> feslSettings, CertGenerator certGenerator, IServiceScopeFactory scopeFactory)
@@ -43,7 +44,6 @@ public class FeslHostedService : IHostedService
         _certGenerator = certGenerator;
         _scopeFactory = scopeFactory;
 
-        _listener = new TcpListener(System.Net.IPAddress.Parse(_arcadiaSettings.ListenAddress), _feslSettings.ServerPort);
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -52,23 +52,8 @@ public class FeslHostedService : IHostedService
 
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-        _listener.Start();
-
-        _server = Task.Run(async () =>
-        {
-            _logger.LogInformation("Fesl listening on {address}:{port}", _arcadiaSettings.ListenAddress, _feslSettings.ServerPort);
-
-            while (!_cts.Token.IsCancellationRequested)
-            {
-                var tcpClient = await _listener.AcceptTcpClientAsync(_cts.Token);
-                var clientEndpoint = tcpClient.Client.RemoteEndPoint!.ToString()!;
-
-                _logger.LogInformation("Opening connection from: {clientEndpoint}", clientEndpoint);
-
-                var connection = Task.Run(async () => await HandleClient(tcpClient, clientEndpoint), _cts.Token);
-                _activeConnections.Add(connection);
-            }
-        }, _cts.Token);
+        CreateFeslPortListener(_feslSettings.ServerPort);
+        CreateFeslPortListener(Rome.FeslServerPortPc);
 
         return Task.CompletedTask;
     }
@@ -79,6 +64,29 @@ public class FeslHostedService : IHostedService
         var SubjectDN = "C=US, ST=California, O=\"Electronic Arts, Inc.\", OU=Online Technology Group, CN=fesl.ea.com, emailAddress=fesl@ea.com";
 
         (_feslCertKey, _feslPubCert) = _certGenerator.GenerateVulnerableCert(IssuerDN, SubjectDN);
+    }
+
+    private void CreateFeslPortListener(int listenerPort)
+    {
+        var serverFesl = Task.Run(async () =>
+        {
+            var listener = new TcpListener(System.Net.IPAddress.Parse(_arcadiaSettings.ListenAddress), listenerPort);
+            listener.Start();
+            _logger.LogInformation("Fesl listening on {address}:{port}", _arcadiaSettings.ListenAddress, listenerPort);
+            _listeners.Add(listener);
+
+            while (!_cts.Token.IsCancellationRequested)
+            {
+                var tcpClient = await listener.AcceptTcpClientAsync(_cts.Token);
+                var clientEndpoint = tcpClient.Client.RemoteEndPoint!.ToString()!;
+
+                _logger.LogInformation("Opening connection from: {clientEndpoint}", clientEndpoint);
+
+                var connection = Task.Run(async () => await HandleClient(tcpClient, clientEndpoint), _cts.Token);
+                _activeConnections.Add(connection);
+            }
+        }, _cts.Token);
+        _servers.Add(serverFesl);
     }
 
     private async Task HandleClient(TcpClient tcpClient, string clientEndpoint)
@@ -113,8 +121,7 @@ public class FeslHostedService : IHostedService
     public Task StopAsync(CancellationToken cancellationToken)
     {
         _cts.Cancel();
-        _listener.Stop();
-
+        _listeners.ToList().ForEach(x => x.Stop());
         return Task.CompletedTask;
     }
 }
