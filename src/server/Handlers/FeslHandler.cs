@@ -112,6 +112,10 @@ public class FeslHandler
             {
                 await HandleLookupUserInfo(reqPacket);
             }
+            else if(reqPacket.Type == "acct" && reqTxn == "NuGetEntitlements")
+            {
+                await HandleNuGetEntitlements(reqPacket);
+            }
             else if(reqPacket.Type == "asso" && reqTxn == "GetAssociations")
             {
                 await HandleGetAssociations(reqPacket);
@@ -368,6 +372,18 @@ public class FeslHandler
             { "lkey", _sessionCache["LKEY"] },
             { "profileId", uid },
             { "userId", uid },
+        };
+
+        var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
+        await SendPacket(packet);
+    }
+
+    private async Task HandleNuGetEntitlements(Packet request)
+    {
+        var loginResponseData = new Dictionary<string, object>
+        {
+            { "TXN", request.TXN },
+            { "entitlements.[]", 0 }
         };
 
         var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
