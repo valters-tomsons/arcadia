@@ -17,6 +17,12 @@ public class FeslHandler
     private readonly SharedCounters _sharedCounters;
     private readonly SharedCache _sharedCache;
 
+    private readonly Dictionary<string, object> _sessionCache = new();
+    private TlsServerProtocol _network = null!;
+    private string _clientEndpoint = null!;
+
+    private uint _feslTicketId;
+
     public FeslHandler(ILogger<FeslHandler> logger, IOptions<ArcadiaSettings> settings, SharedCounters sharedCounters, SharedCache sharedCache)
     {
         _logger = logger;
@@ -24,12 +30,6 @@ public class FeslHandler
         _sharedCounters = sharedCounters;
         _sharedCache = sharedCache;
     }
-
-    private readonly Dictionary<string, object> _sessionCache = new();
-    private TlsServerProtocol _network = null!;
-    private string _clientEndpoint = null!;
-
-    private uint _feslTicketId;
 
     public async Task HandleClientConnection(TlsServerProtocol network, string clientEndpoint)
     {
