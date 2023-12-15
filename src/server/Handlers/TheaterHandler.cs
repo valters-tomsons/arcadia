@@ -95,6 +95,11 @@ public class TheaterHandler
 
         _logger.LogInformation("CONN: {tid}", tid);
 
+        if (request["PLAT"] == "PC")
+        {
+            _sharedCounters.SetServerNetworkStream(_network);
+        }
+
         var response = new Dictionary<string, object>
         {
             ["TIME"] = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
@@ -112,8 +117,10 @@ public class TheaterHandler
     private async Task HandleUSER(Packet request)
     {
         var lkey = request.DataDict["LKEY"];
-        var username = _sharedCache.GetUsernameByKey((string)lkey);
+        var username = _sharedCache.GetUsernameByLKey((string)lkey);
 
+        _sessionCache["NAME"] = username;
+        _sessionCache["UID"] = _sharedCounters.GetNextUserId();
         _logger.LogInformation("USER: {name} {lkey}", username, lkey);
 
         var response = new Dictionary<string, object>
@@ -177,19 +184,47 @@ public class TheaterHandler
     // EnterGameRequest
     private async Task HandleEGAM(Packet request)
     {
-        var response = new Dictionary<string, object>
+        var clientResponse = new Dictionary<string, object>
         {
             ["TID"] = request.DataDict["TID"],
             ["LID"] = request.DataDict["LID"],
-            ["GID"] = request.DataDict["GID"]
+            ["GID"] = request.DataDict["GID"],
         };
 
-        var packet = new Packet("EGAM", TheaterTransmissionType.OkResponse, 0, response);
-        var data = await packet.Serialize();
+        var clientPacket = new Packet("EGAM", TheaterTransmissionType.OkResponse, 0, clientResponse);
+        var clientData = await clientPacket.Serialize();
 
-        await _network.WriteAsync(data);
+        var ticket = _sharedCounters.GetNextTicket();
+        _sessionCache["TICKET"] = ticket;
 
-        await SendEGEG(request);
+        await SendEGRQ(request, ticket);
+        await _network.WriteAsync(clientData);
+        await SendEGEG(request, ticket);
+    }
+
+    private async Task SendEGRQ(Packet request, long ticket)
+    {
+        var serverMessage = new Dictionary<string, object>
+        {
+            ["R-INT-PORT"] = request["R-INT-PORT"],
+            ["R-INT-IP"] = request["R-INT-IP"],
+            ["PORT"] = request["PORT"],
+            ["NAME"] = _sessionCache["NAME"],
+            ["PTYPE"] = request["PTYPE"],
+            ["TICKET"] = ticket,
+            ["PID"] = _sessionCache["UID"],
+            ["UID"] = _sessionCache["UID"],
+            ["IP"] = "192.168.0.39",
+
+            ["LID"] = request.DataDict["LID"],
+            ["GID"] = request.DataDict["GID"],
+        };
+
+        var serverPacket = new Packet("EGRQ", TheaterTransmissionType.OkResponse, 0, serverMessage);
+        var serverData = await serverPacket.Serialize();
+        // await _network.WriteAsync(serverData);
+        var serverNetwork = _sharedCounters.GetServerNetworkStream();
+        await serverNetwork!.WriteAsync(serverData);
     }
 
     private async Task HandleEGRS(Packet request)
@@ -203,8 +238,8 @@ public class TheaterHandler
         var data = await packet.Serialize();
 
         await _network.WriteAsync(data);
-
-        await SendEGEG(request);
+        var ticket = long.Parse((string)request.DataDict["PID"]);
+        await SendEGEG(request, ticket);
     }
 
     private async Task HandleGDAT(Packet request)
@@ -272,7 +307,8 @@ public class TheaterHandler
 
     private async Task SendGDET(Packet request, IDictionary<string, object> serverInfo)
     {
-        _sessionCache["UGID"] = Guid.NewGuid().ToString();
+        UGID = Guid.NewGuid().ToString();
+        _sessionCache["UGID"] = UGID;
 
         var responseData = new Dictionary<string, object>
         {
@@ -291,7 +327,7 @@ public class TheaterHandler
             ["D-ThreeDSpotting"] = serverInfo["D-ThreeDSpotting"]
         };
 
-        for (var i = 0; i < 24; i++)
+        for (var i = 0; i < 32; i++)
         {
             responseData.Add($"D-pdat{i}", "|0|0|0|0");
         }
@@ -348,18 +384,26 @@ public class TheaterHandler
         return Task.CompletedTask;
     }
 
-    private async Task SendEGEG(Packet request)
+    private static string UGID = string.Empty;
+
+    private async Task SendEGEG(Packet request, long ticket)
     {
         var serverIp = _arcadiaSettings.Value.GameServerAddress;
         var serverPort = _arcadiaSettings.Value.GameServerPort;
 
+        var ugid = _sessionCache.GetValueOrDefault("UGID");
+        if (string.IsNullOrWhiteSpace((string?)ugid))
+        {
+            _sessionCache["UGID"] = UGID;
+        }
+
         var serverInfo = new Dictionary<string, object>
         {
             ["PL"] = "ps3",
-            ["TICKET"] = _sharedCounters.GetNextTicket(),
-            ["PID"] = _sharedCounters.GetNextPid(),
+            ["TICKET"] = ticket,
+            ["PID"] = _sessionCache["UID"],
             ["HUID"] = "201104017",
-            ["EKEY"] = "",
+            ["EKEY"] = "AIBSgPFqRDg0TfdXW1zUGa4%3d",
             ["UGID"] = _sessionCache["UGID"],
 
             ["INT-IP"] = serverIp,
@@ -376,34 +420,6 @@ public class TheaterHandler
         var data = await packet.Serialize();
 
         _logger.LogTrace("Sending EGEG to client at {endpoint}", _clientEndpoint);
-        await _network.WriteAsync(data);
-    }
-
-    private async Task SendEGRQ()
-    {
-        var serverIp = _arcadiaSettings.Value.GameServerAddress;
-        var serverPort = _arcadiaSettings.Value.GameServerPort;
-
-        var serverInfo = new Dictionary<string, object>
-        {
-            ["R-INT-PORT"] = serverPort,
-            ["R-INT-IP"] = serverIp,
-            ["PORT"] = serverPort,
-            ["IP"] = serverIp,
-            ["NAME"] = "arcadia-ps3",
-            ["PTYPE"] = "P",
-            ["TICKET"] = "-479505973",
-            ["PID"] = 1,
-            ["PID"] = 1,
-            ["UID"] = 1000000000000,
-            ["LID"] = 255,
-            ["GID"] = 801000
-        };
-
-        var packet = new Packet("EGRQ", TheaterTransmissionType.OkResponse, 0, serverInfo);
-        var data = await packet.Serialize();
-
-        _logger.LogTrace("Sending EGRQ to client at {endpoint}", _clientEndpoint);
         await _network.WriteAsync(data);
     }
 }
