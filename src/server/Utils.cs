@@ -21,20 +21,6 @@ public static class Utils
         return byteArray;
     }
 
-    public static async Task<(int, byte[])> ReadApplicationDataAsync(TlsServerProtocol network)
-    {
-        var readBuffer = new byte[8096];
-        try
-        {
-            var read = await Task.Run(() => network.ReadApplicationData(readBuffer, 0, readBuffer.Length));
-            return (read, readBuffer);
-        }
-        catch
-        {
-            throw new Exception("Connection has been closed");
-        }
-    }
-
     public static byte[]? ReflectMasterSecretFromBCTls(TlsSecret secret)
     {
         // We need to use reflection to access the master secret from BC

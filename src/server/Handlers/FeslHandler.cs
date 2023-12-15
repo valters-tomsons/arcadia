@@ -39,15 +39,15 @@ public class FeslHandler
         while (_network.IsConnected)
         {
             int read;
-            byte[]? readBuffer;
+            byte[] readBuffer = new byte[8096];
 
             try
             {
-                (read, readBuffer) = await Utils.ReadApplicationDataAsync(_network);
+                read = await _network.Stream.ReadAsync(readBuffer);
             }
-            catch
+            catch(Exception e)
             {
-                _logger.LogInformation("Connection has been closed with {endpoint}", _clientEndpoint);
+                _logger.LogInformation(e, "Connection has been closed with {endpoint}", _clientEndpoint);
                 break;
             }
 
@@ -557,7 +557,7 @@ public class FeslHandler
 
     private async Task SendPacket(Packet packet)
     {
-        var serializedData = await packet.Serialize();
-        _network.WriteApplicationData(serializedData.AsSpan());
+        var data = await packet.Serialize();
+        await _network.Stream.WriteAsync(data);
     }
 }
