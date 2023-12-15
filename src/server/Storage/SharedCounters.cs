@@ -1,3 +1,5 @@
+using System.Net.Sockets;
+
 namespace Arcadia.Storage;
 
 public class SharedCounters
@@ -52,5 +54,17 @@ public class SharedCounters
         var key = _random.Next(100000000, 999999999);
         const string keyTempl = "W5NyZzx{0}Cki6GQAAKDw.";
         return string.Format(keyTempl, key);
+    }
+
+    private NetworkStream? _serverStream;
+
+    public void SetServerNetworkStream(NetworkStream stream)
+    {
+        _serverStream = stream;
+    }
+
+    public NetworkStream? GetServerNetworkStream()
+    {
+        return _serverStream;
     }
 }

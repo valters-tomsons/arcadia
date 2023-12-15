@@ -20,7 +20,7 @@ public class SharedCache
         _lkeyUsernames.TryAdd(lkey, username);
     }
 
-    public string GetUsernameByKey(string lkey)
+    public string GetUsernameByLKey(string lkey)
     {
         return _lkeyUsernames[lkey];
     }
