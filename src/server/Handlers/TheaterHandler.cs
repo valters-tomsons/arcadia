@@ -279,7 +279,7 @@ public class TheaterHandler
             ["B-U-Softcore"] = serverInfo["B-U-Softcore"],
             ["B-U-Hardcore"] = serverInfo["B-U-Hardcore"],
             ["B-U-HasPassword"] = serverInfo["B-U-HasPassword"],
-            ["B-U-Punkbuster"] = serverInfo["B-U-Punkbuster"],
+            ["B-U-Punkbuster"] = 0,
             ["B-U-EA"] = serverInfo["B-U-EA"],
             ["B-version"] = serverInfo["B-version"],
             ["V"] = "851434",
