@@ -44,7 +44,7 @@ var host = Host.CreateDefaultBuilder()
         {
             log.ClearProviders();
             log.AddSimpleConsole(x => {
-                x.IncludeScopes = false;
+                x.IncludeScopes = true;
                 x.SingleLine = true;
                 x.TimestampFormat = "[HH:mm:ss::fff] ";
                 x.ColorBehavior = LoggerColorBehavior.Enabled;
