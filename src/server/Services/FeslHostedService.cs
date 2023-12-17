@@ -91,6 +91,10 @@ public class FeslHostedService : IHostedService
 
     private async Task HandleClient(TcpClient tcpClient, string clientEndpoint)
     {
+        var connectionId = Guid.NewGuid().ToString();
+        using var logScope = _logger.BeginScope(connectionId);
+        _logger.LogDebug("Creating new connectionId: {connId}", connectionId);
+
         using var scope = _scopeFactory.CreateAsyncScope();
         var crypto = scope.ServiceProvider.GetRequiredService<Rc4TlsCrypto>();
 

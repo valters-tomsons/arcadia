@@ -19,11 +19,12 @@ public class TheaterHostedService : IHostedService
 
     private readonly TcpListener _tcpListener;
     private readonly ConcurrentBag<Task> _activeConnections = new();
-    private readonly UdpClient _udpListener;
 
     private CancellationTokenSource _cts = null!;
 
+#pragma warning disable IDE0052 // Remove unread private members
     private Task? _tcpServer;
+#pragma warning restore IDE0052 // Remove unread private members
 
     public TheaterHostedService(ILogger<TheaterHostedService> logger, IOptions<ArcadiaSettings> arcadiaSettings, IServiceScopeFactory scopeFactory)
     {
@@ -34,7 +35,6 @@ public class TheaterHostedService : IHostedService
 
         var endpoint = new IPEndPoint(IPAddress.Parse(_arcadiaSettings.ListenAddress), _arcadiaSettings.TheaterPort);
         _tcpListener = new TcpListener(endpoint);
-        _udpListener = new UdpClient(endpoint);
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -63,6 +63,10 @@ public class TheaterHostedService : IHostedService
 
     private async Task HandleClient(TcpClient tcpClient, string clientEndpoint)
     {
+        var connectionId = Guid.NewGuid().ToString();
+        using var logScope = _logger.BeginScope(connectionId);
+        _logger.LogDebug("Creating new connectionId: {connId}", connectionId);
+
         using var scope = _scopeFactory.CreateAsyncScope();
 
         var networkStream = tcpClient.GetStream();
