@@ -244,6 +244,15 @@ public class TheaterHandler
 
     private async Task HandleGDAT(Packet request)
     {
+        var requestGid = request["GID"];
+
+        if (string.IsNullOrWhiteSpace(requestGid))
+        {
+            var pk = await new Packet("GDAT", TheaterTransmissionType.OkResponse, 0, request.DataDict).Serialize();
+            await _network.WriteAsync(pk);
+            return;
+        }
+
         var serverGid = long.Parse(request["GID"]);
         var serverInfo = _sharedCache.GetGameServerDataByGid(serverGid);
 
