@@ -54,15 +54,16 @@ public class TheaterHandler : EAConnection
 
     private async Task HandlePacket(Packet packet)
     {
-        var type = packet.Type;
-        _handlers.TryGetValue(type, out var handler);
+        var packetType = packet.Type;
+        _handlers.TryGetValue(packetType, out var handler);
 
         if (handler is null)
         {
-            _logger.LogWarning("Unknown packet type: {type}", type);
+            _logger.LogWarning("Unknown packet type: {type}", packetType);
             return;
         }
 
+        _logger.LogDebug("Incoming Type: {type}", packetType);
         await handler(packet);
     }
 

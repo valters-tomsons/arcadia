@@ -95,6 +95,7 @@ public class EAConnection
         try
         {
             await NetworkStream.WriteAsync(buffer);
+            _logger.LogTrace("data sent:{data}", Encoding.ASCII.GetString(buffer));
             return true;
         }
         catch (Exception e)

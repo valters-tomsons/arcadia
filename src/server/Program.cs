@@ -59,8 +59,7 @@ var host = Host.CreateDefaultBuilder()
                 {
                     x.AddFilter("Arcadia.Handlers.FeslHandler", LogLevel.Trace);
                     x.AddFilter("Arcadia.Handlers.TheaterHandler", LogLevel.Trace);
-                    x.AddFilter("Arcadia.EA.Proxy.FeslProxy", LogLevel.Trace);
-                    x.AddFilter("Arcadia.EA.Proxy.TheaterProxy", LogLevel.Trace);
+                    x.AddFilter("Arcadia.EA.EAConnection", LogLevel.Trace);
                 });
 
                 log.AddFile("arcadia.log", append: true);
