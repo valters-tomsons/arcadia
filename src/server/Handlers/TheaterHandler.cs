@@ -1,5 +1,4 @@
 using System.Net.Sockets;
-using System.Text;
 using Arcadia.EA;
 using Arcadia.EA.Constants;
 using Arcadia.Storage;
@@ -8,11 +7,8 @@ using Microsoft.Extensions.Options;
 
 namespace Arcadia.Handlers;
 
-public class TheaterHandler
+public class TheaterHandler : EAConnection
 {
-    private NetworkStream _network = null!;
-    private string _clientEndpoint = null!;
-
     private readonly ILogger<TheaterHandler> _logger;
     private readonly SharedCounters _sharedCounters;
     private readonly SharedCache _sharedCache;
@@ -24,7 +20,7 @@ public class TheaterHandler
 
     private int _brackets = 0;
 
-    public TheaterHandler(ILogger<TheaterHandler> logger, SharedCounters sharedCounters, SharedCache sharedCache, IOptions<ArcadiaSettings> arcadiaSettings)
+    public TheaterHandler(ILogger<EAConnection> baseLogger, ILogger<TheaterHandler> logger, SharedCounters sharedCounters, SharedCache sharedCache, IOptions<ArcadiaSettings> arcadiaSettings) : base(baseLogger)
     {
         _logger = logger;
         _sharedCounters = sharedCounters;
@@ -49,45 +45,25 @@ public class TheaterHandler
 
     public async Task HandleClientConnection(NetworkStream network, string clientEndpoint)
     {
-        _network = network;
-        _clientEndpoint = clientEndpoint;
-
-        while (_network.CanRead)
+        InitializeInsecure(network, clientEndpoint);
+        await foreach (var packet in StartConnection())
         {
-            int read;
-            byte[] readBuffer = new byte[8096];
-
-            try
-            {
-                read = await _network.ReadAsync(readBuffer.AsMemory());
-            }
-            catch
-            {
-                _logger.LogInformation("Connection has been closed: {endpoint}", _clientEndpoint);
-                break;
-            }
-
-            if (read == 0)
-            {
-                continue;
-            }
-
-            var packet = new Packet(readBuffer[..read]);
-            var type = packet.Type;
-
-            _logger.LogDebug("Incoming Type: {type}", type);
-            _logger.LogTrace("data:{data}", Encoding.ASCII.GetString(readBuffer[..read]));
-
-            _handlers.TryGetValue(type, out var handler);
-
-            if (handler is null)
-            {
-                _logger.LogWarning("Unknown packet type: {type}", type);
-                continue;
-            }
-
-            await handler(packet);
+            await HandlePacket(packet);
         }
+    }
+
+    private async Task HandlePacket(Packet packet)
+    {
+        var type = packet.Type;
+        _handlers.TryGetValue(type, out var handler);
+
+        if (handler is null)
+        {
+            _logger.LogWarning("Unknown packet type: {type}", type);
+            return;
+        }
+
+        await handler(packet);
     }
 
     private async Task HandleCONN(Packet request)
@@ -98,7 +74,7 @@ public class TheaterHandler
 
         if (request["PLAT"] == "PC")
         {
-            _sharedCounters.SetServerNetworkStream(_network);
+            _sharedCounters.SetServerNetworkStream(NetworkStream!);
         }
 
         var response = new Dictionary<string, object>
@@ -110,9 +86,7 @@ public class TheaterHandler
         };
 
         var packet = new Packet("CONN", TheaterTransmissionType.OkResponse, 0, response);
-        var data = await packet.Serialize();
-
-        await _network.WriteAsync(data);
+        await SendPacket(packet);
     }
 
     private async Task HandleUSER(Packet request)
@@ -131,9 +105,7 @@ public class TheaterHandler
         };
 
         var packet = new Packet("USER", TheaterTransmissionType.OkResponse, 0, response);
-        var data = await packet.Serialize();
-
-        await _network.WriteAsync(data);
+        await SendPacket(packet);
     }
 
     // CreateGame
@@ -158,9 +130,7 @@ public class TheaterHandler
         };
 
         var packet = new Packet("CGAM", TheaterTransmissionType.OkResponse, 0, response);
-        var data = await packet.Serialize();
-
-        await _network.WriteAsync(data);
+        await SendPacket(packet);
     }
 
     // LeaveGame
@@ -177,9 +147,7 @@ public class TheaterHandler
         };
 
         var packet = new Packet("ECNL", TheaterTransmissionType.OkResponse, 0, response);
-        var data = await packet.Serialize();
-
-        await _network.WriteAsync(data);
+        await SendPacket(packet);
     }
 
     // EnterGameRequest
@@ -193,13 +161,12 @@ public class TheaterHandler
         };
 
         var clientPacket = new Packet("EGAM", TheaterTransmissionType.OkResponse, 0, clientResponse);
-        var clientData = await clientPacket.Serialize();
 
         var ticket = _sharedCounters.GetNextTicket();
         _sessionCache["TICKET"] = ticket;
 
         await SendEGRQ(request, ticket);
-        await _network.WriteAsync(clientData);
+        await SendPacket(clientPacket);
         await SendEGEG(request, ticket);
     }
 
@@ -236,9 +203,8 @@ public class TheaterHandler
         };
 
         var packet = new Packet("EGRS", TheaterTransmissionType.OkResponse, 0, serverInfo);
-        var data = await packet.Serialize();
+        await SendPacket(packet);
 
-        await _network.WriteAsync(data);
         var ticket = long.Parse((string)request.DataDict["PID"]);
         await SendEGEG(request, ticket);
     }
@@ -249,8 +215,8 @@ public class TheaterHandler
 
         if (string.IsNullOrWhiteSpace(requestGid))
         {
-            var pk = await new Packet("GDAT", TheaterTransmissionType.OkResponse, 0, request.DataDict).Serialize();
-            await _network.WriteAsync(pk);
+            var pk = new Packet("GDAT", TheaterTransmissionType.OkResponse, 0, request.DataDict);
+            await SendPacket(pk);
             return;
         }
 
@@ -309,8 +275,7 @@ public class TheaterHandler
         };
 
         var packet = new Packet("GDAT", TheaterTransmissionType.OkResponse, 0, serverInfoResponse);
-        var data = await packet.Serialize();
-        await _network.WriteAsync(data);
+        await SendPacket(packet);
 
         await SendGDET(request, serverInfo);
     }
@@ -342,11 +307,9 @@ public class TheaterHandler
             responseData.Add($"D-pdat{i}", "|0|0|0|0");
         }
 
+        _logger.LogTrace("Sending GDET to client at {endpoint}", ClientEndpoint);
         var packet = new Packet("GDET", TheaterTransmissionType.OkResponse, 0, responseData);
-        var data = await packet.Serialize();
-
-        _logger.LogTrace("Sending GDET to client at {endpoint}", _clientEndpoint);
-        await _network.WriteAsync(data);
+        await SendPacket(packet);
     }
 
     private async Task HandlePENT(Packet request)
@@ -358,9 +321,7 @@ public class TheaterHandler
         };
 
         var packet = new Packet("PENT", TheaterTransmissionType.OkResponse, 0, serverInfo);
-        var data = await packet.Serialize();
-
-        await _network.WriteAsync(data);
+        await SendPacket(packet);
     }
 
     private async Task HandleUBRA(Packet request)
@@ -377,7 +338,7 @@ public class TheaterHandler
                 };
 
                 var packet = new Packet(request.Type, TheaterTransmissionType.OkResponse, 0, data);
-                await _network.WriteAsync(await packet.Serialize());
+                await SendPacket(packet);
                 Interlocked.Decrement(ref _brackets);
             }
         }
@@ -438,10 +399,8 @@ public class TheaterHandler
             ["GID"] = request.DataDict["GID"]
         };
 
+        _logger.LogTrace("Sending EGEG to client at {endpoint}", ClientEndpoint);
         var packet = new Packet("EGEG", TheaterTransmissionType.OkResponse, 0, serverInfo);
-        var data = await packet.Serialize();
-
-        _logger.LogTrace("Sending EGEG to client at {endpoint}", _clientEndpoint);
-        await _network.WriteAsync(data);
+        await SendPacket(packet);
     }
 }

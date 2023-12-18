@@ -1,5 +1,3 @@
-using System.Net.Sockets;
-
 namespace Arcadia.Storage;
 
 public class SharedCounters
@@ -56,14 +54,14 @@ public class SharedCounters
         return string.Format(keyTempl, key);
     }
 
-    private NetworkStream? _serverStream;
+    private Stream? _serverStream;
 
-    public void SetServerNetworkStream(NetworkStream stream)
+    public void SetServerNetworkStream(Stream stream)
     {
         _serverStream = stream;
     }
 
-    public NetworkStream? GetServerNetworkStream()
+    public Stream? GetServerNetworkStream()
     {
         return _serverStream;
     }

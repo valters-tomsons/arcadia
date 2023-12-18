@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text;
 using Arcadia.EA;
 using Arcadia.EA.Constants;
 using Arcadia.PSN;
@@ -10,7 +9,7 @@ using Org.BouncyCastle.Tls;
 
 namespace Arcadia.Handlers;
 
-public class FeslHandler
+public class FeslHandler : EAConnection
 {
     private readonly ILogger<FeslHandler> _logger;
     private readonly IOptions<ArcadiaSettings> _settings;
@@ -18,12 +17,9 @@ public class FeslHandler
     private readonly SharedCache _sharedCache;
 
     private readonly Dictionary<string, object> _sessionCache = new();
-    private TlsServerProtocol _network = null!;
-    private string _clientEndpoint = null!;
-
     private uint _feslTicketId;
 
-    public FeslHandler(ILogger<FeslHandler> logger, IOptions<ArcadiaSettings> settings, SharedCounters sharedCounters, SharedCache sharedCache)
+    public FeslHandler(ILogger<EAConnection> baseLogger, ILogger<FeslHandler> logger, IOptions<ArcadiaSettings> settings, SharedCounters sharedCounters, SharedCache sharedCache) : base(baseLogger)
     {
         _logger = logger;
         _settings = settings;
@@ -31,126 +27,108 @@ public class FeslHandler
         _sharedCache = sharedCache;
     }
 
-    public async Task HandleClientConnection(TlsServerProtocol network, string clientEndpoint)
+    public async Task HandleClientConnection(TlsServerProtocol tlsProtocol, string clientEndpoint)
     {
-        _network = network;
-        _clientEndpoint = clientEndpoint;
-
-        while (_network.IsConnected)
+        InitializeSecure(tlsProtocol, clientEndpoint);
+        await foreach (var packet in StartConnection())
         {
-            int read;
-            byte[] readBuffer = new byte[8096];
+            await HandlePacket(packet);
+        }
+    }
 
-            try
-            {
-                read = await _network.Stream.ReadAsync(readBuffer);
-            }
-            catch(Exception e)
-            {
-                _logger.LogInformation(e, "Connection has been closed with {endpoint}", _clientEndpoint);
-                break;
-            }
+    public async Task HandlePacket(Packet reqPacket)
+    {
+        var reqTxn = reqPacket.TXN;
+        _logger.LogDebug("Incoming Type: {type} | TXN: {txn}", reqPacket.Type, reqTxn);
 
-            if (read == 0)
-            {
-                continue;
-            }
-
-            var reqPacket = new Packet(readBuffer[..read]);
-            var reqTxn = reqPacket.TXN;
-
-            _logger.LogDebug("Incoming Type: {type} | TXN: {txn}", reqPacket.Type, reqTxn);
-            _logger.LogTrace("data:{data}", Encoding.ASCII.GetString(readBuffer[..read]));
-
-            if (reqPacket.Type == "fsys" && reqTxn == "Hello")
-            {
-                await HandleHello(reqPacket);
-            }
-            else if(reqPacket.Type == "pnow" && reqTxn == "Start")
-            {
-                await HandlePlayNow(reqPacket);
-            }
-            else if (reqPacket.Type == "fsys" && reqTxn == "MemCheck")
-            {
-                await HandleMemCheck();
-            }
-            else if (reqPacket.Type == "fsys" && reqTxn == "GetPingSites")
-            {
-                await HandleGetPingSites(reqPacket);
-            }
-            else if(reqPacket.Type == "acct" && reqTxn == "NuPS3Login")
-            {
-                await HandleNuPs3Login(reqPacket);
-            }
-            else if(reqPacket.Type == "acct" && reqTxn == "NuLogin")
-            {
-                await HandleNuLogin(reqPacket);
-            }
-            else if(reqPacket.Type == "acct" && reqTxn == "NuGetPersonas")
-            {
-                await HandleNuGetPersonas(reqPacket);
-            }
-            else if(reqPacket.Type == "acct" && reqTxn == "NuLoginPersona")
-            {
-                await HandleNuLoginPersona(reqPacket);
-            }
-            else if(reqPacket.Type == "acct" && reqTxn == "NuGetTos")
-            {
-                await HandleGetTos(reqPacket);
-            }
-            else if(reqPacket.Type == "acct" && reqTxn == "GetTelemetryToken")
-            {
-                await HandleTelemetryToken(reqPacket);
-            }
-            else if(reqPacket.Type == "acct" && reqTxn == "NuPS3AddAccount")
-            {
-                await HandleAddAccount(reqPacket);
-            }
-            else if(reqPacket.Type == "acct" && reqTxn == "NuLookupUserInfo")
-            {
-                await HandleLookupUserInfo(reqPacket);
-            }
-            else if(reqPacket.Type == "acct" && reqTxn == "NuGetEntitlements")
-            {
-                await HandleNuGetEntitlements(reqPacket);
-            }
-            else if(reqPacket.Type == "acct" && reqTxn == "NuGrantEntitlement")
-            {
-                await HandleNuGrantEntitlement(reqPacket);
-            }
-            else if(reqPacket.Type == "acct" && reqTxn == "GetLockerURL")
-            {
-                await HandleGetLockerUrl(reqPacket);
-            }
-            else if(reqPacket.Type == "recp" && reqTxn == "GetRecord")
-            {
-                await HandleGetRecord(reqPacket);
-            }
-            else if(reqPacket.Type == "recp" && reqTxn == "GetRecordAsMap")
-            {
-                await HandleGetRecordAsMap(reqPacket);
-            }
-            else if(reqPacket.Type == "asso" && reqTxn == "GetAssociations")
-            {
-                await HandleGetAssociations(reqPacket);
-            }
-            else if(reqPacket.Type == "pres" && reqTxn == "PresenceSubscribe")
-            {
-                await HandlePresenceSubscribe(reqPacket);
-            }
-            else if(reqPacket.Type == "pres" && reqTxn == "SetPresenceStatus")
-            {
-                await HandleSetPresenceStatus(reqPacket);
-            }
-            else if (reqPacket.Type == "rank" && reqTxn == "GetStats")
-            {
-                await HandleGetStats(reqPacket);
-            }
-            else
-            {
-                _logger.LogWarning("Unknown packet type: {type}, TXN: {txn}", reqPacket.Type, reqTxn);
-                Interlocked.Increment(ref _feslTicketId);
-            }
+        if (reqPacket.Type == "fsys" && reqTxn == "Hello")
+        {
+            await HandleHello(reqPacket);
+        }
+        else if (reqPacket.Type == "pnow" && reqTxn == "Start")
+        {
+            await HandlePlayNow(reqPacket);
+        }
+        else if (reqPacket.Type == "fsys" && reqTxn == "MemCheck")
+        {
+            await HandleMemCheck();
+        }
+        else if (reqPacket.Type == "fsys" && reqTxn == "GetPingSites")
+        {
+            await HandleGetPingSites(reqPacket);
+        }
+        else if (reqPacket.Type == "acct" && reqTxn == "NuPS3Login")
+        {
+            await HandleNuPs3Login(reqPacket);
+        }
+        else if (reqPacket.Type == "acct" && reqTxn == "NuLogin")
+        {
+            await HandleNuLogin(reqPacket);
+        }
+        else if (reqPacket.Type == "acct" && reqTxn == "NuGetPersonas")
+        {
+            await HandleNuGetPersonas(reqPacket);
+        }
+        else if (reqPacket.Type == "acct" && reqTxn == "NuLoginPersona")
+        {
+            await HandleNuLoginPersona(reqPacket);
+        }
+        else if (reqPacket.Type == "acct" && reqTxn == "NuGetTos")
+        {
+            await HandleGetTos(reqPacket);
+        }
+        else if (reqPacket.Type == "acct" && reqTxn == "GetTelemetryToken")
+        {
+            await HandleTelemetryToken(reqPacket);
+        }
+        else if (reqPacket.Type == "acct" && reqTxn == "NuPS3AddAccount")
+        {
+            await HandleAddAccount(reqPacket);
+        }
+        else if (reqPacket.Type == "acct" && reqTxn == "NuLookupUserInfo")
+        {
+            await HandleLookupUserInfo(reqPacket);
+        }
+        else if (reqPacket.Type == "acct" && reqTxn == "NuGetEntitlements")
+        {
+            await HandleNuGetEntitlements(reqPacket);
+        }
+        else if (reqPacket.Type == "acct" && reqTxn == "NuGrantEntitlement")
+        {
+            await HandleNuGrantEntitlement(reqPacket);
+        }
+        else if (reqPacket.Type == "acct" && reqTxn == "GetLockerURL")
+        {
+            await HandleGetLockerUrl(reqPacket);
+        }
+        else if (reqPacket.Type == "recp" && reqTxn == "GetRecord")
+        {
+            await HandleGetRecord(reqPacket);
+        }
+        else if (reqPacket.Type == "recp" && reqTxn == "GetRecordAsMap")
+        {
+            await HandleGetRecordAsMap(reqPacket);
+        }
+        else if (reqPacket.Type == "asso" && reqTxn == "GetAssociations")
+        {
+            await HandleGetAssociations(reqPacket);
+        }
+        else if (reqPacket.Type == "pres" && reqTxn == "PresenceSubscribe")
+        {
+            await HandlePresenceSubscribe(reqPacket);
+        }
+        else if (reqPacket.Type == "pres" && reqTxn == "SetPresenceStatus")
+        {
+            await HandleSetPresenceStatus(reqPacket);
+        }
+        else if (reqPacket.Type == "rank" && reqTxn == "GetStats")
+        {
+            await HandleGetStats(reqPacket);
+        }
+        else
+        {
+            _logger.LogWarning("Unknown packet type: {type}, TXN: {txn}", reqPacket.Type, reqTxn);
+            Interlocked.Increment(ref _feslTicketId);
         }
     }
 
@@ -553,11 +531,5 @@ public class FeslHandler
         // But since memchecks are not part of the meaningful conversation with the client, they don't have a packed id
         var memcheckPacket = new Packet("fsys", FeslTransmissionType.SinglePacketRequest, 0, memCheckData);
         await SendPacket(memcheckPacket);
-    }
-
-    private async Task SendPacket(Packet packet)
-    {
-        var data = await packet.Serialize();
-        await _network.Stream.WriteAsync(data);
     }
 }
