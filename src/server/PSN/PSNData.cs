@@ -44,18 +44,18 @@ public class TimeData : TicketData
 public class BinaryData : TicketData
 {
     public override TicketDataType Type => TicketDataType.Binary;
-    public byte[] Value { get; set; }
+    public byte[]? Value { get; set; }
 }
 
 public class BStringData : TicketData
 {
     public override TicketDataType Type => TicketDataType.BString;
-    public string Value { get; set; }
+    public string? Value { get; set; }
 }
 
 public class BlobData : TicketData
 {
     public override TicketDataType Type => TicketDataType.Blob;
     public byte Tag { get; set; }
-    public List<TicketData> Children { get; set; }
+    public List<TicketData>? Children { get; set; }
 }
