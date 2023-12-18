@@ -43,6 +43,7 @@ public class TheaterHandler
             ["GDAT"] = HandleGDAT,
             ["UBRA"] = HandleUBRA,
             ["UGAM"] = HandleUGAM,
+            ["UGDE"] = HandleUGDE
         };
     }
 
@@ -371,7 +372,8 @@ public class TheaterHandler
             {
                 var data = new Dictionary<string, object>
                 {
-                    ["TID"] = originalTid + i
+                    //TODO: Server responds with unknown if tid=i+1?
+                    ["TID"] = request["TID"]
                 };
 
                 var packet = new Packet(request.Type, TheaterTransmissionType.OkResponse, 0, data);
@@ -385,10 +387,21 @@ public class TheaterHandler
         }
     }
 
+
+    // UpdateGameDetails
+    private Task HandleUGDE(Packet request)
+    {
+        var gid = long.Parse(request["GID"]);
+        _logger.LogInformation("Server GID={gid} updating details!", gid);
+        _sharedCache.UpsertGameServerDataByGid(gid, request.DataDict);
+        return Task.CompletedTask;
+    }
+
+    // UpdateGameData
     private Task HandleUGAM(Packet request)
     {
         var gid = long.Parse(request["GID"]);
-        _logger.LogInformation("Server GID={gid} updating info!", gid);
+        _logger.LogInformation("Server GID={gid} updating data!", gid);
         _sharedCache.UpsertGameServerDataByGid(gid, request.DataDict);
         return Task.CompletedTask;
     }
