@@ -16,6 +16,8 @@ public class FeslHandler : EAConnection
     private readonly SharedCounters _sharedCounters;
     private readonly SharedCache _sharedCache;
 
+    private readonly Dictionary<string, Func<Packet, Task>> _handlers;
+
     private readonly Dictionary<string, object> _sessionCache = new();
     private uint _feslTicketId;
 
@@ -25,6 +27,31 @@ public class FeslHandler : EAConnection
         _settings = settings;
         _sharedCounters = sharedCounters;
         _sharedCache = sharedCache;
+
+        _handlers = new Dictionary<string, Func<Packet, Task>>()
+        {
+            ["fsys/Hello"] = HandleHello,
+            ["fsys/MemCheck"] = HandleMemCheck,
+            ["fsys/GetPingSites"] = HandleGetPingSites,
+            ["pnow/Start"] = HandlePlayNow,
+            ["acct/NuPS3Login"] = HandleNuPs3Login,
+            ["acct/NuLogin"] = HandleNuLogin,
+            ["acct/NuGetPersonas"] = HandleNuGetPersonas,
+            ["acct/NuLoginPersona"] = HandleNuLoginPersona,
+            ["acct/NuGetTos"] = HandleGetTos,
+            ["acct/GetTelemetryToken"] = HandleTelemetryToken,
+            ["acct/NuPS3AddAccount"] = HandleAddAccount,
+            ["acct/NuLookupUserInfo"] = HandleLookupUserInfo,
+            ["acct/NuGetEntitlements"] = HandleNuGetEntitlements,
+            ["acct/NuGrantEntitlement"] = HandleNuGrantEntitlement,
+            ["acct/GetLockerURL"] = HandleGetLockerUrl,
+            ["recp/GetRecord"] = HandleGetRecord,
+            ["recp/GetRecordAsMap"] = HandleGetRecordAsMap,
+            ["asso/GetAssociations"] = HandleGetAssociations,
+            ["pres/PresenceSubscribe"] = HandlePresenceSubscribe,
+            ["pres/SetPresenceStatus"] = HandleSetPresenceStatus,
+            ["rank/GetStats"] = HandleGetStats
+        };
     }
 
     public async Task HandleClientConnection(TlsServerProtocol tlsProtocol, string clientEndpoint)
@@ -36,100 +63,21 @@ public class FeslHandler : EAConnection
         }
     }
 
-    public async Task HandlePacket(Packet reqPacket)
+    public async Task HandlePacket(Packet packet)
     {
-        var reqTxn = reqPacket.TXN;
-        _logger.LogDebug("Incoming Type: {type} | TXN: {txn}", reqPacket.Type, reqTxn);
+        var reqTxn = packet.TXN;
+        var packetType = packet.Type;
+        _handlers.TryGetValue($"{packetType}/{reqTxn}", out var handler);
 
-        if (reqPacket.Type == "fsys" && reqTxn == "Hello")
+        if (handler is null)
         {
-            await HandleHello(reqPacket);
-        }
-        else if (reqPacket.Type == "pnow" && reqTxn == "Start")
-        {
-            await HandlePlayNow(reqPacket);
-        }
-        else if (reqPacket.Type == "fsys" && reqTxn == "MemCheck")
-        {
-            await HandleMemCheck();
-        }
-        else if (reqPacket.Type == "fsys" && reqTxn == "GetPingSites")
-        {
-            await HandleGetPingSites(reqPacket);
-        }
-        else if (reqPacket.Type == "acct" && reqTxn == "NuPS3Login")
-        {
-            await HandleNuPs3Login(reqPacket);
-        }
-        else if (reqPacket.Type == "acct" && reqTxn == "NuLogin")
-        {
-            await HandleNuLogin(reqPacket);
-        }
-        else if (reqPacket.Type == "acct" && reqTxn == "NuGetPersonas")
-        {
-            await HandleNuGetPersonas(reqPacket);
-        }
-        else if (reqPacket.Type == "acct" && reqTxn == "NuLoginPersona")
-        {
-            await HandleNuLoginPersona(reqPacket);
-        }
-        else if (reqPacket.Type == "acct" && reqTxn == "NuGetTos")
-        {
-            await HandleGetTos(reqPacket);
-        }
-        else if (reqPacket.Type == "acct" && reqTxn == "GetTelemetryToken")
-        {
-            await HandleTelemetryToken(reqPacket);
-        }
-        else if (reqPacket.Type == "acct" && reqTxn == "NuPS3AddAccount")
-        {
-            await HandleAddAccount(reqPacket);
-        }
-        else if (reqPacket.Type == "acct" && reqTxn == "NuLookupUserInfo")
-        {
-            await HandleLookupUserInfo(reqPacket);
-        }
-        else if (reqPacket.Type == "acct" && reqTxn == "NuGetEntitlements")
-        {
-            await HandleNuGetEntitlements(reqPacket);
-        }
-        else if (reqPacket.Type == "acct" && reqTxn == "NuGrantEntitlement")
-        {
-            await HandleNuGrantEntitlement(reqPacket);
-        }
-        else if (reqPacket.Type == "acct" && reqTxn == "GetLockerURL")
-        {
-            await HandleGetLockerUrl(reqPacket);
-        }
-        else if (reqPacket.Type == "recp" && reqTxn == "GetRecord")
-        {
-            await HandleGetRecord(reqPacket);
-        }
-        else if (reqPacket.Type == "recp" && reqTxn == "GetRecordAsMap")
-        {
-            await HandleGetRecordAsMap(reqPacket);
-        }
-        else if (reqPacket.Type == "asso" && reqTxn == "GetAssociations")
-        {
-            await HandleGetAssociations(reqPacket);
-        }
-        else if (reqPacket.Type == "pres" && reqTxn == "PresenceSubscribe")
-        {
-            await HandlePresenceSubscribe(reqPacket);
-        }
-        else if (reqPacket.Type == "pres" && reqTxn == "SetPresenceStatus")
-        {
-            await HandleSetPresenceStatus(reqPacket);
-        }
-        else if (reqPacket.Type == "rank" && reqTxn == "GetStats")
-        {
-            await HandleGetStats(reqPacket);
-        }
-        else
-        {
-            _logger.LogWarning("Unknown packet type: {type}, TXN: {txn}", reqPacket.Type, reqTxn);
+            _logger.LogWarning("Unknown packet type: {type}, TXN: {txn}", packet.Type, reqTxn);
             Interlocked.Increment(ref _feslTicketId);
+            return;
         }
+
+        _logger.LogDebug("Incoming Type: {type} | TXN: {txn}", packet.Type, reqTxn);
+        await handler(packet);
     }
 
     private async Task HandleTelemetryToken(Packet request)
@@ -512,7 +460,7 @@ public class FeslHandler : EAConnection
         await SendPacket(resultPacket );
     }
 
-    private static Task HandleMemCheck()
+    private static Task HandleMemCheck(Packet _)
     {
         return Task.CompletedTask;
     }
