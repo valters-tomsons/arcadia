@@ -17,13 +17,13 @@ namespace Arcadia.EA;
 /// <summary>
 /// Based on the following article: https://github.com/Aim4kill/Bug_OldProtoSSL
 /// </summary>
-public class CertGenerator
+public class ProtoSSL
 {
     private const string CipherAlgorithm = "SHA1WITHRSA";
 
-    private readonly ILogger<CertGenerator> _logger;
+    private readonly ILogger<ProtoSSL> _logger;
 
-    public CertGenerator(ILogger<CertGenerator> logger)
+    public ProtoSSL(ILogger<ProtoSSL> logger)
     {
         _logger = logger;
     }

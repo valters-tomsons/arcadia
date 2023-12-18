@@ -21,7 +21,7 @@ public class FeslHostedService : IHostedService
     private readonly ArcadiaSettings _arcadiaSettings;
     private readonly FeslSettings _feslSettings;
 
-    private readonly CertGenerator _certGenerator;
+    private readonly ProtoSSL _certGenerator;
     private readonly IServiceScopeFactory _scopeFactory;
 
     private readonly ConcurrentBag<TcpListener> _listeners = new();
@@ -34,7 +34,7 @@ public class FeslHostedService : IHostedService
     private ConcurrentBag<Task?> _servers = new();
 
     public FeslHostedService(ILogger<FeslHostedService> logger, IOptions<ArcadiaSettings> arcadiaSettings,
-        IOptions<FeslSettings> feslSettings, CertGenerator certGenerator, IServiceScopeFactory scopeFactory)
+        IOptions<FeslSettings> feslSettings, ProtoSSL certGenerator, IServiceScopeFactory scopeFactory)
     {
         _logger = logger;
         

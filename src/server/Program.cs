@@ -26,7 +26,7 @@ var host = Host.CreateDefaultBuilder()
             .Configure<DebugSettings>(config.GetSection(nameof(DebugSettings)));
 
         services
-            .AddSingleton<CertGenerator>()
+            .AddSingleton<ProtoSSL>()
             .AddSingleton<SharedCounters>()
             .AddSingleton<SharedCache>();
 
