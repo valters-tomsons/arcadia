@@ -1,11 +1,7 @@
 using System.Reflection;
 using System.Text;
-using Org.BouncyCastle.Crypto;
-using Org.BouncyCastle.OpenSsl;
-using Org.BouncyCastle.Tls;
 using Org.BouncyCastle.Tls.Crypto;
 using Org.BouncyCastle.Tls.Crypto.Impl.BC;
-using Org.BouncyCastle.X509;
 
 namespace Arcadia;
 
@@ -28,33 +24,6 @@ public static class Utils
         const BindingFlags bindingFlags = BindingFlags.NonPublic | BindingFlags.Instance;
         var field = typeof(BcTlsSecret).GetField("m_data", bindingFlags);
         return (byte[]?)field?.GetValue(secret);
-    }
-
-    public static void DumpCertificate(AsymmetricKeyParameter privateKey, Certificate certificate, string serviceName)
-    {
-        var prefix = serviceName.Split('.')[0];
-
-        // Export Private Key
-        {
-            var file = $"{prefix}-private.pem";
-
-            using var textWriter = new StreamWriter(file);
-            using var pemWriter = new PemWriter(textWriter);
-            pemWriter.WriteObject(privateKey);
-            pemWriter.Writer.Flush();
-        }
-
-        // Export Certificate
-        {
-            var file = $"{prefix}-certificate.pem";
-
-            var x509 = new X509Certificate(certificate.GetCertificateAt(0).GetEncoded());
-
-            using var textWriter = new StreamWriter(file);
-            using var pemWriter = new PemWriter(textWriter);
-            pemWriter.WriteObject(x509);
-            pemWriter.Writer.Flush();
-        }
     }
 
     public static byte[][] SplitAt(byte[] source, int index)
