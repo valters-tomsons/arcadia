@@ -191,7 +191,6 @@ public class TheaterHandler : EAConnection
 
         var serverPacket = new Packet("EGRQ", TheaterTransmissionType.OkResponse, 0, serverMessage);
         var serverData = await serverPacket.Serialize();
-        // await _network.WriteAsync(serverData);
         var serverNetwork = _sharedCounters.GetServerNetworkStream();
         await serverNetwork!.WriteAsync(serverData);
     }
