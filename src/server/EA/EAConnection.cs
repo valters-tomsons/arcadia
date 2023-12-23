@@ -5,7 +5,21 @@ using Org.BouncyCastle.Tls;
 
 namespace Arcadia.EA;
 
-public class EAConnection
+public interface IEAConnection
+{
+    string ClientEndpoint { get; }
+    Stream? NetworkStream { get; }
+
+    void InitializeInsecure(Stream network, string endpoint);
+    void InitializeSecure(TlsServerProtocol network, string endpoint);
+
+    IAsyncEnumerable<Packet> StartConnection(CancellationToken ct = default);
+
+    Task<bool> SendPacket(Packet packet);
+    Task<bool> SendBinary(byte[] buffer);
+}
+
+public class EAConnection : IEAConnection
 {
     public string ClientEndpoint { get; private set; } = string.Empty;
     public Stream? NetworkStream { get; private set; }
