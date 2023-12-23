@@ -12,7 +12,7 @@ using Microsoft.Extensions.Options;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Tls;
 
-namespace Arcadia.Services;
+namespace Arcadia.Hosting;
 
 public class FeslHostedService : IHostedService
 {

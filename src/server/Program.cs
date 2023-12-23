@@ -3,7 +3,7 @@ using Arcadia.Handlers;
 using Arcadia.Tls.Crypto;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
-using Arcadia.Services;
+using Arcadia.Hosting;
 using Microsoft.Extensions.Hosting;
 using Arcadia.EA;
 using Microsoft.Extensions.Logging;
