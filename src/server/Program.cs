@@ -9,6 +9,7 @@ using Arcadia.EA;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 using Arcadia.Storage;
+using Arcadia.Internal;
 
 var host = Host.CreateDefaultBuilder()
     .ConfigureAppConfiguration((_, config) => config
@@ -31,6 +32,7 @@ var host = Host.CreateDefaultBuilder()
             .AddSingleton<SharedCache>();
 
         services
+            .AddScoped<ConnectionLogScope>()
             .AddScoped<Rc4TlsCrypto>()
             .AddScoped<FeslHandler>()
             .AddScoped<TheaterHandler>();

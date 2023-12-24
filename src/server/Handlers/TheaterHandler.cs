@@ -1,6 +1,7 @@
 using System.Net.Sockets;
 using Arcadia.EA;
 using Arcadia.EA.Constants;
+using Arcadia.Internal;
 using Arcadia.Storage;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -10,6 +11,7 @@ namespace Arcadia.Handlers;
 public class TheaterHandler : EAConnection
 {
     private readonly ILogger<TheaterHandler> _logger;
+    private readonly ConnectionLogScope _loggerScope;
     private readonly SharedCounters _sharedCounters;
     private readonly SharedCache _sharedCache;
     private readonly IOptions<ArcadiaSettings> _arcadiaSettings;

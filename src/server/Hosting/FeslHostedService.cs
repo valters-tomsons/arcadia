@@ -3,6 +3,7 @@ using System.Net.Sockets;
 using Arcadia.EA;
 using Arcadia.EA.Constants;
 using Arcadia.Handlers;
+using Arcadia.Internal;
 using Arcadia.Tls;
 using Arcadia.Tls.Crypto;
 using Microsoft.Extensions.DependencyInjection;
@@ -91,15 +92,17 @@ public class FeslHostedService : IHostedService
 
     private async Task HandleClient(TcpClient tcpClient, string clientEndpoint)
     {
-        var connectionId = Guid.NewGuid().ToString();
-        using var logScope = _logger.BeginScope(connectionId);
-        _logger.LogDebug("Creating new connectionId: {connId}", connectionId);
-
         using var scope = _scopeFactory.CreateAsyncScope();
-        var crypto = scope.ServiceProvider.GetRequiredService<Rc4TlsCrypto>();
+
+        var scopeData = scope.ServiceProvider.GetRequiredService<ConnectionLogScope>();
+        scopeData.ClientEndpoint = clientEndpoint;
+
+        using var logScope = _logger.BeginScope(scopeData);
+        _logger.LogDebug("Creating new connectionId: {connId}", scopeData.ConnectionId);
 
         var networkStream = tcpClient.GetStream();
 
+        var crypto = scope.ServiceProvider.GetRequiredService<Rc4TlsCrypto>();
         var connTls = new Ssl3TlsServer(crypto, _feslPubCert, _feslCertKey);
         var serverProtocol = new TlsServerProtocol(networkStream);
 
