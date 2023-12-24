@@ -1,6 +1,7 @@
 using System.Globalization;
 using Arcadia.EA;
 using Arcadia.EA.Constants;
+using Arcadia.Internal;
 using Arcadia.PSN;
 using Arcadia.Storage;
 using Microsoft.Extensions.Logging;
@@ -12,6 +13,7 @@ namespace Arcadia.Handlers;
 public class FeslHandler : EAConnection
 {
     private readonly ILogger<FeslHandler> _logger;
+    private readonly ConnectionLogScope _loggerScope;
     private readonly IOptions<ArcadiaSettings> _settings;
     private readonly SharedCounters _sharedCounters;
     private readonly SharedCache _sharedCache;
@@ -21,12 +23,13 @@ public class FeslHandler : EAConnection
     private readonly Dictionary<string, object> _sessionCache = new();
     private uint _feslTicketId;
 
-    public FeslHandler(ILogger<EAConnection> baseLogger, ILogger<FeslHandler> logger, IOptions<ArcadiaSettings> settings, SharedCounters sharedCounters, SharedCache sharedCache) : base(baseLogger)
+    public FeslHandler(ILogger<EAConnection> baseLogger, ILogger<FeslHandler> logger, IOptions<ArcadiaSettings> settings, SharedCounters sharedCounters, SharedCache sharedCache, ConnectionLogScope loggerScope) : base(baseLogger)
     {
         _logger = logger;
         _settings = settings;
         _sharedCounters = sharedCounters;
         _sharedCache = sharedCache;
+        _loggerScope = loggerScope;
 
         _handlers = new Dictionary<string, Func<Packet, Task>>()
         {
@@ -274,6 +277,9 @@ public class FeslHandler : EAConnection
 
     private async Task HandleHello(Packet request)
     {
+        _loggerScope.ClientString = request["clientString"];
+        _loggerScope.ClientType = request["clientType"];
+
         var currentTime = DateTime.UtcNow.ToString("MMM-dd-yyyy HH:mm:ss 'UTC'", CultureInfo.InvariantCulture);
         var serverHelloData = new Dictionary<string, object>
                 {

@@ -1,7 +1,9 @@
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
+using Arcadia.EA;
 using Arcadia.Handlers;
+using Arcadia.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -63,11 +65,13 @@ public class TheaterHostedService : IHostedService
 
     private async Task HandleClient(TcpClient tcpClient, string clientEndpoint)
     {
-        var connectionId = Guid.NewGuid().ToString();
-        using var logScope = _logger.BeginScope(connectionId);
-        _logger.LogDebug("Creating new connectionId: {connId}", connectionId);
-
         using var scope = _scopeFactory.CreateAsyncScope();
+
+        var scopeData = scope.ServiceProvider.GetRequiredService<ConnectionLogScope>();
+        scopeData.ClientEndpoint = clientEndpoint;
+
+        using var logScope = _logger.BeginScope(scopeData);
+        _logger.LogDebug("Creating new connectionId: {connId}", scopeData.ConnectionId);
 
         var networkStream = tcpClient.GetStream();
         var handler = scope.ServiceProvider.GetRequiredService<TheaterHandler>();
