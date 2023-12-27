@@ -5,9 +5,9 @@ public enum TicketDataType
     Empty = 0,
     U32 = 1,
     U64 = 2,
+    BString = 4,
     Time = 7,
     Binary = 8,
-    BString = 4,
     Blob = 0x3000
 }
 
