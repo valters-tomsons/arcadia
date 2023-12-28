@@ -407,7 +407,7 @@ public class FeslHandler : EAConnection
         // else
 
         var loginTicket = request.DataDict["ticket"] as string ?? string.Empty;
-        var ticketData = TicketDecoder.DecodeFromASCIIString(loginTicket);
+        var ticketData = TicketDecoder.DecodeFromASCIIString(loginTicket, _logger);
         var onlineId = (ticketData[5] as BStringData)?.Value?.TrimEnd('\0');
 
         _sessionCache["personaName"] = onlineId ?? throw new NotImplementedException();
