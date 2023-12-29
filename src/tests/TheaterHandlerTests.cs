@@ -39,14 +39,12 @@ public class TheaterHandlerTests
             ["PLAT"] = plat,
             ["PROT"] = prot
         };
-
         var request = new Packet("CONN", SinglePacketRequest, 0, requestData);
 
         await handler.HandlePacket(request);
+
         mockConnection.Verify();
-
         Assert.NotEmpty(responses);
-
         Assert.True(responses.TryDequeue(out var response));
         Assert.Equal("CONN", response.Type);
         Assert.NotEqual(0, (long)response.DataDict["TIME"]);
