@@ -54,7 +54,7 @@ public class TheaterHandler
         }
     }
 
-    private async Task HandlePacket(Packet packet)
+    public async Task HandlePacket(Packet packet)
     {
         var packetType = packet.Type;
         _handlers.TryGetValue(packetType, out var handler);
