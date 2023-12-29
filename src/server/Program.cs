@@ -34,7 +34,7 @@ var host = Host.CreateDefaultBuilder()
         services
             .AddScoped<ConnectionLogScope>()
             .AddScoped<Rc4TlsCrypto>()
-            .AddScoped<EAConnection>()
+            .AddScoped<IEAConnection, EAConnection>()
             .AddScoped<FeslHandler>()
             .AddScoped<TheaterHandler>();
 
