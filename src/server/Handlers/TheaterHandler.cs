@@ -306,7 +306,8 @@ public class TheaterHandler
 
         for (var i = 0; i < 32; i++)
         {
-            responseData.Add($"D-pdat{i}", "|0|0|0|0");
+            var pdatId = $"D-pdat{i:D2}";
+            responseData.Add(pdatId, "|0|0|0|0");
         }
 
         _logger.LogTrace("Sending GDET to client at {endpoint}", _conn.ClientEndpoint);
