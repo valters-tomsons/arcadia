@@ -9,7 +9,7 @@ using System.Collections.Concurrent;
 
 namespace tests;
 
-public class FeslSessionTests
+public class FeslHandlerTests
 {
     private readonly IFixture fixture;
     private readonly Mock<IEAConnection> mockConnection;
@@ -17,7 +17,7 @@ public class FeslSessionTests
 
     private readonly ConcurrentQueue<Packet> responses = new();
 
-    public FeslSessionTests()
+    public FeslHandlerTests()
     {
         fixture = new Fixture().Customize(new AutoMoqCustomization());
         mockConnection = fixture.Freeze<Mock<IEAConnection>>();
@@ -32,7 +32,7 @@ public class FeslSessionTests
 
     [Theory]
     [InlineData("beach-ps3")]
-    public async Task HandlePacket_ClientHello_ServerResponds(string clientString, string? clientType = null)
+    public async Task ClientHello_Responds_ServerHelloAndMemCheck(string clientString, string? clientType = null)
     {
         Dictionary<string, object> requestData = new() {
             ["TXN"] = "Hello",
