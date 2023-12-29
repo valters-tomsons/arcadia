@@ -16,7 +16,6 @@ public interface IEAConnection
     IAsyncEnumerable<Packet> StartConnection(CancellationToken ct = default);
 
     Task<bool> SendPacket(Packet packet);
-    Task<bool> SendBinary(byte[] buffer);
 }
 
 public class EAConnection : IEAConnection
@@ -98,7 +97,7 @@ public class EAConnection : IEAConnection
         return await SendBinary(packetBuffer);
     }
 
-    public async Task<bool> SendBinary(byte[] buffer)
+    private async Task<bool> SendBinary(byte[] buffer)
     {
         if (NetworkStream is null || !NetworkStream.CanWrite)
         {
