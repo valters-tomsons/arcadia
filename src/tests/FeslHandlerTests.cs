@@ -41,8 +41,8 @@ public class FeslHandlerTests
         var request = new Packet("fsys", SinglePacketRequest, 0, requestData);
 
         await handler.HandlePacket(request);
-        mockConnection.Verify();
 
+        mockConnection.Verify();
         Assert.True(responses.TryDequeue(out var serverHello));
         Assert.Equal("fsys", serverHello.Type);
         Assert.Equal("Hello", serverHello.TXN);
