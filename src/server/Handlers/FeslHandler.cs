@@ -10,26 +10,28 @@ using Org.BouncyCastle.Tls;
 
 namespace Arcadia.Handlers;
 
-public class FeslHandler : EAConnection
+public class FeslHandler
 {
     private readonly ILogger<FeslHandler> _logger;
     private readonly ConnectionLogScope _loggerScope;
     private readonly IOptions<ArcadiaSettings> _settings;
     private readonly SharedCounters _sharedCounters;
     private readonly SharedCache _sharedCache;
+    private readonly IEAConnection _conn;
 
     private readonly Dictionary<string, Func<Packet, Task>> _handlers;
 
     private readonly Dictionary<string, object> _sessionCache = new();
     private uint _feslTicketId;
 
-    public FeslHandler(ILogger<EAConnection> baseLogger, ILogger<FeslHandler> logger, IOptions<ArcadiaSettings> settings, SharedCounters sharedCounters, SharedCache sharedCache, ConnectionLogScope loggerScope) : base(baseLogger)
+    public FeslHandler(IEAConnection conn, ILogger<EAConnection> baseLogger, ILogger<FeslHandler> logger, IOptions<ArcadiaSettings> settings, SharedCounters sharedCounters, SharedCache sharedCache, ConnectionLogScope loggerScope)
     {
         _logger = logger;
         _settings = settings;
         _sharedCounters = sharedCounters;
         _sharedCache = sharedCache;
         _loggerScope = loggerScope;
+        _conn = conn;
 
         _handlers = new Dictionary<string, Func<Packet, Task>>()
         {
@@ -59,8 +61,8 @@ public class FeslHandler : EAConnection
 
     public async Task HandleClientConnection(TlsServerProtocol tlsProtocol, string clientEndpoint)
     {
-        InitializeSecure(tlsProtocol, clientEndpoint);
-        await foreach (var packet in StartConnection())
+        _conn.InitializeSecure(tlsProtocol, clientEndpoint);
+        await foreach (var packet in _conn.StartConnection())
         {
             await HandlePacket(packet);
         }
@@ -91,7 +93,7 @@ public class FeslHandler : EAConnection
         };
 
         var packet = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
-        await SendPacket(packet);
+        await _conn.SendPacket(packet);
     }
 
     private async Task HandlePlayNow(Packet request)
@@ -108,7 +110,7 @@ public class FeslHandler : EAConnection
         };
 
         var packet1 = new Packet("pnow", FeslTransmissionType.SinglePacketResponse, request.Id, data1);
-        await SendPacket(packet1);
+        await _conn.SendPacket(packet1);
 
         var data2 = new Dictionary<string, object>
         {
@@ -125,7 +127,7 @@ public class FeslHandler : EAConnection
         };
 
         var packet2 = new Packet("pnow", FeslTransmissionType.SinglePacketResponse, request.Id, data2);
-        await SendPacket(packet2);
+        await _conn.SendPacket(packet2);
     }
 
     private async Task HandleGetRecord(Packet request)
@@ -139,7 +141,7 @@ public class FeslHandler : EAConnection
 
         };
 
-        await SendPacket(new Packet("recp", FeslTransmissionType.SinglePacketResponse, request.Id, responseData));
+        await _conn.SendPacket(new Packet("recp", FeslTransmissionType.SinglePacketResponse, request.Id, responseData));
     }
 
     private async Task HandleGetRecordAsMap(Packet request)
@@ -152,7 +154,7 @@ public class FeslHandler : EAConnection
             {"values.{}", 0 }
         };
 
-        await SendPacket(new Packet("recp", FeslTransmissionType.SinglePacketResponse, request.Id, responseData));
+        await _conn.SendPacket(new Packet("recp", FeslTransmissionType.SinglePacketResponse, request.Id, responseData));
     }
 
     private async Task HandleNuGrantEntitlement(Packet request)
@@ -162,7 +164,7 @@ public class FeslHandler : EAConnection
             { "TXN", request.TXN }
         };
 
-        await SendPacket(new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, responseData));
+        await _conn.SendPacket(new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, responseData));
     }
 
 
@@ -187,7 +189,7 @@ public class FeslHandler : EAConnection
         // }
 
         var packet = new Packet("rank", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
-        await SendPacket(packet);
+        await _conn.SendPacket(packet);
     }
 
     private async Task HandlePresenceSubscribe(Packet request)
@@ -202,7 +204,7 @@ public class FeslHandler : EAConnection
         };
 
         var packet = new Packet("pres", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
-        await SendPacket(packet);
+        await _conn.SendPacket(packet);
     }
 
     private async Task HandleSetPresenceStatus(Packet request)
@@ -213,7 +215,7 @@ public class FeslHandler : EAConnection
         };
 
         var packet = new Packet("pres", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
-        await SendPacket(packet);
+        await _conn.SendPacket(packet);
     }
 
     private async Task HandleLookupUserInfo(Packet request)
@@ -226,7 +228,7 @@ public class FeslHandler : EAConnection
         };
 
         var packet = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
-        await SendPacket(packet);
+        await _conn.SendPacket(packet);
     }
 
     private async Task HandleGetAssociations(Packet request)
@@ -254,7 +256,7 @@ public class FeslHandler : EAConnection
         }
 
         var packet = new Packet("asso", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
-        await SendPacket(packet);
+        await _conn.SendPacket(packet);
     }
 
     private async Task HandleGetPingSites(Packet request)
@@ -272,7 +274,7 @@ public class FeslHandler : EAConnection
         };
 
         var packet = new Packet("fsys", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
-        await SendPacket(packet);
+        await _conn.SendPacket(packet);
     }
 
     private async Task HandleHello(Packet request)
@@ -295,7 +297,7 @@ public class FeslHandler : EAConnection
                 };
 
         var helloPacket = new Packet("fsys", FeslTransmissionType.SinglePacketResponse, request.Id, serverHelloData);
-        await SendPacket(helloPacket);
+        await _conn.SendPacket(helloPacket);
         await SendMemCheck();
     }
 
@@ -312,7 +314,7 @@ public class FeslHandler : EAConnection
         };
 
         var packet = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, data);
-        await SendPacket(packet);
+        await _conn.SendPacket(packet);
     }
 
     private async Task HandleNuLogin(Packet request)
@@ -326,7 +328,7 @@ public class FeslHandler : EAConnection
         };
 
         var loginPacket = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
-        await SendPacket(loginPacket);
+        await _conn.SendPacket(loginPacket);
     }
 
     private async Task HandleNuGetPersonas(Packet request)
@@ -339,7 +341,7 @@ public class FeslHandler : EAConnection
         };
 
         var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
-        await SendPacket(packet);
+        await _conn.SendPacket(packet);
     }
     
     private async Task HandleNuLoginPersona(Packet request)
@@ -359,7 +361,7 @@ public class FeslHandler : EAConnection
         };
 
         var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
-        await SendPacket(packet);
+        await _conn.SendPacket(packet);
     }
 
     private async Task HandleNuGetEntitlements(Packet request)
@@ -371,7 +373,7 @@ public class FeslHandler : EAConnection
         };
 
         var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
-        await SendPacket(packet);
+        await _conn.SendPacket(packet);
     }
 
     private async Task HandleGetLockerUrl(Packet request)
@@ -383,7 +385,7 @@ public class FeslHandler : EAConnection
         };
 
         var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
-        await SendPacket(packet);
+        await _conn.SendPacket(packet);
     }
 
     private async Task HandleNuPs3Login(Packet request)
@@ -425,7 +427,7 @@ public class FeslHandler : EAConnection
         };
 
         var loginPacket = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
-        await SendPacket(loginPacket);
+        await _conn.SendPacket(loginPacket);
     }
 
     private async Task SendInvalidLogin(Packet request)
@@ -447,7 +449,7 @@ public class FeslHandler : EAConnection
         };
 
         var loginPacket = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
-        await SendPacket(loginPacket);
+        await _conn.SendPacket(loginPacket);
     }
 
     private async Task HandleAddAccount(Packet request)
@@ -463,7 +465,7 @@ public class FeslHandler : EAConnection
         _logger.LogDebug("Trying to register user {email} with password {pass}", email, pass);
 
         var resultPacket = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, data);
-        await SendPacket(resultPacket);
+        await _conn.SendPacket(resultPacket);
     }
 
     private static Task HandleMemCheck(Packet _)
@@ -484,6 +486,6 @@ public class FeslHandler : EAConnection
         // FESL backend is requesting the client to respond to the memcheck, so this is a request
         // But since memchecks are not part of the meaningful conversation with the client, they don't have a packed id
         var memcheckPacket = new Packet("fsys", FeslTransmissionType.SinglePacketRequest, 0, memCheckData);
-        await SendPacket(memcheckPacket);
+        await _conn.SendPacket(memcheckPacket);
     }
 }
