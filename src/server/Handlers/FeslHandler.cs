@@ -463,7 +463,7 @@ public class FeslHandler : EAConnection
         _logger.LogDebug("Trying to register user {email} with password {pass}", email, pass);
 
         var resultPacket = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, data);
-        await SendPacket(resultPacket );
+        await SendPacket(resultPacket);
     }
 
     private static Task HandleMemCheck(Packet _)
