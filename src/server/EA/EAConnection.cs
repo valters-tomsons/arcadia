@@ -75,12 +75,8 @@ public class EAConnection : IEAConnection
             }
 
             var packet = new Packet(readBuffer[..read]);
+            _logger.LogTrace("Incoming '{type}' data:{data}", packet.Type, Encoding.ASCII.GetString(readBuffer[..read]));
             yield return packet;
-
-            var type = packet.Type;
-
-            _logger.LogDebug("Incoming Type: {type}", type);
-            _logger.LogTrace("data:{data}", Encoding.ASCII.GetString(readBuffer[..read]));
         }
 
         _logger.LogInformation("Connection has been closed: {endpoint}", ClientEndpoint);
