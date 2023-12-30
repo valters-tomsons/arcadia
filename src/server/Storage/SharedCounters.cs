@@ -56,12 +56,12 @@ public class SharedCounters
 
     private Stream? _serverStream;
 
-    public void SetServerNetworkStream(Stream stream)
+    public void SetServerTheaterNetworkStream(Stream stream)
     {
         _serverStream = stream;
     }
 
-    public Stream? GetServerNetworkStream()
+    public Stream? GetServerTheaterNetworkStream()
     {
         return _serverStream;
     }
