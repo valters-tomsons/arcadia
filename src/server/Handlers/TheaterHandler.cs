@@ -201,14 +201,16 @@ public class TheaterHandler
     {
         var serverInfo = new Dictionary<string, object>
         {
-            ["TID"] = request.DataDict["TID"]
+            ["TID"] = request.DataDict["TID"],
         };
+
+        if (request["ALLOWED"] == "1")
+        {
+            Interlocked.Increment(ref joiningPlayers);
+        }
 
         var packet = new Packet("EGRS", TheaterTransmissionType.OkResponse, 0, serverInfo);
         await _conn.SendPacket(packet);
-
-        var ticket = long.Parse((string)request.DataDict["PID"]);
-        await SendEGEG(request, ticket);
     }
 
     private async Task HandleGDAT(Packet request)
@@ -217,7 +219,12 @@ public class TheaterHandler
 
         if (string.IsNullOrWhiteSpace(requestGid))
         {
-            var pk = new Packet("GDAT", TheaterTransmissionType.OkResponse, 0, request.DataDict);
+            var earlyExit = new Dictionary<string, object>
+            {
+                ["TID"] = request["TID"]
+            };
+
+            var pk = new Packet("GDAT", TheaterTransmissionType.OkResponse, 0, earlyExit);
             await _conn.SendPacket(pk);
             return;
         }
@@ -244,10 +251,10 @@ public class TheaterHandler
             ["P"] = serverInfo["PORT"],
 
             ["N"] = serverInfo["NAME"],
-            ["AP"] = 0,
+            ["AP"] = activePlayers,
             ["MP"] = serverInfo["MAX-PLAYERS"],
             ["QP"] = serverInfo["B-U-QueueLength"],
-            ["JP"] = 1,
+            ["JP"] = joiningPlayers,
             ["PL"] = "PS3",
 
             ["PW"] = 0,
@@ -292,6 +299,7 @@ public class TheaterHandler
             ["LID"] = request.DataDict["LID"],
             ["GID"] = request.DataDict["GID"],
             ["TID"] = request.DataDict["TID"],
+
             ["UGID"] = _sessionCache["UGID"],
             ["D-AutoBalance"] = serverInfo["D-AutoBalance"],
             ["D-Crosshair"] = serverInfo["D-Crosshair"],
@@ -317,6 +325,9 @@ public class TheaterHandler
 
     private async Task HandlePENT(Packet request)
     {
+        Interlocked.Decrement(ref joiningPlayers);
+        Interlocked.Increment(ref activePlayers);
+
         var serverInfo = new Dictionary<string, object>
         {
             ["TID"] = request.DataDict["TID"],
@@ -371,6 +382,8 @@ public class TheaterHandler
     }
 
     private static string UGID = string.Empty;
+    private static int activePlayers = 0;
+    private static int joiningPlayers = 0;
 
     private async Task SendEGEG(Packet request, long ticket)
     {
@@ -399,7 +412,8 @@ public class TheaterHandler
             ["P"] = serverPort,
 
             ["LID"] = request.DataDict["LID"],
-            ["GID"] = request.DataDict["GID"]
+            ["GID"] = request.DataDict["GID"],
+            ["TID"] = request.DataDict["TID"]
         };
 
         _logger.LogTrace("Sending EGEG to client at {endpoint}", _conn.ClientEndpoint);
