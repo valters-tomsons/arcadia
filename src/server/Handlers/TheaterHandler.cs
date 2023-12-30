@@ -77,7 +77,7 @@ public class TheaterHandler
 
         if (request["PLAT"] == "PC")
         {
-            _sharedCounters.SetServerNetworkStream(_conn.NetworkStream!);
+            _sharedCounters.SetServerTheaterNetworkStream(_conn.NetworkStream!);
         }
 
         var response = new Dictionary<string, object>
@@ -193,7 +193,7 @@ public class TheaterHandler
 
         var serverPacket = new Packet("EGRQ", TheaterTransmissionType.OkResponse, 0, serverMessage);
         var serverData = await serverPacket.Serialize();
-        var serverNetwork = _sharedCounters.GetServerNetworkStream();
+        var serverNetwork = _sharedCounters.GetServerTheaterNetworkStream();
         await serverNetwork!.WriteAsync(serverData);
     }
 
