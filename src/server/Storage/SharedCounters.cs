@@ -24,7 +24,7 @@ public class SharedCounters
 
     public long GetNextTicket()
     {
-        return -Interlocked.Increment(ref _ticket);
+        return Interlocked.Increment(ref _ticket);
     }
 
     public long GetNextGameId()
