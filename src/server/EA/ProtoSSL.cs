@@ -19,10 +19,10 @@ namespace Arcadia.EA;
 /// </summary>
 public class ProtoSSL
 {
-    private const string CipherAlgorithm = "SHA1WITHRSA";
+    private const string Sha1CipherAlgorithm = "SHA1WITHRSA";
+    private static readonly ReadOnlyMemory<byte> Sha1CipherSignature = new byte[] { 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x05 };
 
     private readonly ILogger<ProtoSSL> _logger;
-
     public ProtoSSL(ILogger<ProtoSSL> logger)
     {
         _logger = logger;
@@ -72,7 +72,7 @@ public class ProtoSSL
         certGen.SetNotAfter(DateTime.UtcNow.Date.AddYears(10));
         certGen.SetSubjectDN(new X509Name(subjectName));
         certGen.SetPublicKey(subjectKeyPair.Public);
-        var signatureFactory = new Asn1SignatureFactory(CipherAlgorithm, issuerPrivKey);
+        var signatureFactory = new Asn1SignatureFactory(Sha1CipherAlgorithm, issuerPrivKey);
         return certGen.Generate(signatureFactory);
     }
 
@@ -81,12 +81,9 @@ public class ProtoSSL
         var cert = DotNetUtilities.ToX509Certificate(cCertificate);
         var certDer = cert.GetRawCertData();
 
-        // Pattern to find the SHA-1 signature in the DER encoded certificate
-        var signaturePattern = new byte[] { 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x05 };
-
         // There must be two signatures in the DER encoded certificate
-        var signature1Offset = Utils.FindBytePattern(certDer, signaturePattern);
-        var signature2Offset = Utils.FindBytePattern(certDer, signaturePattern, signature1Offset + 1);
+        var signature1Offset = Utils.FindBytePattern(certDer, Sha1CipherSignature.Span);
+        var signature2Offset = Utils.FindBytePattern(certDer, Sha1CipherSignature.Span, signature1Offset + Sha1CipherSignature.Length);
 
         if (signature1Offset == -1 || signature2Offset == -1)
         {
@@ -94,8 +91,7 @@ public class ProtoSSL
         }
 
         // Patch the second signature to TLS_NULL_WITH_NULL_NULL
-        var byteOffset = signature2Offset + 8;
-        certDer[byteOffset] = 0x01;
+        certDer[signature2Offset + 8] = 0x01;
 
         using var derStream = new MemoryStream(certDer);
         var parser = new X509CertificateParser();

@@ -93,7 +93,7 @@ public static class Utils
     /// Returns index of provided byte pattern in a buffer,
     /// returns -1 if not found
     /// </summary>
-    public static int FindBytePattern(byte[] buffer, byte[] searchPattern, int offset = 0)
+    public static int FindBytePattern(ReadOnlySpan<byte> buffer, ReadOnlySpan<byte> searchPattern, int offset = 0)
     {
         int found = -1;
         if (buffer.Length > 0 && searchPattern.Length > 0 && offset <= (buffer.Length - searchPattern.Length) && buffer.Length >= searchPattern.Length)
