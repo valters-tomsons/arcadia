@@ -26,5 +26,5 @@ bfbc2-ps3.fesl.ea.com=127.0.0.1&&theater.ps3.arcadia=127.0.0.1
 
 ## References
 
-* https://github.com/Tratos/BFBC2_MasterServer
 * https://github.com/Aim4kill/Bug_OldProtoSSL
+* https://github.com/Tratos/BFBC2_MasterServer
