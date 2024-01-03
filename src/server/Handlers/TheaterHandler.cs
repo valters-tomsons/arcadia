@@ -253,7 +253,6 @@ public class TheaterHandler
             ["N"] = serverInfo["NAME"],
             ["AP"] = activePlayers,
             ["MP"] = serverInfo["MAX-PLAYERS"],
-            ["QP"] = serverInfo["B-U-QueueLength"],
             ["JP"] = joiningPlayers,
             ["PL"] = "PS3",
 
@@ -261,13 +260,11 @@ public class TheaterHandler
             ["TYPE"] = serverInfo["TYPE"],
             ["J"] = serverInfo["JOIN"],
 
-            ["B-U-Softcore"] = serverInfo["B-U-Softcore"],
             ["B-U-Hardcore"] = serverInfo["B-U-Hardcore"],
             ["B-U-HasPassword"] = serverInfo["B-U-HasPassword"],
             ["B-U-Punkbuster"] = 0,
-            ["B-U-EA"] = serverInfo["B-U-EA"],
             ["B-version"] = serverInfo["B-version"],
-            ["V"] = "851434",
+            ["V"] = "515757",
             ["B-U-level"] = serverInfo["B-U-level"],
             ["B-U-gamemode"] = serverInfo["B-U-gamemode"],
             ["B-U-sguid"] = serverInfo["B-U-sguid"],
@@ -278,9 +275,14 @@ public class TheaterHandler
             ["B-U-elo"] = serverInfo["B-U-elo"],
             ["B-numObservers"] = serverInfo["B-numObservers"],
             ["B-maxObservers"] = serverInfo["B-maxObservers"],
-            ["B-U-Provider"] = serverInfo["B-U-Provider"],
-            ["B-U-gameMod"] = serverInfo["B-U-gameMod"],
-            ["B-U-QueueLength"] = serverInfo["B-U-QueueLength"]
+
+            // Not in R11
+            // ["QP"] = serverInfo["B-U-QueueLength"],
+            // ["B-U-Softcore"] = serverInfo["B-U-Softcore"],
+            // ["B-U-EA"] = serverInfo["B-U-EA"],
+            // ["B-U-Provider"] = serverInfo["B-U-Provider"],
+            // ["B-U-gameMod"] = serverInfo["B-U-gameMod"],
+            // ["B-U-QueueLength"] = serverInfo["B-U-QueueLength"]
         };
 
         var packet = new Packet("GDAT", TheaterTransmissionType.OkResponse, 0, serverInfoResponse);
