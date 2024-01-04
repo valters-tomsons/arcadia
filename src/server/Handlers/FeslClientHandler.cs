@@ -279,9 +279,6 @@ public class FeslClientHandler
 
     private async Task HandleHello(Packet request)
     {
-        _loggerScope.ClientString = request["clientString"];
-        _loggerScope.ClientType = request["clientType"];
-
         var currentTime = DateTime.UtcNow.ToString("MMM-dd-yyyy HH:mm:ss 'UTC'", CultureInfo.InvariantCulture);
         var serverHelloData = new Dictionary<string, object>
                 {
