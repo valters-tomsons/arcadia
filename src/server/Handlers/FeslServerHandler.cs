@@ -10,9 +10,9 @@ using Org.BouncyCastle.Tls;
 
 namespace Arcadia.Handlers;
 
-public class FeslHandler
+public class FeslServerHandler
 {
-    private readonly ILogger<FeslHandler> _logger;
+    private readonly ILogger<FeslServerHandler> _logger;
     private readonly ConnectionLogScope _loggerScope;
     private readonly IOptions<ArcadiaSettings> _settings;
     private readonly SharedCounters _sharedCounters;
@@ -24,7 +24,7 @@ public class FeslHandler
     private readonly Dictionary<string, object> _sessionCache = new();
     private uint _feslTicketId;
 
-    public FeslHandler(IEAConnection conn, ILogger<EAConnection> baseLogger, ILogger<FeslHandler> logger, IOptions<ArcadiaSettings> settings, SharedCounters sharedCounters, SharedCache sharedCache, ConnectionLogScope loggerScope)
+    public FeslServerHandler(IEAConnection conn, ILogger<EAConnection> baseLogger, ILogger<FeslServerHandler> logger, IOptions<ArcadiaSettings> settings, SharedCounters sharedCounters, SharedCache sharedCache, ConnectionLogScope loggerScope)
     {
         _logger = logger;
         _settings = settings;

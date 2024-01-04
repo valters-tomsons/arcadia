@@ -13,7 +13,7 @@ public class TheaterHandlerTests
 {
     private readonly IFixture fixture;
     private readonly Mock<IEAConnection> mockConnection;
-    private readonly TheaterHandler handler;
+    private readonly TheaterClientHandler handler;
 
     private readonly ConcurrentQueue<Packet> responses = new();
 
@@ -27,7 +27,7 @@ public class TheaterHandlerTests
                       .Returns(Task.FromResult(true))
                       .Verifiable();
 
-        handler = fixture.Create<TheaterHandler>();
+        handler = fixture.Create<TheaterClientHandler>();
     }
 
     [Theory]

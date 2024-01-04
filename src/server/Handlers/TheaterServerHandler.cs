@@ -7,9 +7,9 @@ using Microsoft.Extensions.Options;
 
 namespace Arcadia.Handlers;
 
-public class TheaterHandler
+public class TheaterServerHandler
 {
-    private readonly ILogger<TheaterHandler> _logger;
+    private readonly ILogger<TheaterServerHandler> _logger;
     private readonly SharedCounters _sharedCounters;
     private readonly SharedCache _sharedCache;
     private readonly IOptions<ArcadiaSettings> _arcadiaSettings;
@@ -21,7 +21,7 @@ public class TheaterHandler
 
     private int _brackets = 0;
 
-    public TheaterHandler(IEAConnection conn, ILogger<TheaterHandler> logger, SharedCounters sharedCounters, SharedCache sharedCache, IOptions<ArcadiaSettings> arcadiaSettings)
+    public TheaterServerHandler(IEAConnection conn, ILogger<TheaterServerHandler> logger, SharedCounters sharedCounters, SharedCache sharedCache, IOptions<ArcadiaSettings> arcadiaSettings)
     {
         _logger = logger;
         _sharedCounters = sharedCounters;

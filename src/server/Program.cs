@@ -22,7 +22,6 @@ var host = Host.CreateDefaultBuilder()
         
         services
             .Configure<ArcadiaSettings>(config.GetSection(nameof(ArcadiaSettings)))
-            .Configure<FeslSettings>(config.GetSection(nameof(FeslSettings)))
             .Configure<DnsSettings>(config.GetSection(nameof(DnsSettings)))
             .Configure<DebugSettings>(config.GetSection(nameof(DebugSettings)));
 
@@ -35,8 +34,10 @@ var host = Host.CreateDefaultBuilder()
             .AddScoped<ConnectionLogScope>()
             .AddScoped<Rc4TlsCrypto>()
             .AddScoped<IEAConnection, EAConnection>()
-            .AddScoped<FeslHandler>()
-            .AddScoped<TheaterHandler>();
+            .AddScoped<FeslServerHandler>()
+            .AddScoped<FeslClientHandler>()
+            .AddScoped<TheaterServerHandler>()
+            .AddScoped<TheaterClientHandler>();
 
         services
             .AddHostedService<DnsHostedService>()
@@ -60,8 +61,7 @@ var host = Host.CreateDefaultBuilder()
             {
                 services.Configure<LoggerFilterOptions>(x =>
                 {
-                    x.AddFilter("Arcadia.Handlers.FeslHandler", LogLevel.Trace);
-                    x.AddFilter("Arcadia.Handlers.TheaterHandler", LogLevel.Trace);
+                    x.AddFilter("Arcadia.Handlers.*", LogLevel.Trace);
                     x.AddFilter("Arcadia.EA.EAConnection", LogLevel.Trace);
                 });
 
