@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
-using Arcadia.EA;
+using Arcadia.EA.Constants;
 using Arcadia.Handlers;
 using Arcadia.Internal;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,14 +19,12 @@ public class TheaterHostedService : IHostedService
     
     private readonly IServiceScopeFactory _scopeFactory;
 
-    private readonly TcpListener _tcpListener;
+    private readonly ConcurrentBag<TcpListener> _listeners = new();
     private readonly ConcurrentBag<Task> _activeConnections = new();
 
     private CancellationTokenSource _cts = null!;
 
-#pragma warning disable IDE0052 // Remove unread private members
-    private Task? _tcpServer;
-#pragma warning restore IDE0052 // Remove unread private members
+    private ConcurrentBag<Task?> _servers = new();
 
     public TheaterHostedService(ILogger<TheaterHostedService> logger, IOptions<ArcadiaSettings> arcadiaSettings, IServiceScopeFactory scopeFactory)
     {
@@ -34,37 +32,52 @@ public class TheaterHostedService : IHostedService
         _scopeFactory = scopeFactory;
 
         _arcadiaSettings = arcadiaSettings.Value;
-
-        var endpoint = new IPEndPoint(IPAddress.Parse(_arcadiaSettings.ListenAddress), _arcadiaSettings.TheaterPort);
-        _tcpListener = new TcpListener(endpoint);
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-        _tcpListener.Start();
-        _tcpServer = Task.Run(async () =>
+        var listeningPorts = new int[] {
+            Beach.TheaterPort,
+            BadCompany.TheaterPort,
+            Rome.TheaterClientPortPs3,
+            Rome.TheaterServerPortPc
+        };
+
+        foreach (var port in listeningPorts)
         {
-            _logger.LogInformation("Theater listening on {address}:{port}", _arcadiaSettings.ListenAddress, _arcadiaSettings.TheaterPort);
-
-            while (!_cts.Token.IsCancellationRequested)
-            {
-                var tcpClient = await _tcpListener.AcceptTcpClientAsync(_cts.Token);
-                var clientEndpoint = tcpClient.Client.RemoteEndPoint!.ToString()!;
-
-                _logger.LogInformation("Opening TCP connection from: {clientEndpoint}", clientEndpoint);
-
-                var connection = Task.Run(async () => await HandleClient(tcpClient, clientEndpoint), _cts.Token);
-                _activeConnections.Add(connection);
-            }
-        }, _cts.Token);
+            CreateTheaterPortListener(port);
+        }
 
         return Task.CompletedTask;
     }
 
-    private async Task HandleClient(TcpClient tcpClient, string clientEndpoint)
+    private void CreateTheaterPortListener(int listenerPort)
     {
+        var server = Task.Run(async () =>
+        {
+            var listener = new TcpListener(IPAddress.Parse(_arcadiaSettings.ListenAddress), listenerPort);
+            listener.Start();
+            _logger.LogInformation("Theater listening on {address}:{port}", _arcadiaSettings.ListenAddress, listenerPort);
+            _listeners.Add(listener);
+
+            while (!_cts.Token.IsCancellationRequested)
+            {
+                var tcpClient = await listener.AcceptTcpClientAsync(_cts.Token);
+                var connection = Task.Run(async () => await HandleConnection(tcpClient, listenerPort), _cts.Token);
+                _activeConnections.Add(connection);
+            }
+        });
+
+        _servers.Add(server);
+    }
+
+    private async Task HandleConnection(TcpClient tcpClient, int connectionPort)
+    {
+        var clientEndpoint = tcpClient.Client.RemoteEndPoint?.ToString()! ?? throw new NullReferenceException("ClientEndpoint cannot be null!");
+        _logger.LogInformation("Opening connection from: {clientEndpoint}", clientEndpoint);
+
         using var scope = _scopeFactory.CreateAsyncScope();
 
         var scopeData = scope.ServiceProvider.GetRequiredService<ConnectionLogScope>();
@@ -74,15 +87,28 @@ public class TheaterHostedService : IHostedService
         _logger.LogDebug("Creating new connectionId: {connId}", scopeData.ConnectionId);
 
         var networkStream = tcpClient.GetStream();
-        var handler = scope.ServiceProvider.GetRequiredService<TheaterHandler>();
-        await handler.HandleClientConnection(networkStream, clientEndpoint);
+
+        switch (connectionPort)
+        {
+            case Beach.TheaterPort:
+            case BadCompany.TheaterPort:
+            case Rome.TheaterClientPortPs3:
+                var clientHandler = scope.ServiceProvider.GetRequiredService<TheaterClientHandler>();
+                await clientHandler.HandleClientConnection(networkStream, clientEndpoint);
+                break;
+            case Rome.TheaterServerPortPc:
+                var serverHandler = scope.ServiceProvider.GetRequiredService<TheaterServerHandler>();
+                await serverHandler.HandleClientConnection(networkStream, clientEndpoint);
+                break;
+        }
+
+        tcpClient.Close();
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
         _cts.Cancel();
-        _tcpListener.Stop();
-
+        _listeners.ToList().ForEach(x => x.Stop());
         return Task.CompletedTask;
     }
 }

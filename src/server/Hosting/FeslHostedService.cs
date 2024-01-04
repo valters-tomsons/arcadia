@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Net;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Tls;
 
@@ -20,7 +21,6 @@ public class FeslHostedService : IHostedService
     private readonly ILogger<FeslHostedService> _logger;
     
     private readonly ArcadiaSettings _arcadiaSettings;
-    private readonly FeslSettings _feslSettings;
 
     private readonly ProtoSSL _certGenerator;
     private readonly IServiceScopeFactory _scopeFactory;
@@ -34,44 +34,42 @@ public class FeslHostedService : IHostedService
 
     private ConcurrentBag<Task?> _servers = new();
 
-    public FeslHostedService(ILogger<FeslHostedService> logger, IOptions<ArcadiaSettings> arcadiaSettings,
-        IOptions<FeslSettings> feslSettings, ProtoSSL certGenerator, IServiceScopeFactory scopeFactory)
+    public FeslHostedService(ILogger<FeslHostedService> logger, IOptions<ArcadiaSettings> arcadiaSettings, ProtoSSL certGenerator, IServiceScopeFactory scopeFactory)
     {
         _logger = logger;
-        
-        _arcadiaSettings = arcadiaSettings.Value;
-        _feslSettings = feslSettings.Value;
-
         _certGenerator = certGenerator;
         _scopeFactory = scopeFactory;
-
+        _arcadiaSettings = arcadiaSettings.Value;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        PrepareCertificate();
+        const string IssuerDN = "CN=OTG3 Certificate Authority, C=US, ST=California, L=Redwood City, O=\"Electronic Arts, Inc.\", OU=Online Technology Group, emailAddress=dirtysock-contact@ea.com";
+        const string SubjectDN = "C=US, ST=California, O=\"Electronic Arts, Inc.\", OU=Online Technology Group, CN=fesl.ea.com, emailAddress=fesl@ea.com";
+        (_feslCertKey, _feslPubCert) = _certGenerator.GenerateVulnerableCert(IssuerDN, SubjectDN);
 
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-        CreateFeslPortListener(_feslSettings.ServerPort);
-        CreateFeslPortListener(Rome.FeslServerPortPc);
+        var listeningPorts = new int[] {
+            Beach.FeslPort,
+            BadCompany.FeslPort,
+            Rome.FeslClientPortPs3,
+            Rome.FeslServerPortPc
+        };
+
+        foreach (var port in listeningPorts)
+        {
+            CreateFeslPortListener(port);
+        }
 
         return Task.CompletedTask;
-    }
-
-    private void PrepareCertificate()
-    {
-        var IssuerDN = "CN=OTG3 Certificate Authority, C=US, ST=California, L=Redwood City, O=\"Electronic Arts, Inc.\", OU=Online Technology Group, emailAddress=dirtysock-contact@ea.com";
-        var SubjectDN = "C=US, ST=California, O=\"Electronic Arts, Inc.\", OU=Online Technology Group, CN=fesl.ea.com, emailAddress=fesl@ea.com";
-
-        (_feslCertKey, _feslPubCert) = _certGenerator.GenerateVulnerableCert(IssuerDN, SubjectDN);
     }
 
     private void CreateFeslPortListener(int listenerPort)
     {
         var serverFesl = Task.Run(async () =>
         {
-            var listener = new TcpListener(System.Net.IPAddress.Parse(_arcadiaSettings.ListenAddress), listenerPort);
+            var listener = new TcpListener(IPAddress.Parse(_arcadiaSettings.ListenAddress), listenerPort);
             listener.Start();
             _logger.LogInformation("Fesl listening on {address}:{port}", _arcadiaSettings.ListenAddress, listenerPort);
             _listeners.Add(listener);
@@ -79,21 +77,20 @@ public class FeslHostedService : IHostedService
             while (!_cts.Token.IsCancellationRequested)
             {
                 var tcpClient = await listener.AcceptTcpClientAsync(_cts.Token);
-                var clientEndpoint = tcpClient.Client.RemoteEndPoint!.ToString()!;
-
-                _logger.LogInformation("Opening connection from: {clientEndpoint}", clientEndpoint);
-
-                var connection = Task.Run(async () => await HandleClient(tcpClient, clientEndpoint), _cts.Token);
+                var connection = Task.Run(async () => await HandleConnection(tcpClient, listenerPort), _cts.Token);
                 _activeConnections.Add(connection);
             }
         }, _cts.Token);
+
         _servers.Add(serverFesl);
     }
 
-    private async Task HandleClient(TcpClient tcpClient, string clientEndpoint)
+    private async Task HandleConnection(TcpClient tcpClient, int connectionPort)
     {
-        using var scope = _scopeFactory.CreateAsyncScope();
+        var clientEndpoint = tcpClient.Client.RemoteEndPoint?.ToString()! ?? throw new NullReferenceException("ClientEndpoint cannot be null!");
+        _logger.LogInformation("Opening connection from: {clientEndpoint}", clientEndpoint);
 
+        using var scope = _scopeFactory.CreateAsyncScope();
         var scopeData = scope.ServiceProvider.GetRequiredService<ConnectionLogScope>();
         scopeData.ClientEndpoint = clientEndpoint;
 
@@ -105,24 +102,23 @@ public class FeslHostedService : IHostedService
         var crypto = scope.ServiceProvider.GetRequiredService<Rc4TlsCrypto>();
         var connTls = new Ssl3TlsServer(crypto, _feslPubCert, _feslCertKey);
         var serverProtocol = new TlsServerProtocol(networkStream);
+        serverProtocol.Accept(connTls);
 
-        try
+        switch (connectionPort)
         {
-            serverProtocol.Accept(connTls);
+            case Beach.FeslPort:
+            case BadCompany.FeslPort:
+            case Rome.FeslClientPortPs3:
+                var clientHandler = scope.ServiceProvider.GetRequiredService<FeslClientHandler>();
+                await clientHandler.HandleClientConnection(serverProtocol, clientEndpoint);
+                break;
+            case Rome.FeslServerPortPc:
+                var serverHandler = scope.ServiceProvider.GetRequiredService<FeslServerHandler>();
+                await serverHandler.HandleClientConnection(serverProtocol, clientEndpoint);
+                break;
         }
-        catch (Exception e)
-        {
-            _logger.LogError("Failed to accept connection: {message}", e.Message);
 
-            serverProtocol.Flush();
-            serverProtocol.Close();
-            connTls.Cancel();
-
-            return;
-        }
-
-        var handler = scope.ServiceProvider.GetRequiredService<FeslHandler>();
-        await handler.HandleClientConnection(serverProtocol, clientEndpoint);
+        tcpClient.Close();
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
