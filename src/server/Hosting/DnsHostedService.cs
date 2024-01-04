@@ -12,8 +12,7 @@ public class DnsHostedService : IHostedService
     private readonly MasterFile? _masterFile;
     private readonly DnsServer? _server;
 
-    public DnsHostedService(ILogger<DnsHostedService> logger, IOptions<ArcadiaSettings> arcadiaSettings,
-        IOptions<FeslSettings> feslSettings, IOptions<DnsSettings> dnsSettings)
+    public DnsHostedService(ILogger<DnsHostedService> logger, IOptions<ArcadiaSettings> arcadiaSettings, IOptions<DnsSettings> dnsSettings)
     {
         _logger = logger;
 
@@ -21,21 +20,20 @@ public class DnsHostedService : IHostedService
         if (!options.EnableDns) return;
 
         var arcadia = arcadiaSettings.Value;
-        var fesl = feslSettings.Value;
 
         _masterFile = new MasterFile();
         _server = new DnsServer(_masterFile, "1.1.1.1", port: options.DnsPort);
 
         // Arcadia services
-        _masterFile.AddIPAddressResourceRecord("theater.ps3.arcadia", options.FeslAddress);
+        _masterFile.AddIPAddressResourceRecord(options.TheaterAddress, options.ArcadiaAddress);
 
         // Override EA PS3 backends
-        _masterFile.AddIPAddressResourceRecord("beach-ps3.fesl.ea.com", options.FeslAddress);
-        _masterFile.AddIPAddressResourceRecord("beach-ps3.theater.ea.com", options.FeslAddress);
-        _masterFile.AddIPAddressResourceRecord("bfbc-ps3.fesl.ea.com", options.FeslAddress);
-        _masterFile.AddIPAddressResourceRecord("bfbc-ps3.theater.ea.com", options.FeslAddress);
-        _masterFile.AddIPAddressResourceRecord("bfbc2-ps3.fesl.ea.com", options.FeslAddress);
-        _masterFile.AddIPAddressResourceRecord("bfbc2-ps3.theater.ea.com", options.FeslAddress);
+        _masterFile.AddIPAddressResourceRecord("beach-ps3.fesl.ea.com", options.ArcadiaAddress);
+        _masterFile.AddIPAddressResourceRecord("beach-ps3.theater.ea.com", options.ArcadiaAddress);
+        _masterFile.AddIPAddressResourceRecord("bfbc-ps3.fesl.ea.com", options.ArcadiaAddress);
+        _masterFile.AddIPAddressResourceRecord("bfbc-ps3.theater.ea.com", options.ArcadiaAddress);
+        _masterFile.AddIPAddressResourceRecord("bfbc2-ps3.fesl.ea.com", options.ArcadiaAddress);
+        _masterFile.AddIPAddressResourceRecord("bfbc2-ps3.theater.ea.com", options.ArcadiaAddress);
 
         // Block EA Telemetry (breaks BFBC1)
         // _masterFile.AddIPAddressResourceRecord("messaging.ea.com", "127.0.0.1");

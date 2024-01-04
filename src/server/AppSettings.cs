@@ -5,26 +5,22 @@ namespace Arcadia;
 public record ArcadiaSettings
 {
     public string ListenAddress { get; init; } = System.Net.IPAddress.Loopback.ToString();
-    public string TheaterAddress { get; init; } = "theater.ps3.arcadia";
-    public int TheaterPort { get; init; } = Rome.TheaterServerPortPc;
     public string GameServerAddress { get; init; } = "gameserver1.ps3.arcadia";
     public int GameServerPort { get; init; } = 1003;
-}
 
-public record FeslSettings
-{
-    // *must* match domain of the original server, otherwise the client will reject the certificate
-    // (this is the domain of the original server, not the proxy)
-    public string ServerAddress { get; init; } = "beach-ps3.fesl.ea.com";
+    // TODO: Get rid of this?
+    public string TheaterAddress { get; init; } = "theater.ps3.arcadia";
 
-    // *must* match port of the original server, otherwise the client won't be able to connect
-    public int ServerPort { get; init; } = Rome.FeslClientPortPs3;
+    // TODO: Get rid of this, we'll just listen on all supported ports
+    // Games connect to the port sent by Fesl HELLO, game servers seem to connect to hard-coded ports
+    public int TheaterPort { get; init; } = Rome.TheaterServerPortPc;
 }
 
 public record DnsSettings
 {
     public bool EnableDns { get; init; }
-    public string FeslAddress { get; init; } = string.Empty;
+    public string ArcadiaAddress { get; init; } = string.Empty;
+    public string TheaterAddress { get; init; } = "theater.ps3.arcadia";
     public int DnsPort { get; init; } = 53;
 }
 
