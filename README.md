@@ -14,7 +14,7 @@ Currently, enough is "implemented" to allow accessing the game's tutorial. When 
 1. Set IP/Hosts switches to:
 
 ```
-bfbc2-ps3.fesl.ea.com=127.0.0.1&&theater.ps3.arcadia=127.0.0.1
+bfbc2-ps3.fesl.ea.com=127.0.0.1&&beach-ps3.fesl.ea.com&&bfbc-ps3.fesl.ea.com&&theater.ps3.arcadia=127.0.0.1
 ```
 
 ## Special Thanks
