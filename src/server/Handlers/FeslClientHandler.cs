@@ -290,7 +290,7 @@ public class FeslClientHandler
                     { "activityTimeoutSecs", 0 },
                     { "curTime", currentTime },
                     { "theaterIp", _settings.Value.TheaterAddress },
-                    { "theaterPort", GetTheaterPort() }
+                    { "theaterPort", (int)GetTheaterPort() }
                 };
 
         var helloPacket = new Packet("fsys", FeslTransmissionType.SinglePacketResponse, request.Id, serverHelloData);
