@@ -21,6 +21,7 @@ bfbc2-ps3.fesl.ea.com=127.0.0.1&&beach-ps3.fesl.ea.com&&bfbc-ps3.fesl.ea.com&&th
 
 * *[cetteup](https://github.com/cetteup)* - lot of proxy stuff, lots of knowledge of ea systems, lots of captures and for fixing my ea packet implementation! Thanks! 
 * *And799* for devmenu and general frostbite knowledge
+* Aim4kill for the great ProtoSSL write-up
 * Battlefield Modding Discord server
 * PS Rewired `#packet-captures` channel
 
