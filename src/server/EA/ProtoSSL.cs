@@ -39,6 +39,7 @@ public class ProtoSSL
 
         if (_certCache.TryGetValue(cacheKey, out var cacheHit))
         {
+            // !TODO: New connections will break after running 10 years without a restart 
             return cacheHit;
         }
 
