@@ -14,23 +14,18 @@ namespace Arcadia.Hosting;
 public class TheaterHostedService : IHostedService
 {
     private readonly ILogger<TheaterHostedService> _logger;
-
-    private readonly ArcadiaSettings _arcadiaSettings;
-    
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly ArcadiaSettings _arcadiaSettings;
 
     private readonly ConcurrentBag<TcpListener> _listeners = new();
     private readonly ConcurrentBag<Task> _activeConnections = new();
-
+    private readonly ConcurrentBag<Task?> _servers = new();
     private CancellationTokenSource _cts = null!;
-
-    private ConcurrentBag<Task?> _servers = new();
 
     public TheaterHostedService(ILogger<TheaterHostedService> logger, IOptions<ArcadiaSettings> arcadiaSettings, IServiceScopeFactory scopeFactory)
     {
         _logger = logger;
         _scopeFactory = scopeFactory;
-
         _arcadiaSettings = arcadiaSettings.Value;
     }
 

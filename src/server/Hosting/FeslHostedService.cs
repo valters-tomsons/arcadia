@@ -19,35 +19,29 @@ namespace Arcadia.Hosting;
 public class FeslHostedService : IHostedService
 {
     private readonly ILogger<FeslHostedService> _logger;
-    
     private readonly ArcadiaSettings _arcadiaSettings;
-
-    private readonly ProtoSSL _certGenerator;
     private readonly IServiceScopeFactory _scopeFactory;
 
+    private readonly AsymmetricKeyParameter _feslCertKey;
+    private readonly Certificate _feslPubCert;
     private readonly ConcurrentBag<TcpListener> _listeners = new();
     private readonly ConcurrentBag<Task> _activeConnections = new();
-
+    private readonly ConcurrentBag<Task?> _servers = new();
     private CancellationTokenSource _cts = null!;
-    private AsymmetricKeyParameter _feslCertKey = null!;
-    private Certificate _feslPubCert = null!;
-
-    private ConcurrentBag<Task?> _servers = new();
 
     public FeslHostedService(ILogger<FeslHostedService> logger, IOptions<ArcadiaSettings> arcadiaSettings, ProtoSSL certGenerator, IServiceScopeFactory scopeFactory)
     {
         _logger = logger;
-        _certGenerator = certGenerator;
         _scopeFactory = scopeFactory;
         _arcadiaSettings = arcadiaSettings.Value;
+
+        const string IssuerDN = "CN=OTG3 Certificate Authority, C=US, ST=California, L=Redwood City, O=\"Electronic Arts, Inc.\", OU=Online Technology Group, emailAddress=dirtysock-contact@ea.com";
+        const string SubjectDN = "C=US, ST=California, O=\"Electronic Arts, Inc.\", OU=Online Technology Group, CN=fesl.ea.com, emailAddress=fesl@ea.com";
+        (_feslCertKey, _feslPubCert) = certGenerator.GenerateVulnerableCert(IssuerDN, SubjectDN);
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        const string IssuerDN = "CN=OTG3 Certificate Authority, C=US, ST=California, L=Redwood City, O=\"Electronic Arts, Inc.\", OU=Online Technology Group, emailAddress=dirtysock-contact@ea.com";
-        const string SubjectDN = "C=US, ST=California, O=\"Electronic Arts, Inc.\", OU=Online Technology Group, CN=fesl.ea.com, emailAddress=fesl@ea.com";
-        (_feslCertKey, _feslPubCert) = _certGenerator.GenerateVulnerableCert(IssuerDN, SubjectDN);
-
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
         var listeningPorts = new int[] {
