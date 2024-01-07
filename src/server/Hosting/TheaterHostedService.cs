@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
-using Arcadia.EA.Constants;
+using Arcadia.EA.Ports;
 using Arcadia.Handlers;
 using Arcadia.Internal;
 using Microsoft.Extensions.DependencyInjection;
@@ -39,10 +39,10 @@ public class TheaterHostedService : IHostedService
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
         var listeningPorts = new int[] {
-            Beach.TheaterPort,
-            BadCompany.TheaterPort,
-            Rome.TheaterClientPortPs3,
-            Rome.TheaterServerPortPc
+            (int)TheaterGamePort.BeachPS3,
+            (int)TheaterGamePort.BadCompanyPS3,
+            (int)TheaterGamePort.RomePS3,
+            (int)TheaterServerPort.RomePC
         };
 
         foreach (var port in listeningPorts)
@@ -90,13 +90,14 @@ public class TheaterHostedService : IHostedService
 
         switch (connectionPort)
         {
-            case Beach.TheaterPort:
-            case BadCompany.TheaterPort:
-            case Rome.TheaterClientPortPs3:
+            case (int)TheaterGamePort.BeachPS3:
+            case (int)TheaterGamePort.RomePS3:
+            case (int)TheaterGamePort.BadCompanyPS3:
                 var clientHandler = scope.ServiceProvider.GetRequiredService<TheaterClientHandler>();
                 await clientHandler.HandleClientConnection(networkStream, clientEndpoint);
                 break;
-            case Rome.TheaterServerPortPc:
+
+            case (int)TheaterServerPort.RomePC:
                 var serverHandler = scope.ServiceProvider.GetRequiredService<TheaterServerHandler>();
                 await serverHandler.HandleClientConnection(networkStream, clientEndpoint);
                 break;
