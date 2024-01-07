@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using System.Net.Sockets;
 using Arcadia.EA;
-using Arcadia.EA.Constants;
 using Arcadia.Handlers;
 using Arcadia.Internal;
 using Arcadia.Tls;
@@ -13,6 +12,7 @@ using Microsoft.Extensions.Options;
 using System.Net;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Tls;
+using Arcadia.EA.Ports;
 
 namespace Arcadia.Hosting;
 
@@ -51,10 +51,10 @@ public class FeslHostedService : IHostedService
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
         var listeningPorts = new int[] {
-            Beach.FeslPort,
-            BadCompany.FeslPort,
-            Rome.FeslClientPortPs3,
-            Rome.FeslServerPortPc
+            (int)FeslGamePort.BeachPS3,
+            (int)FeslGamePort.BadCompanyPS3,
+            (int)FeslGamePort.RomePS3,
+            (int)FeslServerPort.RomePC
         };
 
         foreach (var port in listeningPorts)
@@ -106,13 +106,14 @@ public class FeslHostedService : IHostedService
 
         switch (connectionPort)
         {
-            case Beach.FeslPort:
-            case BadCompany.FeslPort:
-            case Rome.FeslClientPortPs3:
+            case (int)FeslGamePort.BeachPS3:
+            case (int)FeslGamePort.RomePS3:
+            case (int)FeslGamePort.BadCompanyPS3:
                 var clientHandler = scope.ServiceProvider.GetRequiredService<FeslClientHandler>();
                 await clientHandler.HandleClientConnection(serverProtocol, clientEndpoint);
                 break;
-            case Rome.FeslServerPortPc:
+
+            case (int)FeslServerPort.RomePC:
                 var serverHandler = scope.ServiceProvider.GetRequiredService<FeslServerHandler>();
                 await serverHandler.HandleClientConnection(serverProtocol, clientEndpoint);
                 break;

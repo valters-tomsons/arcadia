@@ -1,4 +1,4 @@
-using Arcadia.EA.Constants;
+using Arcadia.EA.Ports;
 
 namespace Arcadia;
 
@@ -13,7 +13,7 @@ public record ArcadiaSettings
 
     // TODO: Get rid of this, we'll just listen on all supported ports
     // Games connect to the port sent by Fesl HELLO, game servers seem to connect to hard-coded ports
-    public int TheaterPort { get; init; } = Rome.TheaterServerPortPc;
+    public int TheaterPort { get; init; } = (int)TheaterServerPort.RomePC;
 }
 
 public record DnsSettings
