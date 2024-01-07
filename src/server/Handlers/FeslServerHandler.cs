@@ -1,7 +1,7 @@
 using System.Globalization;
 using Arcadia.EA;
 using Arcadia.EA.Constants;
-using Arcadia.Internal;
+using Arcadia.EA.Ports;
 using Arcadia.PSN;
 using Arcadia.Storage;
 using Microsoft.Extensions.Logging;
@@ -13,7 +13,6 @@ namespace Arcadia.Handlers;
 public class FeslServerHandler
 {
     private readonly ILogger<FeslServerHandler> _logger;
-    private readonly ConnectionLogScope _loggerScope;
     private readonly IOptions<ArcadiaSettings> _settings;
     private readonly SharedCounters _sharedCounters;
     private readonly SharedCache _sharedCache;
@@ -24,13 +23,12 @@ public class FeslServerHandler
     private readonly Dictionary<string, object> _sessionCache = new();
     private uint _feslTicketId;
 
-    public FeslServerHandler(IEAConnection conn, ILogger<EAConnection> baseLogger, ILogger<FeslServerHandler> logger, IOptions<ArcadiaSettings> settings, SharedCounters sharedCounters, SharedCache sharedCache, ConnectionLogScope loggerScope)
+    public FeslServerHandler(IEAConnection conn, ILogger<FeslServerHandler> logger, IOptions<ArcadiaSettings> settings, SharedCounters sharedCounters, SharedCache sharedCache)
     {
         _logger = logger;
         _settings = settings;
         _sharedCounters = sharedCounters;
         _sharedCache = sharedCache;
-        _loggerScope = loggerScope;
         _conn = conn;
 
         _handlers = new Dictionary<string, Func<Packet, Task>>()
@@ -288,9 +286,9 @@ public class FeslServerHandler
                     { "domainPartition.subDomain", "BEACH" },
                     { "TXN", "Hello" },
                     { "activityTimeoutSecs", 0 },
-                    { "curTime", currentTime},
+                    { "curTime", currentTime },
                     { "theaterIp", _settings.Value.TheaterAddress },
-                    { "theaterPort", _settings.Value.TheaterPort }
+                    { "theaterPort", (int)TheaterServerPort.RomePC }
                 };
 
         var helloPacket = new Packet("fsys", FeslTransmissionType.SinglePacketResponse, request.Id, serverHelloData);

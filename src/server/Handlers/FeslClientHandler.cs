@@ -1,7 +1,7 @@
 using System.Globalization;
 using Arcadia.EA;
 using Arcadia.EA.Constants;
-using Arcadia.Internal;
+using Arcadia.EA.Ports;
 using Arcadia.PSN;
 using Arcadia.Storage;
 using Microsoft.Extensions.Logging;
@@ -13,7 +13,6 @@ namespace Arcadia.Handlers;
 public class FeslClientHandler
 {
     private readonly ILogger<FeslClientHandler> _logger;
-    private readonly ConnectionLogScope _loggerScope;
     private readonly IOptions<ArcadiaSettings> _settings;
     private readonly SharedCounters _sharedCounters;
     private readonly SharedCache _sharedCache;
@@ -22,15 +21,15 @@ public class FeslClientHandler
     private readonly Dictionary<string, Func<Packet, Task>> _handlers;
 
     private readonly Dictionary<string, object> _sessionCache = new();
+    private FeslGamePort _servicePort;
     private uint _feslTicketId;
 
-    public FeslClientHandler(IEAConnection conn, ILogger<EAConnection> baseLogger, ILogger<FeslClientHandler> logger, IOptions<ArcadiaSettings> settings, SharedCounters sharedCounters, SharedCache sharedCache, ConnectionLogScope loggerScope)
+    public FeslClientHandler(IEAConnection conn, ILogger<FeslClientHandler> logger, IOptions<ArcadiaSettings> settings, SharedCounters sharedCounters, SharedCache sharedCache)
     {
         _logger = logger;
         _settings = settings;
         _sharedCounters = sharedCounters;
         _sharedCache = sharedCache;
-        _loggerScope = loggerScope;
         _conn = conn;
 
         _handlers = new Dictionary<string, Func<Packet, Task>>()
@@ -59,8 +58,9 @@ public class FeslClientHandler
         };
     }
 
-    public async Task HandleClientConnection(TlsServerProtocol tlsProtocol, string clientEndpoint)
+    public async Task HandleClientConnection(TlsServerProtocol tlsProtocol, string clientEndpoint, FeslGamePort servicePort)
     {
+        _servicePort = servicePort;
         _conn.InitializeSecure(tlsProtocol, clientEndpoint);
         await foreach (var packet in _conn.StartConnection())
         {
@@ -288,14 +288,30 @@ public class FeslClientHandler
                     { "domainPartition.subDomain", "BEACH" },
                     { "TXN", "Hello" },
                     { "activityTimeoutSecs", 0 },
-                    { "curTime", currentTime},
+                    { "curTime", currentTime },
                     { "theaterIp", _settings.Value.TheaterAddress },
-                    { "theaterPort", _settings.Value.TheaterPort }
+                    { "theaterPort", GetTheaterPort() }
                 };
 
         var helloPacket = new Packet("fsys", FeslTransmissionType.SinglePacketResponse, request.Id, serverHelloData);
         await _conn.SendPacket(helloPacket);
         await SendMemCheck();
+    }
+
+    private TheaterGamePort GetTheaterPort()
+    {
+        switch (_servicePort)
+        {
+            case FeslGamePort.RomePS3:
+                return TheaterGamePort.RomePS3;
+            case FeslGamePort.BeachPS3:
+                return TheaterGamePort.BeachPS3;
+            case FeslGamePort.BadCompanyPS3:
+                return TheaterGamePort.BadCompanyPS3;
+            default:
+                _logger.LogError("Unknown FESL service port: {port}", (int)_servicePort);
+                return TheaterGamePort.BeachPS3;
+        }
     }
 
     private async Task HandleGetTos(Packet request)
