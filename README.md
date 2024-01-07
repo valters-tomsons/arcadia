@@ -28,3 +28,4 @@ bfbc2-ps3.fesl.ea.com=127.0.0.1&&beach-ps3.fesl.ea.com&&bfbc-ps3.fesl.ea.com&&th
 
 * https://github.com/Aim4kill/Bug_OldProtoSSL
 * https://github.com/Tratos/BFBC2_MasterServer
+* https://github.com/GrzybDev/BFBC2_MasterServer
