@@ -34,10 +34,7 @@ public class FeslHostedService : IHostedService
         _logger = logger;
         _scopeFactory = scopeFactory;
         _arcadiaSettings = arcadiaSettings.Value;
-
-        const string IssuerDN = "CN=OTG3 Certificate Authority, C=US, ST=California, L=Redwood City, O=\"Electronic Arts, Inc.\", OU=Online Technology Group, emailAddress=dirtysock-contact@ea.com";
-        const string SubjectDN = "C=US, ST=California, O=\"Electronic Arts, Inc.\", OU=Online Technology Group, CN=fesl.ea.com, emailAddress=fesl@ea.com";
-        (_feslCertKey, _feslPubCert) = certGenerator.GenerateVulnerableCert(IssuerDN, SubjectDN);
+        (_feslCertKey, _feslPubCert) = certGenerator.GetFeslEaCert();
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
