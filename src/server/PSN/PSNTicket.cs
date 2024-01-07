@@ -14,7 +14,6 @@ public record PSNTicket
     public string Domain { get; init; }
     public string ServiceId { get; init; }
 
-
     public PSNTicket(TicketData[] ticketData)
     {
         TicketId = ulong.Parse(Encoding.UTF8.GetString((ticketData[0] as BinaryData).Value).TrimEnd('\0'));
