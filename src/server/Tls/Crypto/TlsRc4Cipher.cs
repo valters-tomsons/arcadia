@@ -9,6 +9,7 @@ namespace Arcadia.Tls.Crypto;
 
 /// <summary>
 /// A generic SSL 3.0 RC4 cipher
+/// Original code from: https://github.com/zivillian/ism7mqtt
 /// </summary>
 public class TlsRc4Cipher : TlsCipher
 {

@@ -5,6 +5,9 @@ using Org.BouncyCastle.Tls.Crypto.Impl.BC;
 
 namespace Arcadia.Tls.Crypto;
 
+/// <summary>
+/// Original code from: https://github.com/zivillian/ism7mqtt
+/// </summary>
 public class Rc4TlsCrypto : BcTlsCrypto
 {
     private readonly bool _writeSslKeyLog;
