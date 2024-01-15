@@ -279,6 +279,11 @@ public class FeslClientHandler
 
     private async Task HandleHello(Packet request)
     {
+        if(request["clientType"] == "server")
+        {
+            throw new NotSupportedException("Server tried connecting to a client port!");
+        }
+
         var currentTime = DateTime.UtcNow.ToString("MMM-dd-yyyy HH:mm:ss 'UTC'", CultureInfo.InvariantCulture);
         var serverHelloData = new Dictionary<string, object>
                 {
