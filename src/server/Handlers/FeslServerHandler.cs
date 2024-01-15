@@ -2,7 +2,6 @@ using System.Globalization;
 using Arcadia.EA;
 using Arcadia.EA.Constants;
 using Arcadia.EA.Ports;
-using Arcadia.PSN;
 using Arcadia.Storage;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -36,14 +35,11 @@ public class FeslServerHandler
             ["fsys/Hello"] = HandleHello,
             ["fsys/MemCheck"] = HandleMemCheck,
             ["fsys/GetPingSites"] = HandleGetPingSites,
-            ["pnow/Start"] = HandlePlayNow,
-            ["acct/NuPS3Login"] = HandleNuPs3Login,
             ["acct/NuLogin"] = HandleNuLogin,
             ["acct/NuGetPersonas"] = HandleNuGetPersonas,
             ["acct/NuLoginPersona"] = HandleNuLoginPersona,
             ["acct/NuGetTos"] = HandleGetTos,
             ["acct/GetTelemetryToken"] = HandleTelemetryToken,
-            ["acct/NuPS3AddAccount"] = HandleAddAccount,
             ["acct/NuLookupUserInfo"] = HandleLookupUserInfo,
             ["acct/NuGetEntitlements"] = HandleNuGetEntitlements,
             ["acct/NuGrantEntitlement"] = HandleNuGrantEntitlement,
@@ -92,40 +88,6 @@ public class FeslServerHandler
 
         var packet = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
         await _conn.SendPacket(packet);
-    }
-
-    private async Task HandlePlayNow(Packet request)
-    {
-        var servers = _sharedCache.ListServersGIDs();
-        var serverData = _sharedCache.GetGameServerDataByGid(servers.First());
-        var pnowId = _sharedCounters.GetNextPnowId();
-
-        var data1 = new Dictionary<string, object>
-        {
-            { "TXN", "Start" },
-            { "id.id", pnowId },
-            { "id.partition", "/ps3/BEACH" },
-        };
-
-        var packet1 = new Packet("pnow", FeslTransmissionType.SinglePacketResponse, request.Id, data1);
-        await _conn.SendPacket(packet1);
-
-        var data2 = new Dictionary<string, object>
-        {
-            { "TXN", "Status" },
-            { "id.id", pnowId },
-            { "id.partition", "/ps3/BEACH" },
-            { "sessionState", "COMPLETE" },
-            { "props.{}", 3 },
-            { "props.{resultType}", "JOIN" },
-            { "props.{avgFit}", "0.8182313914386985" },
-            { "props.{games}.[]", 1 },
-            { "props.{games}.0.gid", serverData["GID"] },
-            { "props.{games}.0.lid", serverData["LID"] }
-        };
-
-        var packet2 = new Packet("pnow", FeslTransmissionType.SinglePacketResponse, request.Id, data2);
-        await _conn.SendPacket(packet2);
     }
 
     private async Task HandleGetRecord(Packet request)
@@ -381,86 +343,6 @@ public class FeslServerHandler
 
         var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
         await _conn.SendPacket(packet);
-    }
-
-    private async Task HandleNuPs3Login(Packet request)
-    {
-        // var tosAccepted = request.DataDict.TryGetValue("tosVersion", out var tosAcceptedValue);
-        // if (false)
-        // {
-        //     loginResponseData.Add("TXN", request.Type);
-        //     loginResponseData.Add("localizedMessage", "The password the user specified is incorrect");
-        //     loginResponseData.Add("errorContainer.[]", "0");
-        //     loginResponseData.Add("errorCode", "122");
-        // }
-
-        // if (!tosAccepted || string.IsNullOrEmpty(tosAcceptedValue as string))
-        // {
-        //     loginResponseData.Add("TXN", request.Type);
-        //     loginResponseData.Add( "localizedMessage", "The user was not found" );
-        //     loginResponseData.Add( "errorContainer.[]", 0 );
-        //     loginResponseData.Add( "errorCode", 101 );
-        // }
-        // else
-
-        var loginTicket = request.DataDict["ticket"] as string ?? string.Empty;
-        var ticketData = TicketDecoder.DecodeFromASCIIString(loginTicket, _logger);
-        var onlineId = (ticketData[5] as BStringData)?.Value?.TrimEnd('\0');
-
-        _sessionCache["personaName"] = onlineId ?? throw new NotImplementedException();
-        _sessionCache["LKEY"] = _sharedCounters.GetNextLkey();
-        _sessionCache["UID"] = _sharedCounters.GetNextUserId();
-
-        _sharedCache.AddUserWithKey((string)_sessionCache["LKEY"], (string)_sessionCache["personaName"]);
-
-        var loginResponseData = new Dictionary<string, object>
-        {
-            { "TXN", "NuPS3Login" },
-            { "lkey", _sessionCache["LKEY"] },
-            { "userId", _sessionCache["UID"] },
-            { "personaName", _sessionCache["personaName"] }
-        };
-
-        var loginPacket = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
-        await _conn.SendPacket(loginPacket);
-    }
-
-    private async Task SendInvalidLogin(Packet request)
-    {
-        var loginResponseData = new Dictionary<string, object>
-        {
-            { "TXN", "NuPS3Login" },
-            { "localizedMessage", "Nope" },
-            { "errorContainer.[]", 0 },
-            { "errorCode", 101 }
-
-            // 101: unknown user
-            // 102: account disabled
-            // 103: account banned
-            // 120: account not entitled
-            // 121: too many login attempts
-            // 122: invalid password
-            // 123: game has not been registered (?)
-        };
-
-        var loginPacket = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
-        await _conn.SendPacket(loginPacket);
-    }
-
-    private async Task HandleAddAccount(Packet request)
-    {
-        var data = new Dictionary<string, object>
-        {
-            {"TXN", "NuPS3AddAccount"}
-        };
-
-        var email = request.DataDict["nuid"] as string;
-        var pass = request.DataDict["password"] as string;
-
-        _logger.LogDebug("Trying to register user {email} with password {pass}", email, pass);
-
-        var resultPacket = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, data);
-        await _conn.SendPacket(resultPacket);
     }
 
     private static Task HandleMemCheck(Packet _)
