@@ -11,6 +11,7 @@ Currently, enough is implemented to allow connection to backend services and bro
 Both PSN and RPCN clients are supported, for now.
 
 * PS3 BC2 - login, partial game server connection
+* PS3 BC2 (PC server) - login, create game, make player connection
 * PS3 1943 - login, access to game tutorial
 * PS3 BC1 - partial connection (*requires a game patch*)
 
