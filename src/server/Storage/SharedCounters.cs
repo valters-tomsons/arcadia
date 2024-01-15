@@ -10,7 +10,7 @@ public class SharedCounters
     private long _pid = 60;
     private long _lid = 255;
 
-    private static Random _random = new();
+    private static readonly Random _random = new();
 
     public long GetNextUserId()
     {
@@ -47,7 +47,7 @@ public class SharedCounters
         return Interlocked.Increment(ref _lid);
     }
 
-    public string GetNextLkey()
+    public static string GetNextLkey()
     {
         var key = _random.Next(100000000, 999999999);
         const string keyTempl = "W5NyZzx{0}Cki6GQAAKDw.";

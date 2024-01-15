@@ -17,7 +17,7 @@ public class TheaterClientHandler
 
     private readonly Dictionary<string, Func<Packet, Task>> _handlers;
 
-    private readonly Dictionary<string, object> _sessionCache = new();
+    private readonly Dictionary<string, object> _sessionCache = [];
 
     private int _brackets = 0;
 

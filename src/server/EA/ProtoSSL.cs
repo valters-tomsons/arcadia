@@ -18,18 +18,13 @@ namespace Arcadia.EA;
 /// <summary>
 /// Based on the following article: https://github.com/Aim4kill/Bug_OldProtoSSL
 /// </summary>
-public class ProtoSSL
+public class ProtoSSL(ILogger<ProtoSSL> logger)
 {
-    private readonly ILogger<ProtoSSL> _logger;
+    private readonly ILogger<ProtoSSL> _logger = logger;
 
     private readonly ConcurrentDictionary<string, (AsymmetricKeyParameter, Certificate)> _certCache = new();
     private const string Sha1CipherAlgorithm = "SHA1WITHRSA";
     private static readonly ReadOnlyMemory<byte> Sha1CipherSignature = new byte[] { 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x05 };
-
-    public ProtoSSL(ILogger<ProtoSSL> logger)
-    {
-        _logger = logger;
-    }
 
     public (AsymmetricKeyParameter, Certificate) GetFeslEaCert()
     {

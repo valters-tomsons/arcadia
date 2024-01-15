@@ -23,7 +23,7 @@ public static class PacketUtils
 
         var packetLengthBytes = CalculatePacketLength(data);
 
-        return typeBytes.Concat(transmissionTypePacketIdBytes).Concat(packetLengthBytes).ToArray();
+        return [.. typeBytes, .. transmissionTypePacketIdBytes, .. packetLengthBytes];
     }
 
     private static byte[] CalculatePacketLength(string packetData)

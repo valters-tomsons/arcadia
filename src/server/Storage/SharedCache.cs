@@ -3,17 +3,12 @@ using Microsoft.Extensions.Logging;
 
 namespace Arcadia.Storage;
 
-public class SharedCache
+public class SharedCache(ILogger<SharedCache> logger)
 {
-    private readonly ILogger<SharedCache> _logger;
+    private readonly ILogger<SharedCache> _logger = logger;
 
     private readonly ConcurrentDictionary<string, string> _lkeyUsernames = new();
-    private readonly ConcurrentBag<GameServerListing> _gameServers = new();
-
-    public SharedCache(ILogger<SharedCache> logger)
-    {
-        _logger = logger;
-    }
+    private readonly ConcurrentBag<GameServerListing> _gameServers = [];
 
     public void AddUserWithKey(string lkey, string username)
     {

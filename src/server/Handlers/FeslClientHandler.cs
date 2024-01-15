@@ -368,7 +368,7 @@ public class FeslClientHandler
     
     private async Task HandleNuLoginPersona(Packet request)
     {
-        _sessionCache["LKEY"] = _sharedCounters.GetNextLkey();
+        _sessionCache["LKEY"] = SharedCounters.GetNextLkey();
 
         var uid = _sharedCounters.GetNextUserId();
         _sessionCache["UID"] = uid;
@@ -435,7 +435,7 @@ public class FeslClientHandler
         var onlineId = (ticketData[5] as BStringData)?.Value?.TrimEnd('\0');
 
         _sessionCache["personaName"] = onlineId ?? throw new NotImplementedException();
-        _sessionCache["LKEY"] = _sharedCounters.GetNextLkey();
+        _sessionCache["LKEY"] = SharedCounters.GetNextLkey();
         _sessionCache["UID"] = _sharedCounters.GetNextUserId();
 
         _sharedCache.AddUserWithKey((string)_sessionCache["LKEY"], (string)_sessionCache["personaName"]);

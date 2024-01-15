@@ -4,28 +4,21 @@ using Org.BouncyCastle.Tls.Crypto.Impl.BC;
 
 namespace Arcadia.Tls;
 
-public class Ssl3TlsServer : DefaultTlsServer
+public class Ssl3TlsServer(BcTlsCrypto crypto, Certificate serverCertificate, AsymmetricKeyParameter serverPrivateKey) : DefaultTlsServer(crypto)
 {
+    private readonly Certificate _serverCertificate = serverCertificate;
+    private readonly AsymmetricKeyParameter _serverPrivateKey = serverPrivateKey;
+    private readonly BcTlsCrypto _crypto = crypto;
+
     private static readonly int[] _cipherSuites =
-    {
+    [
         CipherSuite.TLS_RSA_WITH_RC4_128_SHA
-    };
+    ];
 
     private static readonly ProtocolVersion[] _supportedVersions =
-    {
+    [
         ProtocolVersion.SSLv3
-    };
-
-    private readonly Certificate _serverCertificate;
-    private readonly AsymmetricKeyParameter _serverPrivateKey;
-    private readonly BcTlsCrypto _crypto;
-
-    public Ssl3TlsServer(BcTlsCrypto crypto, Certificate serverCertificate, AsymmetricKeyParameter serverPrivateKey) : base(crypto)
-    {
-        _crypto = crypto;
-        _serverCertificate = serverCertificate;
-        _serverPrivateKey = serverPrivateKey;
-    }
+    ];
 
     public override ProtocolVersion GetServerVersion()
     {

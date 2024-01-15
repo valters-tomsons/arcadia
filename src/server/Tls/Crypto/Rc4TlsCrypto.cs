@@ -8,14 +8,9 @@ namespace Arcadia.Tls.Crypto;
 /// <summary>
 /// Original code from: https://github.com/zivillian/ism7mqtt
 /// </summary>
-public class Rc4TlsCrypto : BcTlsCrypto
+public class Rc4TlsCrypto(IOptions<DebugSettings> settings) : BcTlsCrypto
 {
-    private readonly bool _writeSslKeyLog;
-
-    public Rc4TlsCrypto(IOptions<DebugSettings> settings)
-    {
-        _writeSslKeyLog = settings.Value.WriteSslDebugKeys;
-    }
+    private readonly bool _writeSslKeyLog = settings.Value.WriteSslDebugKeys;
 
     public override TlsCipher CreateCipher(TlsCryptoParameters cryptoParams, int encryptionAlgorithm, int macAlgorithm)
     {
@@ -46,7 +41,7 @@ public class Rc4TlsCrypto : BcTlsCrypto
         };
     }
 
-    private TlsCipher CreateCipher_RC4(TlsCryptoParameters cryptoParams, int cipherKeySize, int macAlgorithm)
+    private TlsRc4Cipher CreateCipher_RC4(TlsCryptoParameters cryptoParams, int cipherKeySize, int macAlgorithm)
     {
         return new TlsRc4Cipher(cryptoParams, cipherKeySize, CreateMac(cryptoParams, macAlgorithm),
             CreateMac(cryptoParams, macAlgorithm));

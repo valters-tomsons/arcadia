@@ -1,4 +1,3 @@
-using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Engines;
 using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Tls;
@@ -26,7 +25,7 @@ public class TlsRc4Cipher : TlsCipher
         m_encryptionCipher = new RC4Engine();
         m_decryptionCipher = new RC4Engine();
 
-        IStreamCipher clientCipher, serverCipher;
+        RC4Engine clientCipher, serverCipher;
         if (cryptoParams.IsServer)
         {
             clientCipher = m_decryptionCipher;
@@ -39,10 +38,10 @@ public class TlsRc4Cipher : TlsCipher
         }
 
         int keyBlockSize = (2 * cipherKeySize) + clientMac.MacLength + serverMac.MacLength;
-
         Span<byte> keyBlock = keyBlockSize <= 512
             ? stackalloc byte[keyBlockSize]
             : new byte[keyBlockSize];
+
         TlsImplUtilities.CalculateKeyBlock(cryptoParams, keyBlock);
 
         clientMac.SetKey(keyBlock[..clientMac.MacLength]); keyBlock = keyBlock[clientMac.MacLength..];
@@ -50,8 +49,7 @@ public class TlsRc4Cipher : TlsCipher
         clientCipher.Init(true, new KeyParameter(keyBlock[..cipherKeySize])); keyBlock = keyBlock[cipherKeySize..];
         serverCipher.Init(false, new KeyParameter(keyBlock[..cipherKeySize])); keyBlock = keyBlock[cipherKeySize..];
 
-        if (!keyBlock.IsEmpty)
-            throw new TlsFatalAlert(AlertDescription.internal_error);
+        if (!keyBlock.IsEmpty) throw new TlsFatalAlert(AlertDescription.internal_error);
 
         if (cryptoParams.IsServer)
         {

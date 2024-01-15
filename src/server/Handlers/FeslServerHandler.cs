@@ -169,7 +169,7 @@ public class FeslServerHandler
     
     private async Task HandleNuLoginPersona(Packet request)
     {
-        _sessionCache["LKEY"] = _sharedCounters.GetNextLkey();
+        _sessionCache["LKEY"] = SharedCounters.GetNextLkey();
 
         var uid = _sharedCounters.GetNextUserId();
         _sessionCache["UID"] = uid;

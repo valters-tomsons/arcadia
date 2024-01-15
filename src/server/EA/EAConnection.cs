@@ -18,17 +18,12 @@ public interface IEAConnection
     Task<bool> SendPacket(Packet packet);
 }
 
-public class EAConnection : IEAConnection
+public class EAConnection(ILogger<EAConnection> logger) : IEAConnection
 {
+    private readonly ILogger<EAConnection> _logger = logger;
+
     public string ClientEndpoint { get; private set; } = string.Empty;
     public Stream? NetworkStream { get; private set; }
-
-    private readonly ILogger<EAConnection> _logger;
-
-    public EAConnection(ILogger<EAConnection> logger)
-    {
-        _logger = logger;
-    }
 
     public void InitializeInsecure(Stream network, string endpoint)
     {

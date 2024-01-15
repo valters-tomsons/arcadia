@@ -35,7 +35,7 @@ public readonly struct Packet
         TransmissionType = transmissionType;
         Id = packetId;
         // TODO Packet length needs to be set here
-        DataDict = dataDict ?? new Dictionary<string, object>();
+        DataDict = dataDict ?? [];
     }
 
     public Packet Clone()

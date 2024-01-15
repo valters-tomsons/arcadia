@@ -11,23 +11,16 @@ using Microsoft.Extensions.Options;
 
 namespace Arcadia.Hosting;
 
-public class TheaterHostedService : IHostedService
+public class TheaterHostedService(ILogger<TheaterHostedService> logger, IOptions<ArcadiaSettings> arcadiaSettings, IServiceScopeFactory scopeFactory) : IHostedService
 {
-    private readonly ILogger<TheaterHostedService> _logger;
-    private readonly IServiceScopeFactory _scopeFactory;
-    private readonly ArcadiaSettings _arcadiaSettings;
+    private readonly ILogger<TheaterHostedService> _logger = logger;
+    private readonly IServiceScopeFactory _scopeFactory = scopeFactory;
+    private readonly ArcadiaSettings _arcadiaSettings = arcadiaSettings.Value;
 
-    private readonly ConcurrentBag<TcpListener> _listeners = new();
-    private readonly ConcurrentBag<Task> _activeConnections = new();
-    private readonly ConcurrentBag<Task?> _servers = new();
+    private readonly ConcurrentBag<TcpListener> _listeners = [];
+    private readonly ConcurrentBag<Task> _activeConnections = [];
+    private readonly ConcurrentBag<Task?> _servers = [];
     private CancellationTokenSource _cts = null!;
-
-    public TheaterHostedService(ILogger<TheaterHostedService> logger, IOptions<ArcadiaSettings> arcadiaSettings, IServiceScopeFactory scopeFactory)
-    {
-        _logger = logger;
-        _scopeFactory = scopeFactory;
-        _arcadiaSettings = arcadiaSettings.Value;
-    }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {

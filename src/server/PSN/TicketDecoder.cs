@@ -62,7 +62,7 @@ public static class TicketDecoder
                 var blobData = new BlobData
                 {
                     Tag = reader.ReadByte(),
-                    Children = new List<TicketData>(),
+                    Children = [],
                     Id = id,
                     Length = len
                 };

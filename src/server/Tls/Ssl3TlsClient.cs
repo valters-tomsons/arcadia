@@ -3,26 +3,20 @@ using Org.BouncyCastle.Tls.Crypto.Impl.BC;
 
 namespace Arcadia.Tls;
 
-public class Ssl3TlsClient : DefaultTlsClient
+public class Ssl3TlsClient(BcTlsCrypto crypto, TlsAuthentication auth) : DefaultTlsClient(crypto)
 {
-    private readonly TlsAuthentication _tlsAuth;
-    public readonly BcTlsCrypto _crypto;
-
-    public Ssl3TlsClient(BcTlsCrypto crypto, TlsAuthentication auth) : base(crypto)
-    {
-        _crypto = crypto;
-        _tlsAuth = auth;
-    }
+    private readonly TlsAuthentication _tlsAuth = auth;
+    public readonly BcTlsCrypto _crypto = crypto;
 
     private static readonly int[] _cipherSuites =
-    {
+    [
         CipherSuite.TLS_RSA_WITH_RC4_128_SHA
-    };
+    ];
 
     private static readonly ProtocolVersion[] _supportedVersions =
-    {
+    [
         ProtocolVersion.SSLv3
-    };
+    ];
 
     public override ProtocolVersion[] GetProtocolVersions()
     {

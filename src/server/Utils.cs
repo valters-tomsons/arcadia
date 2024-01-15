@@ -30,9 +30,11 @@ public static class Utils
     {
         byte[] first = new byte[index];
         byte[] second = new byte[source.Length - index];
+
         Array.Copy(source, 0, first, 0, index);
         Array.Copy(source, index, second, 0, source.Length - index);
-        return new[] { first, second };
+
+        return [first, second];
     }
 
     public static Dictionary<string, object> ParseFeslPacketToDict(byte[] data)
@@ -95,38 +97,20 @@ public static class Utils
     /// </summary>
     public static int FindBytePattern(ReadOnlySpan<byte> buffer, ReadOnlySpan<byte> searchPattern, int offset = 0)
     {
-        int found = -1;
-        if (buffer.Length > 0 && searchPattern.Length > 0 && offset <= (buffer.Length - searchPattern.Length) && buffer.Length >= searchPattern.Length)
+        if (searchPattern.IsEmpty || buffer.Length < searchPattern.Length || offset > buffer.Length - searchPattern.Length)
         {
-            for (int i = offset; i <= buffer.Length - searchPattern.Length; i++)
+            return -1;
+        }
+
+        int endIndex = buffer.Length - searchPattern.Length + 1;
+        for (int i = offset; i < endIndex; i++)
+        {
+            if (buffer[i] == searchPattern[0] && buffer.Slice(i, searchPattern.Length).SequenceEqual(searchPattern))
             {
-                if (buffer[i] == searchPattern[0])
-                {
-                    if (buffer.Length > 1)
-                    {
-                        bool matched = true;
-                        for (int y = 1; y <= searchPattern.Length - 1; y++)
-                        {
-                            if (buffer[i + y] != searchPattern[y])
-                            {
-                                matched = false;
-                                break;
-                            }
-                        }
-                        if (matched)
-                        {
-                            found = i;
-                            break;
-                        }
-                    }
-                    else
-                    {
-                        found = i;
-                        break;
-                    }
-                }
+                return i;
             }
         }
-        return found;
+
+        return -1;
     }
 }
