@@ -1,12 +1,18 @@
 # Arcadia
 
-An experimental project in emulating backend services for Battlefield 1943 (possibly others!). Project is in early development and is not yet playable. 
+An experimental project in emulating backend services for Battlefield games based on Frostbite *1.x*, targeting Playstation 3 clients. Project is in early development and is **not playable in any form**. 
 
 **Note**: This project is not affiliated with EA or DICE.
 
 ## Features
 
-Currently, enough is "implemented" to allow accessing the game's tutorial. When asked to enter email/password, just submit whatever (or keep them empty).
+Currently, enough is implemented to allow connection to backend services and browse menus which require connection with "*EA Online*".
+
+Both PSN and RPCN clients are supported, for now.
+
+* PS3 BC2 - login, partial game server connection
+* PS3 1943 - login, access to game tutorial
+* PS3 BC1 - partial connection (*requires a game patch*)
 
 ## PS3 Client Configuration
 
