@@ -79,7 +79,7 @@ public class FeslHostedService : IHostedService
     private async Task HandleConnection(TcpClient tcpClient, int connectionPort)
     {
         var clientEndpoint = tcpClient.Client.RemoteEndPoint?.ToString()! ?? throw new NullReferenceException("ClientEndpoint cannot be null!");
-        _logger.LogInformation("Opening connection from: {clientEndpoint}", clientEndpoint);
+        _logger.LogInformation("Opening connection from: {clientEndpoint} to {port}", clientEndpoint, connectionPort);
 
         using var scope = _scopeFactory.CreateAsyncScope();
         var scopeData = scope.ServiceProvider.GetRequiredService<ConnectionLogScope>();
