@@ -11,17 +11,6 @@
             "cwd": "${workspaceFolder}/src/server",
             "console": "internalConsole",
             "stopAtEntry": false
-        },
-        {
-            "name": "dump-pcap",
-            "type": "coreclr",
-            "request": "launch",
-            "preLaunchTask": "build-dpcap",
-            "program": "${workspaceFolder}/tools/dump-pcap/bin/Debug/net8.0/dump-pcap.dll",
-            "args": [],
-            "cwd": "${workspaceFolder}/tools/dump-pcap",
-            "console": "internalConsole",
-            "stopAtEntry": false
         }
     ]
 }
