@@ -38,18 +38,7 @@ public class FeslServerHandler
             ["acct/NuLogin"] = HandleNuLogin,
             ["acct/NuGetPersonas"] = HandleNuGetPersonas,
             ["acct/NuLoginPersona"] = HandleNuLoginPersona,
-            ["acct/NuGetTos"] = HandleGetTos,
-            ["acct/GetTelemetryToken"] = HandleTelemetryToken,
-            ["acct/NuLookupUserInfo"] = HandleLookupUserInfo,
-            ["acct/NuGetEntitlements"] = HandleNuGetEntitlements,
-            ["acct/NuGrantEntitlement"] = HandleNuGrantEntitlement,
-            ["acct/GetLockerURL"] = HandleGetLockerUrl,
-            ["recp/GetRecord"] = HandleGetRecord,
-            ["recp/GetRecordAsMap"] = HandleGetRecordAsMap,
             ["asso/GetAssociations"] = HandleGetAssociations,
-            ["pres/PresenceSubscribe"] = HandlePresenceSubscribe,
-            ["pres/SetPresenceStatus"] = HandleSetPresenceStatus,
-            ["rank/GetStats"] = HandleGetStats
         };
     }
 
@@ -79,116 +68,30 @@ public class FeslServerHandler
         await handler(packet);
     }
 
-    private async Task HandleTelemetryToken(Packet request)
+    private async Task HandleHello(Packet request)
     {
-        var responseData = new Dictionary<string, object>
+        if (request["clientType"] != "server")
         {
-            { "TXN", "GetTelemetryToken" },
-        };
+            throw new NotSupportedException("Client tried connecting to a server port!");
+        }
 
-        var packet = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
-        await _conn.SendPacket(packet);
-    }
+        var currentTime = DateTime.UtcNow.ToString("MMM-dd-yyyy HH:mm:ss 'UTC'", CultureInfo.InvariantCulture);
+        var serverHelloData = new Dictionary<string, object>
+                {
+                    { "domainPartition.domain", "ps3" },
+                    { "messengerIp", "127.0.0.1" },
+                    { "messengerPort", 0 },
+                    { "domainPartition.subDomain", "BEACH" },
+                    { "TXN", "Hello" },
+                    { "activityTimeoutSecs", 0 },
+                    { "curTime", currentTime },
+                    { "theaterIp", _settings.Value.TheaterAddress },
+                    { "theaterPort", (int)TheaterServerPort.RomePC }
+                };
 
-    private async Task HandleGetRecord(Packet request)
-    {
-        var responseData = new Dictionary<string, object>
-        {
-            { "TXN", request.TXN },
-            {"localizedMessage", "Nope" },
-            {"errorContainer.[]", 0 },
-            {"errorCode", 5000 },
-
-        };
-
-        await _conn.SendPacket(new Packet("recp", FeslTransmissionType.SinglePacketResponse, request.Id, responseData));
-    }
-
-    private async Task HandleGetRecordAsMap(Packet request)
-    {
-        var responseData = new Dictionary<string, object>
-        {
-            { "TXN", request.TXN },
-            {"TTL", 0 },
-            {"state", 1 },
-            {"values.{}", 0 }
-        };
-
-        await _conn.SendPacket(new Packet("recp", FeslTransmissionType.SinglePacketResponse, request.Id, responseData));
-    }
-
-    private async Task HandleNuGrantEntitlement(Packet request)
-    {
-        var responseData = new Dictionary<string, object>
-        {
-            { "TXN", request.TXN }
-        };
-
-        await _conn.SendPacket(new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, responseData));
-    }
-
-
-    private async Task HandleGetStats(Packet request)
-    {
-        // TODO Not entirely sure if this works well with the game, since stats requests are usually sent as multi-packet queries with base64 encoded data
-        var responseData = new Dictionary<string, object>
-        {
-            { "TXN", "GetStats" },
-            {"stats.[]", 0 }
-        };
-
-        // TODO: Add some stats
-        // var keysStr = request.DataDict["keys.[]"] as string ?? string.Empty;
-        // var reqKeys = int.Parse(keysStr, CultureInfo.InvariantCulture);
-        // for (var i = 0; i < reqKeys; i++)
-        // {
-        //     var key = request.DataDict[$"keys.{i}"];
-
-        //     responseData.Add($"stats.{i}.key", key);
-        //     responseData.Add($"stats.{i}.value", 0.0);
-        // }
-
-        var packet = new Packet("rank", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
-        await _conn.SendPacket(packet);
-    }
-
-    private async Task HandlePresenceSubscribe(Packet request)
-    {
-        var responseData = new Dictionary<string, object>
-        {
-            { "TXN", "PresenceSubscribe" },
-            { "responses.0.outcome", "0" },
-            { "responses.[]", "1" },
-            { "responses.0.owner.type", "1" },
-            { "responses.0.owner.id", _sessionCache["UID"] },
-        };
-
-        var packet = new Packet("pres", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
-        await _conn.SendPacket(packet);
-    }
-
-    private async Task HandleSetPresenceStatus(Packet request)
-    {
-        var responseData = new Dictionary<string, object>
-        {
-            { "TXN", "SetPresenceStatus" },
-        };
-
-        var packet = new Packet("pres", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
-        await _conn.SendPacket(packet);
-    }
-
-    private async Task HandleLookupUserInfo(Packet request)
-    {
-        var responseData = new Dictionary<string, object>
-        {
-            { "TXN", "NuLookupUserInfo" },
-            { "userInfo.[]", "1" },
-            { "userInfo.0.userName", _sessionCache["personaName"] },
-        };
-
-        var packet = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
-        await _conn.SendPacket(packet);
+        var helloPacket = new Packet("fsys", FeslTransmissionType.SinglePacketResponse, request.Id, serverHelloData);
+        await _conn.SendPacket(helloPacket);
+        await SendMemCheck();
     }
 
     private async Task HandleGetAssociations(Packet request)
@@ -237,43 +140,6 @@ public class FeslServerHandler
         await _conn.SendPacket(packet);
     }
 
-    private async Task HandleHello(Packet request)
-    {
-        var currentTime = DateTime.UtcNow.ToString("MMM-dd-yyyy HH:mm:ss 'UTC'", CultureInfo.InvariantCulture);
-        var serverHelloData = new Dictionary<string, object>
-                {
-                    { "domainPartition.domain", "ps3" },
-                    { "messengerIp", "127.0.0.1" },
-                    { "messengerPort", 0 },
-                    { "domainPartition.subDomain", "BEACH" },
-                    { "TXN", "Hello" },
-                    { "activityTimeoutSecs", 0 },
-                    { "curTime", currentTime },
-                    { "theaterIp", _settings.Value.TheaterAddress },
-                    { "theaterPort", (int)TheaterServerPort.RomePC }
-                };
-
-        var helloPacket = new Packet("fsys", FeslTransmissionType.SinglePacketResponse, request.Id, serverHelloData);
-        await _conn.SendPacket(helloPacket);
-        await SendMemCheck();
-    }
-
-    private async Task HandleGetTos(Packet request)
-    {
-        // TODO Same as with stats, usually sent as multi-packed response
-        const string tos = "Welcome to Arcadia!\nBeware, here be dragons!";
-
-        var data = new Dictionary<string, object>
-        {
-            { "TXN", "NuGetTos" },
-            { "version", "20426_17.20426_17" },
-            { "tos", $"{System.Net.WebUtility.UrlEncode(tos).Replace('+', ' ')}" },
-        };
-
-        var packet = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, data);
-        await _conn.SendPacket(packet);
-    }
-
     private async Task HandleNuLogin(Packet request)
     {
         _sessionCache["personaName"] = request["nuid"];
@@ -315,30 +181,6 @@ public class FeslServerHandler
             { "lkey", _sessionCache["LKEY"] },
             { "profileId", uid },
             { "userId", uid },
-        };
-
-        var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
-        await _conn.SendPacket(packet);
-    }
-
-    private async Task HandleNuGetEntitlements(Packet request)
-    {
-        var loginResponseData = new Dictionary<string, object>
-        {
-            { "TXN", request.TXN },
-            { "entitlements.[]", 0 }
-        };
-
-        var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
-        await _conn.SendPacket(packet);
-    }
-
-    private async Task HandleGetLockerUrl(Packet request)
-    {
-        var loginResponseData = new Dictionary<string, object>
-        {
-            { "TXN", request.TXN },
-            { "url", "http://127.0.0.1/arcadia.jsp" }
         };
 
         var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
