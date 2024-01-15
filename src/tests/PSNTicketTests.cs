@@ -34,8 +34,8 @@ public class PSNTicketTests
 
         var ticketData = TicketDecoder.DecodeFromASCIIString(loginTicket);
 
-        var onlineId = (ticketData[5] as BStringData).Value.TrimEnd('\0');
-        var serviceId = Encoding.UTF8.GetString((ticketData[8] as BinaryData).Value).TrimEnd('\0');
+        var onlineId = (ticketData[5] as BStringData)?.Value?.TrimEnd('\0');
+        var serviceId = Encoding.UTF8.GetString((ticketData?[8] as BinaryData)?.Value!).TrimEnd('\0');
 
         Assert.Equal("FaithLV", onlineId);
         Assert.Equal("EP0006-NPEB00092_00", serviceId);

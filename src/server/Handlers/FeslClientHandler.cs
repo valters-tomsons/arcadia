@@ -85,6 +85,32 @@ public class FeslClientHandler
         await handler(packet);
     }
 
+    private async Task HandleHello(Packet request)
+    {
+        if (request["clientType"] == "server")
+        {
+            throw new NotSupportedException("Server tried connecting to a client port!");
+        }
+
+        var currentTime = DateTime.UtcNow.ToString("MMM-dd-yyyy HH:mm:ss 'UTC'", CultureInfo.InvariantCulture);
+        var serverHelloData = new Dictionary<string, object>
+                {
+                    { "domainPartition.domain", "ps3" },
+                    { "messengerIp", "127.0.0.1" },
+                    { "messengerPort", 0 },
+                    { "domainPartition.subDomain", "BEACH" },
+                    { "TXN", "Hello" },
+                    { "activityTimeoutSecs", 0 },
+                    { "curTime", currentTime },
+                    { "theaterIp", _settings.Value.TheaterAddress },
+                    { "theaterPort", (int)GetTheaterPort() }
+                };
+
+        var helloPacket = new Packet("fsys", FeslTransmissionType.SinglePacketResponse, request.Id, serverHelloData);
+        await _conn.SendPacket(helloPacket);
+        await SendMemCheck();
+    }
+
     private async Task HandleTelemetryToken(Packet request)
     {
         var responseData = new Dictionary<string, object>
@@ -135,10 +161,9 @@ public class FeslClientHandler
         var responseData = new Dictionary<string, object>
         {
             { "TXN", request.TXN },
-            {"localizedMessage", "Nope" },
-            {"errorContainer.[]", 0 },
-            {"errorCode", 5000 },
-
+            { "localizedMessage", "Nope" },
+            { "errorContainer.[]", 0 },
+            { "errorCode", 5000 },
         };
 
         await _conn.SendPacket(new Packet("recp", FeslTransmissionType.SinglePacketResponse, request.Id, responseData));
@@ -149,9 +174,9 @@ public class FeslClientHandler
         var responseData = new Dictionary<string, object>
         {
             { "TXN", request.TXN },
-            {"TTL", 0 },
-            {"state", 1 },
-            {"values.{}", 0 }
+            { "TTL", 0 },
+            { "state", 1 },
+            { "values.{}", 0 }
         };
 
         await _conn.SendPacket(new Packet("recp", FeslTransmissionType.SinglePacketResponse, request.Id, responseData));
@@ -174,7 +199,7 @@ public class FeslClientHandler
         var responseData = new Dictionary<string, object>
         {
             { "TXN", "GetStats" },
-            {"stats.[]", 0 }
+            { "stats.[]", 0 }
         };
 
         // TODO: Add some stats
@@ -277,31 +302,6 @@ public class FeslClientHandler
         await _conn.SendPacket(packet);
     }
 
-    private async Task HandleHello(Packet request)
-    {
-        if(request["clientType"] == "server")
-        {
-            throw new NotSupportedException("Server tried connecting to a client port!");
-        }
-
-        var currentTime = DateTime.UtcNow.ToString("MMM-dd-yyyy HH:mm:ss 'UTC'", CultureInfo.InvariantCulture);
-        var serverHelloData = new Dictionary<string, object>
-                {
-                    { "domainPartition.domain", "ps3" },
-                    { "messengerIp", "127.0.0.1" },
-                    { "messengerPort", 0 },
-                    { "domainPartition.subDomain", "BEACH" },
-                    { "TXN", "Hello" },
-                    { "activityTimeoutSecs", 0 },
-                    { "curTime", currentTime },
-                    { "theaterIp", _settings.Value.TheaterAddress },
-                    { "theaterPort", (int)GetTheaterPort() }
-                };
-
-        var helloPacket = new Packet("fsys", FeslTransmissionType.SinglePacketResponse, request.Id, serverHelloData);
-        await _conn.SendPacket(helloPacket);
-        await SendMemCheck();
-    }
 
     private TheaterGamePort GetTheaterPort()
     {
