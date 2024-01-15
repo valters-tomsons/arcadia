@@ -8,6 +8,13 @@ An experimental project in emulating backend services for Battlefield 1943 (poss
 
 Currently, enough is "implemented" to allow accessing the game's tutorial. When asked to enter email/password, just submit whatever (or keep them empty).
 
+## PS3 Client Configuration
+
+1. Set `DnsSettings.EnableDns` to `true` and `DnsSettings.ArcadiaAddress` to IP address of the backend
+2. Open PS3 Network configuration, set DNS address to IP address of the backend (or DNS, if hosted seperately)
+
+**Notice:** Valid PSN sign-in is still required.
+
 ## RPCS3 Client Configuration
 
 1. Enable network connection and RPCN
