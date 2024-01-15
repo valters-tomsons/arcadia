@@ -126,6 +126,10 @@ public class FeslClientHandler
     {
         var servers = _sharedCache.ListServersGIDs();
         var serverData = _sharedCache.GetGameServerDataByGid(servers.First());
+
+        // Should return approprate error to user
+        if (serverData is null) throw new NotImplementedException();
+
         var pnowId = _sharedCounters.GetNextPnowId();
 
         var data1 = new Dictionary<string, object>
