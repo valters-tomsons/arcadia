@@ -106,17 +106,10 @@ public class FeslServerHandler
             { "owner.type", "1" },
             { "type", assoType },
             { "members.[]", "0" },
+            { "maxListSize", 100 }
         };
 
-        if (assoType == "PlasmaMute")
-        {
-            responseData.Add("maxListSize", 100);
-            responseData.Add("owner.name", _sessionCache["personaName"]);
-        }
-        else
-        {
-            _logger.LogWarning("Unknown association type: {assoType}", assoType);
-        }
+        _logger.LogInformation("Association type: {assoType}", assoType);
 
         var packet = new Packet("asso", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
         await _conn.SendPacket(packet);

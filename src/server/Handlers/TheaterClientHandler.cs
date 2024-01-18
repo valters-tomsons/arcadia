@@ -39,9 +39,7 @@ public class TheaterClientHandler
             ["EGRS"] = HandleEGRS,
             ["PENT"] = HandlePENT,
             ["GDAT"] = HandleGDAT,
-            ["UBRA"] = HandleUBRA,
-            ["UGAM"] = HandleUGAM,
-            ["UGDE"] = HandleUGDE
+            ["UBRA"] = HandleUBRA
         };
     }
 
@@ -116,8 +114,6 @@ public class TheaterClientHandler
     {
         var gid = _sharedCounters.GetNextGameId();
         var lid = _sharedCounters.GetNextLid();
-
-        _sharedCache.UpsertGameServerDataByGid(gid, request.DataDict);
 
         var response = new Dictionary<string, object>
         {
@@ -215,20 +211,6 @@ public class TheaterClientHandler
 
     private async Task HandleGDAT(Packet request)
     {
-        var requestGid = request["GID"];
-
-        if (string.IsNullOrWhiteSpace(requestGid))
-        {
-            var earlyExit = new Dictionary<string, object>
-            {
-                ["TID"] = request["TID"]
-            };
-
-            var pk = new Packet("GDAT", TheaterTransmissionType.OkResponse, 0, earlyExit);
-            await _conn.SendPacket(pk);
-            return;
-        }
-
         var serverGid = long.Parse(request["GID"]);
         var serverInfo = _sharedCache.GetGameServerDataByGid(serverGid);
 
@@ -274,15 +256,7 @@ public class TheaterClientHandler
             ["B-U-public"] = serverInfo["B-U-public"],
             ["B-U-elo"] = serverInfo["B-U-elo"],
             ["B-numObservers"] = serverInfo["B-numObservers"],
-            ["B-maxObservers"] = serverInfo["B-maxObservers"],
-
-            // Not in R11
-            // ["QP"] = serverInfo["B-U-QueueLength"],
-            // ["B-U-Softcore"] = serverInfo["B-U-Softcore"],
-            // ["B-U-EA"] = serverInfo["B-U-EA"],
-            // ["B-U-Provider"] = serverInfo["B-U-Provider"],
-            // ["B-U-gameMod"] = serverInfo["B-U-gameMod"],
-            // ["B-U-QueueLength"] = serverInfo["B-U-QueueLength"]
+            ["B-maxObservers"] = serverInfo["B-maxObservers"]
         };
 
         var packet = new Packet("GDAT", TheaterTransmissionType.OkResponse, 0, serverInfoResponse);
@@ -364,25 +338,6 @@ public class TheaterClientHandler
         {
             Interlocked.Add(ref _brackets, 2);
         }
-    }
-
-
-    // UpdateGameDetails
-    private Task HandleUGDE(Packet request)
-    {
-        var gid = long.Parse(request["GID"]);
-        _logger.LogInformation("Server GID={gid} updating details!", gid);
-        _sharedCache.UpsertGameServerDataByGid(gid, request.DataDict);
-        return Task.CompletedTask;
-    }
-
-    // UpdateGameData
-    private Task HandleUGAM(Packet request)
-    {
-        var gid = long.Parse(request["GID"]);
-        _logger.LogInformation("Server GID={gid} updating data!", gid);
-        _sharedCache.UpsertGameServerDataByGid(gid, request.DataDict);
-        return Task.CompletedTask;
     }
 
     private static string UGID = string.Empty;
