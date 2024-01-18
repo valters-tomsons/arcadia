@@ -33,13 +33,9 @@ public class TheaterClientHandler
         {
             ["CONN"] = HandleCONN,
             ["USER"] = HandleUSER,
-            ["CGAM"] = HandleCGAM,
             ["ECNL"] = HandleECNL,
             ["EGAM"] = HandleEGAM,
-            ["EGRS"] = HandleEGRS,
-            ["PENT"] = HandlePENT,
-            ["GDAT"] = HandleGDAT,
-            ["UBRA"] = HandleUBRA
+            ["GDAT"] = HandleGDAT
         };
     }
 
@@ -109,29 +105,6 @@ public class TheaterClientHandler
         await _conn.SendPacket(packet);
     }
 
-    // CreateGame
-    private async Task HandleCGAM(Packet request)
-    {
-        var gid = _sharedCounters.GetNextGameId();
-        var lid = _sharedCounters.GetNextLid();
-
-        var response = new Dictionary<string, object>
-        {
-            ["TID"] = request["TID"],
-            ["MAX-PLAYERS"] = request["MAX-PLAYERS"],
-            ["EKEY"] = "AIBSgPFqRDg0TfdXW1zUGa4%3d",
-            ["UGID"] = Guid.NewGuid().ToString(),
-            ["JOIN"] = request["JOIN"],
-            ["SECRET"] = request["SECRET"],
-            ["LID"] = lid,
-            ["J"] = request["JOIN"],
-            ["GID"] = gid
-        };
-
-        var packet = new Packet("CGAM", TheaterTransmissionType.OkResponse, 0, response);
-        await _conn.SendPacket(packet);
-    }
-
     // LeaveGame
     private async Task HandleECNL(Packet request)
     {
@@ -164,6 +137,9 @@ public class TheaterClientHandler
         var ticket = _sharedCounters.GetNextTicket();
         _sessionCache["TICKET"] = ticket;
 
+        var srvData = _sharedCache.GetGameServerDataByGid(long.Parse(request["GID"]));
+        _sessionCache["UGID"] = srvData["UGID"];
+
         await SendEGRQ(request, ticket);
         await _conn.SendPacket(clientPacket);
         await SendEGEG(request, ticket);
@@ -193,22 +169,6 @@ public class TheaterClientHandler
         await serverNetwork!.WriteAsync(serverData);
     }
 
-    private async Task HandleEGRS(Packet request)
-    {
-        var serverInfo = new Dictionary<string, object>
-        {
-            ["TID"] = request.DataDict["TID"],
-        };
-
-        if (request["ALLOWED"] == "1")
-        {
-            Interlocked.Increment(ref joiningPlayers);
-        }
-
-        var packet = new Packet("EGRS", TheaterTransmissionType.OkResponse, 0, serverInfo);
-        await _conn.SendPacket(packet);
-    }
-
     private async Task HandleGDAT(Packet request)
     {
         var serverGid = long.Parse(request["GID"]);
@@ -233,9 +193,9 @@ public class TheaterClientHandler
             ["P"] = serverInfo["PORT"],
 
             ["N"] = serverInfo["NAME"],
-            ["AP"] = activePlayers,
+            ["AP"] = 0,
             ["MP"] = serverInfo["MAX-PLAYERS"],
-            ["JP"] = joiningPlayers,
+            ["JP"] = 1,
             ["PL"] = "PS3",
 
             ["PW"] = 0,
@@ -267,16 +227,13 @@ public class TheaterClientHandler
 
     private async Task SendGDET(Packet request, IDictionary<string, object> serverInfo)
     {
-        UGID = Guid.NewGuid().ToString();
-        _sessionCache["UGID"] = UGID;
-
         var responseData = new Dictionary<string, object>
         {
             ["LID"] = request.DataDict["LID"],
             ["GID"] = request.DataDict["GID"],
             ["TID"] = request.DataDict["TID"],
 
-            ["UGID"] = _sessionCache["UGID"],
+            ["UGID"] = serverInfo["UGID"],
             ["D-AutoBalance"] = serverInfo["D-AutoBalance"],
             ["D-Crosshair"] = serverInfo["D-Crosshair"],
             ["D-FriendlyFire"] = serverInfo["D-FriendlyFire"],
@@ -301,59 +258,10 @@ public class TheaterClientHandler
         await _conn.SendPacket(packet);
     }
 
-    private async Task HandlePENT(Packet request)
-    {
-        Interlocked.Decrement(ref joiningPlayers);
-        Interlocked.Increment(ref activePlayers);
-
-        var serverInfo = new Dictionary<string, object>
-        {
-            ["TID"] = request.DataDict["TID"],
-            ["PID"] = request.DataDict["PID"],
-        };
-
-        var packet = new Packet("PENT", TheaterTransmissionType.OkResponse, 0, serverInfo);
-        await _conn.SendPacket(packet);
-    }
-
-    private async Task HandleUBRA(Packet request)
-    {
-        if (request["START"] != "1")
-        {
-            var originalTid = (request.DataDict["TID"] as int?) - (_brackets / 2) ?? 0;
-            for (var i = 0; i < _brackets; i++)
-            {
-                var data = new Dictionary<string, object>
-                {
-                    //TODO: Server responds with unknown if tid=i+1?
-                    ["TID"] = request["TID"]
-                };
-
-                var packet = new Packet(request.Type, TheaterTransmissionType.OkResponse, 0, data);
-                await _conn.SendPacket(packet);
-                Interlocked.Decrement(ref _brackets);
-            }
-        }
-        else
-        {
-            Interlocked.Add(ref _brackets, 2);
-        }
-    }
-
-    private static string UGID = string.Empty;
-    private static int activePlayers = 0;
-    private static int joiningPlayers = 0;
-
     private async Task SendEGEG(Packet request, long ticket)
     {
         var serverIp = _arcadiaSettings.Value.GameServerAddress;
         var serverPort = _arcadiaSettings.Value.GameServerPort;
-
-        var ugid = _sessionCache.GetValueOrDefault("UGID");
-        if (string.IsNullOrWhiteSpace((string?)ugid))
-        {
-            _sessionCache["UGID"] = UGID;
-        }
 
         var serverInfo = new Dictionary<string, object>
         {

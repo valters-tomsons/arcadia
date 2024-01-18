@@ -36,7 +36,6 @@ public class TheaterServerHandler
             ["CGAM"] = HandleCGAM,
             ["UBRA"] = HandleUBRA,
             ["UGAM"] = HandleUGAM,
-            // ["GDAT"] = HandleGDAT,
             ["EGRS"] = HandleEGRS,
             ["UGDE"] = HandleUGDE
         };
@@ -113,15 +112,17 @@ public class TheaterServerHandler
     {
         var gid = _sharedCounters.GetNextGameId();
         var lid = _sharedCounters.GetNextLid();
+        var ugid = Guid.NewGuid().ToString();
 
         _sharedCache.UpsertGameServerDataByGid(gid, request.DataDict);
+        _sharedCache.UpsertGameServerValueByGid(gid, "UGID", ugid);
 
         var response = new Dictionary<string, object>
         {
             ["TID"] = request["TID"],
             ["MAX-PLAYERS"] = request["MAX-PLAYERS"],
             ["EKEY"] = "AIBSgPFqRDg0TfdXW1zUGa4%3d",
-            ["UGID"] = Guid.NewGuid().ToString(),
+            ["UGID"] = ugid,
             ["JOIN"] = request["JOIN"],
             ["SECRET"] = request["SECRET"],
             ["LID"] = lid,
@@ -147,18 +148,6 @@ public class TheaterServerHandler
 
         var packet = new Packet("EGRS", TheaterTransmissionType.OkResponse, 0, serverInfo);
         await _conn.SendPacket(packet);
-    }
-
-    private async Task HandleGDAT(Packet request)
-    {
-        var response = new Dictionary<string, object>
-        {
-            ["TID"] = request["TID"]
-        };
-
-        var pk = new Packet("GDAT", TheaterTransmissionType.OkResponse, 0, response);
-        await _conn.SendPacket(pk);
-        return;
     }
 
     private async Task HandleUBRA(Packet request)
@@ -203,7 +192,5 @@ public class TheaterServerHandler
         return Task.CompletedTask;
     }
 
-    private static string UGID = string.Empty;
-    private static int activePlayers = 0;
     private static int joiningPlayers = 0;
 }

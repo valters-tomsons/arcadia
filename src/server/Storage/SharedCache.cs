@@ -54,6 +54,30 @@ public class SharedCache(ILogger<SharedCache> logger)
         }
     }
 
+    public void UpsertGameServerValueByGid(long serverGid, string key, object value)
+    {
+        if (serverGid < 1)
+        {
+            _logger.LogWarning("Tried to update server with GID=0");
+            return;
+        }
+
+        var server = _gameServers.SingleOrDefault(x => x.GameId == serverGid);
+        if (server is null)
+        {
+            throw new NotImplementedException();
+        }
+
+        var serverData = server.InfoData;
+        if (serverData is null)
+        {
+            throw new NotImplementedException();
+        }
+
+        serverData.Remove(key, out var _);
+        serverData.TryAdd(key, value);
+    }
+
     public IDictionary<string, object>? GetGameServerDataByGid(long serverGid)
     {
         return _gameServers.SingleOrDefault(x => x.GameId == serverGid)?.InfoData;
