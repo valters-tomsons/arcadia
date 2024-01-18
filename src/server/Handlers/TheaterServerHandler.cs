@@ -45,7 +45,7 @@ public class TheaterServerHandler
     public async Task HandleClientConnection(NetworkStream network, string clientEndpoint)
     {
         _conn.InitializeInsecure(network, clientEndpoint);
-        await foreach (var packet in _conn.StartConnection())
+        await foreach (var packet in _conn.StartConnection(_logger))
         {
             await HandlePacket(packet);
         }

@@ -13,14 +13,14 @@ public interface IEAConnection
     void InitializeInsecure(Stream network, string endpoint);
     void InitializeSecure(TlsServerProtocol network, string endpoint);
 
-    IAsyncEnumerable<Packet> StartConnection(CancellationToken ct = default);
+    IAsyncEnumerable<Packet> StartConnection(ILogger logger, CancellationToken ct = default);
 
     Task<bool> SendPacket(Packet packet);
 }
 
-public class EAConnection(ILogger<EAConnection> logger) : IEAConnection
+public class EAConnection : IEAConnection
 {
-    private readonly ILogger<EAConnection> _logger = logger;
+    private ILogger? _logger;
 
     public string ClientEndpoint { get; private set; } = string.Empty;
     public Stream? NetworkStream { get; private set; }
@@ -47,8 +47,10 @@ public class EAConnection(ILogger<EAConnection> logger) : IEAConnection
         NetworkStream = network.Stream;
     }
 
-    public async IAsyncEnumerable<Packet> StartConnection([EnumeratorCancellation] CancellationToken ct = default)
+    public async IAsyncEnumerable<Packet> StartConnection(ILogger logger, [EnumeratorCancellation] CancellationToken ct = default)
     {
+        _logger = logger;
+
         while (NetworkStream?.CanRead == true || !ct.IsCancellationRequested)
         {
             int read;
@@ -60,7 +62,7 @@ public class EAConnection(ILogger<EAConnection> logger) : IEAConnection
             }
             catch(Exception e)
             {
-                _logger.LogDebug(e, "Failed to read client stream, endpoint: {endpoint}", ClientEndpoint);
+                logger.LogDebug(e, "Failed to read client stream, endpoint: {endpoint}", ClientEndpoint);
                 break;
             }
 
@@ -70,11 +72,11 @@ public class EAConnection(ILogger<EAConnection> logger) : IEAConnection
             }
 
             var packet = new Packet(readBuffer[..read]);
-            _logger.LogTrace("Incoming '{type}' data:{data}", packet.Type, Encoding.ASCII.GetString(readBuffer[..read]));
+            logger.LogTrace("Incoming '{type}' data:{data}", packet.Type, Encoding.ASCII.GetString(readBuffer[..read]));
             yield return packet;
         }
 
-        _logger.LogInformation("Connection has been closed: {endpoint}", ClientEndpoint);
+        logger.LogInformation("Connection has been closed: {endpoint}", ClientEndpoint);
     }
 
     public async Task<bool> SendPacket(Packet packet)
@@ -92,19 +94,19 @@ public class EAConnection(ILogger<EAConnection> logger) : IEAConnection
     {
         if (NetworkStream is null || !NetworkStream.CanWrite)
         {
-            _logger.LogDebug("Tried writing to disconnected endpoint: {endpoint}!", ClientEndpoint);
+            _logger?.LogDebug("Tried writing to disconnected endpoint: {endpoint}!", ClientEndpoint);
             return false;
         }
 
         try
         {
             await NetworkStream.WriteAsync(buffer);
-            _logger.LogTrace("data sent:{data}", Encoding.ASCII.GetString(buffer));
+            _logger?.LogTrace("data sent:{data}", Encoding.ASCII.GetString(buffer));
             return true;
         }
         catch (Exception e)
         {
-            _logger.LogDebug(e, "Failed writing to endpoint: {endpoint}!", ClientEndpoint);
+            _logger?.LogDebug(e, "Failed writing to endpoint: {endpoint}!", ClientEndpoint);
             return false;
         }
     }

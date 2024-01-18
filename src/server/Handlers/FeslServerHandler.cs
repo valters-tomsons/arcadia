@@ -45,7 +45,7 @@ public class FeslServerHandler
     public async Task HandleClientConnection(TlsServerProtocol tlsProtocol, string clientEndpoint)
     {
         _conn.InitializeSecure(tlsProtocol, clientEndpoint);
-        await foreach (var packet in _conn.StartConnection())
+        await foreach (var packet in _conn.StartConnection(_logger))
         {
             await HandlePacket(packet);
         }

@@ -62,7 +62,7 @@ public class FeslClientHandler
     {
         _servicePort = servicePort;
         _conn.InitializeSecure(tlsProtocol, clientEndpoint);
-        await foreach (var packet in _conn.StartConnection())
+        await foreach (var packet in _conn.StartConnection(_logger))
         {
             await HandlePacket(packet);
         }
