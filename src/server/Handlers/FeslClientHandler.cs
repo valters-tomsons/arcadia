@@ -150,7 +150,7 @@ public class FeslClientHandler
             { "sessionState", "COMPLETE" },
             { "props.{}", 3 },
             { "props.{resultType}", "JOIN" },
-            { "props.{avgFit}", "0.8182313914386985" },
+            { "props.{avgFit}", "1.0" },
             { "props.{games}.[]", 1 },
             { "props.{games}.0.gid", serverData["GID"] },
             { "props.{games}.0.lid", serverData["LID"] }

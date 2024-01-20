@@ -114,6 +114,8 @@ public class TheaterServerHandler
         _sharedCache.UpsertGameServerDataByGid(gid, request.DataDict);
         _sharedCache.UpsertGameServerValueByGid(gid, "UGID", ugid);
 
+        var serverData = _sharedCache.GetGameServerDataByGid(gid) ?? throw new NotImplementedException();
+
         var response = new Dictionary<string, object>
         {
             ["TID"] = request["TID"],

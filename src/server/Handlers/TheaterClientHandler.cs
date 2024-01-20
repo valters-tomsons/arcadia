@@ -138,12 +138,12 @@ public class TheaterClientHandler
         var srvData = _sharedCache.GetGameServerDataByGid(long.Parse(request["GID"])) ?? throw new NotImplementedException();
         _sessionCache["UGID"] = srvData["UGID"];
 
-        await SendEGRQ(request, ticket);
+        await SendEGRQToHost(request, ticket);
         await _conn.SendPacket(clientPacket);
-        await SendEGEG(request, ticket);
+        await SendEGEG(request, ticket, srvData);
     }
 
-    private async Task SendEGRQ(Packet request, long ticket)
+    private async Task SendEGRQToHost(Packet request, long ticket)
     {
         var serverMessage = new Dictionary<string, object>
         {
@@ -155,8 +155,7 @@ public class TheaterClientHandler
             ["TICKET"] = ticket,
             ["PID"] = _sessionCache["UID"],
             ["UID"] = _sessionCache["UID"],
-            ["IP"] = "192.168.0.39",
-
+            ["IP"] = _conn.ClientEndpoint.Split(":")[0],
             ["LID"] = request.DataDict["LID"],
             ["GID"] = request.DataDict["GID"],
         };
@@ -170,13 +169,7 @@ public class TheaterClientHandler
     private async Task HandleGDAT(Packet request)
     {
         var serverGid = long.Parse(request["GID"]);
-        var serverInfo = _sharedCache.GetGameServerDataByGid(serverGid);
-
-        if (serverInfo is null)
-        {
-            _logger.LogWarning("Almost sent GDAT for a non-existant server!");
-            return;
-        }
+        var serverInfo = _sharedCache.GetGameServerDataByGid(serverGid) ?? throw new NotImplementedException();
 
         var serverInfoResponse = new Dictionary<string, object>
         {
@@ -194,22 +187,24 @@ public class TheaterClientHandler
             ["AP"] = 0,
             ["MP"] = serverInfo["MAX-PLAYERS"],
             ["JP"] = 1,
-            ["PL"] = "PS3",
+            ["PL"] = "ps3",
 
             ["PW"] = 0,
             ["TYPE"] = serverInfo["TYPE"],
             ["J"] = serverInfo["JOIN"],
 
+            ["B-U-balance"] = serverInfo["B-U-balance"],
             ["B-U-Hardcore"] = serverInfo["B-U-Hardcore"],
             ["B-U-HasPassword"] = serverInfo["B-U-HasPassword"],
-            ["B-U-Punkbuster"] = 0,
+            ["B-U-Punkbuster"] = serverInfo["B-U-Punkbuster"],
             ["B-version"] = serverInfo["B-version"],
-            ["V"] = "511118",
+            ["V"] = "530204",
             ["B-U-level"] = serverInfo["B-U-level"],
             ["B-U-gamemode"] = serverInfo["B-U-gamemode"],
             ["B-U-sguid"] = serverInfo["B-U-sguid"],
             ["B-U-Time"] = serverInfo["B-U-Time"],
             ["B-U-hash"] = serverInfo["B-U-hash"],
+            ["B-U-type"] = serverInfo["B-U-type"],
             ["B-U-region"] = serverInfo["B-U-region"],
             ["B-U-public"] = serverInfo["B-U-public"],
             ["B-U-elo"] = serverInfo["B-U-elo"],
@@ -256,7 +251,7 @@ public class TheaterClientHandler
         await _conn.SendPacket(packet);
     }
 
-    private async Task SendEGEG(Packet request, long ticket)
+    private async Task SendEGEG(Packet request, long ticket, IDictionary<string, object> serverData)
     {
         var serverIp = _arcadiaSettings.Value.GameServerAddress;
         var serverPort = _arcadiaSettings.Value.GameServerPort;
@@ -266,7 +261,7 @@ public class TheaterClientHandler
             ["PL"] = "ps3",
             ["TICKET"] = ticket,
             ["PID"] = _sessionCache["UID"],
-            ["HUID"] = "201104017",
+            ["HUID"] = "1000000000001",
             ["EKEY"] = "AIBSgPFqRDg0TfdXW1zUGa4%3d",
             ["UGID"] = _sessionCache["UGID"],
 
@@ -274,11 +269,10 @@ public class TheaterClientHandler
             ["INT-PORT"] = serverPort,
 
             ["I"] = serverIp,
-            ["P"] = serverPort,
+            ["P"] = serverData["PORT"],
 
             ["LID"] = request.DataDict["LID"],
-            ["GID"] = request.DataDict["GID"],
-            ["TID"] = request.DataDict["TID"]
+            ["GID"] = request.DataDict["GID"]
         };
 
         _logger.LogTrace("Sending EGEG to client at {endpoint}", _conn.ClientEndpoint);
