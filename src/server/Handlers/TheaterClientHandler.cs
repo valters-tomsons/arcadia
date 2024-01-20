@@ -204,7 +204,7 @@ public class TheaterClientHandler
             ["B-U-HasPassword"] = serverInfo["B-U-HasPassword"],
             ["B-U-Punkbuster"] = 0,
             ["B-version"] = serverInfo["B-version"],
-            ["V"] = "515757",
+            ["V"] = "511118",
             ["B-U-level"] = serverInfo["B-U-level"],
             ["B-U-gamemode"] = serverInfo["B-U-gamemode"],
             ["B-U-sguid"] = serverInfo["B-U-sguid"],
