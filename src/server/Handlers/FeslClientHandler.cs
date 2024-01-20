@@ -20,7 +20,7 @@ public class FeslClientHandler
 
     private readonly Dictionary<string, Func<Packet, Task>> _handlers;
 
-    private readonly Dictionary<string, object> _sessionCache = new();
+    private readonly Dictionary<string, object> _sessionCache = [];
     private FeslGamePort _servicePort;
     private uint _feslTicketId;
 

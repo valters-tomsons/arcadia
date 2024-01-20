@@ -19,8 +19,6 @@ public class TheaterClientHandler
 
     private readonly Dictionary<string, object> _sessionCache = [];
 
-    private int _brackets = 0;
-
     public TheaterClientHandler(IEAConnection conn, ILogger<TheaterClientHandler> logger, SharedCounters sharedCounters, SharedCache sharedCache, IOptions<ArcadiaSettings> arcadiaSettings)
     {
         _logger = logger;
@@ -137,7 +135,7 @@ public class TheaterClientHandler
         var ticket = _sharedCounters.GetNextTicket();
         _sessionCache["TICKET"] = ticket;
 
-        var srvData = _sharedCache.GetGameServerDataByGid(long.Parse(request["GID"]));
+        var srvData = _sharedCache.GetGameServerDataByGid(long.Parse(request["GID"])) ?? throw new NotImplementedException();
         _sessionCache["UGID"] = srvData["UGID"];
 
         await SendEGRQ(request, ticket);

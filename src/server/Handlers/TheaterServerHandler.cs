@@ -3,7 +3,6 @@ using Arcadia.EA;
 using Arcadia.EA.Constants;
 using Arcadia.Storage;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace Arcadia.Handlers;
 
@@ -12,7 +11,6 @@ public class TheaterServerHandler
     private readonly ILogger<TheaterServerHandler> _logger;
     private readonly SharedCounters _sharedCounters;
     private readonly SharedCache _sharedCache;
-    private readonly IOptions<ArcadiaSettings> _arcadiaSettings;
     private readonly IEAConnection _conn;
 
     private readonly Dictionary<string, Func<Packet, Task>> _handlers;
@@ -21,12 +19,11 @@ public class TheaterServerHandler
 
     private int _brackets = 0;
 
-    public TheaterServerHandler(IEAConnection conn, ILogger<TheaterServerHandler> logger, SharedCounters sharedCounters, SharedCache sharedCache, IOptions<ArcadiaSettings> arcadiaSettings)
+    public TheaterServerHandler(IEAConnection conn, ILogger<TheaterServerHandler> logger, SharedCounters sharedCounters, SharedCache sharedCache)
     {
         _logger = logger;
         _sharedCounters = sharedCounters;
         _sharedCache = sharedCache;
-        _arcadiaSettings = arcadiaSettings;
         _conn = conn;
 
         _handlers = new Dictionary<string, Func<Packet, Task>>

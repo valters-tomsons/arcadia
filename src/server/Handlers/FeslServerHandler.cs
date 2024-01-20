@@ -19,7 +19,7 @@ public class FeslServerHandler
 
     private readonly Dictionary<string, Func<Packet, Task>> _handlers;
 
-    private readonly Dictionary<string, object> _sessionCache = new();
+    private readonly Dictionary<string, object> _sessionCache = [];
     private uint _feslTicketId;
 
     public FeslServerHandler(IEAConnection conn, ILogger<FeslServerHandler> logger, IOptions<ArcadiaSettings> settings, SharedCounters sharedCounters, SharedCache sharedCache)
