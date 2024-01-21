@@ -39,7 +39,7 @@ bfbc2-ps3.fesl.ea.com=127.0.0.1&&beach-ps3.fesl.ea.com&&bfbc-ps3.fesl.ea.com&&th
 * *And799* for devmenu and general frostbite knowledge
 * Aim4kill for the great ProtoSSL write-up
 * Battlefield Modding Discord server
-* PS Rewired `#packet-captures` channel
+* `Dorian_N` & PS Rewired `#packet-captures` channel for PS3 captures
 
 ## References
 
