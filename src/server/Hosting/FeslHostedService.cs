@@ -45,6 +45,7 @@ public class FeslHostedService : IHostedService
             (int)FeslGamePort.BeachPS3,
             (int)FeslGamePort.BadCompanyPS3,
             (int)FeslGamePort.RomePS3,
+            (int)FeslGamePort.RomePC,
             (int)FeslServerPort.RomePC
         };
 
@@ -99,6 +100,7 @@ public class FeslHostedService : IHostedService
         {
             case (int)FeslGamePort.BeachPS3:
             case (int)FeslGamePort.RomePS3:
+            case (int)FeslGamePort.RomePC:
             case (int)FeslGamePort.BadCompanyPS3:
                 var clientHandler = scope.ServiceProvider.GetRequiredService<FeslClientHandler>();
                 await clientHandler.HandleClientConnection(serverProtocol, clientEndpoint, (FeslGamePort)connectionPort);

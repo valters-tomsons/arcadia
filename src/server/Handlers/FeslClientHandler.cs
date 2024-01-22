@@ -311,6 +311,8 @@ public class FeslClientHandler
     {
         switch (_servicePort)
         {
+            case FeslGamePort.RomePC:
+                return TheaterGamePort.RomePC;
             case FeslGamePort.RomePS3:
                 return TheaterGamePort.RomePS3;
             case FeslGamePort.BeachPS3:
