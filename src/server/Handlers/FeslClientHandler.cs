@@ -54,7 +54,9 @@ public class FeslClientHandler
             ["asso/GetAssociations"] = HandleGetAssociations,
             ["pres/PresenceSubscribe"] = HandlePresenceSubscribe,
             ["pres/SetPresenceStatus"] = HandleSetPresenceStatus,
-            ["rank/GetStats"] = HandleGetStats
+            ["rank/GetStats"] = HandleGetStats,
+            ["xmsg/GetMessages"] = HandleGetMessages,
+            ["xmsg/ModifySettings"] = HandleModifySettings
         };
     }
 
@@ -489,6 +491,29 @@ public class FeslClientHandler
 
         var resultPacket = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, data);
         await _conn.SendPacket(resultPacket);
+    }
+
+    private async Task HandleGetMessages(Packet request)
+    {
+        var response = new Dictionary<string, object>
+        {
+            { "TXN", request.TXN }
+        };
+
+        var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, response);
+        await _conn.SendPacket(packet);
+    }
+
+    private async Task HandleModifySettings(Packet request)
+    {
+        var response = new Dictionary<string, object>
+        {
+            { "TXN", request.TXN },
+            { "messages.[]", 0 },
+        };
+
+        var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, response);
+        await _conn.SendPacket(packet);
     }
 
     private static Task HandleMemCheck(Packet _)
