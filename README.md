@@ -33,6 +33,12 @@ Both PSN and RPCN clients are supported unless noted otherwise.
 bfbc2-ps3.fesl.ea.com=127.0.0.1&&beach-ps3.fesl.ea.com&&bfbc-ps3.fesl.ea.com&&theater.ps3.arcadia=127.0.0.1
 ```
 
+## PC Client Configuration
+
+**Notice:** Arcadia will not support PC clients, see below if you're a developer. 
+
+1. Override hosts as seen in `dist/pc/hosts.etc` or configure the DNS server
+
 ## Special Thanks
 
 * *[cetteup](https://github.com/cetteup)* - lot of proxy stuff, lots of knowledge of ea systems, lots of captures and for fixing my ea packet implementation! Thanks! 
