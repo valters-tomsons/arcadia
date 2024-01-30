@@ -23,11 +23,13 @@ public class EAPacketTests
 72 61 67 6d 65 6e 74 53 69 7a 65 3d 38 30 39 36
 0a 63 6c 69 65 6e 74 54 79 70 65 3d 0a 00";
 
-        var packet = new Packet(Utils.HexStringToBytes(request));
+        var requestData = Utils.HexStringToBytes(request);
+        var packet = new Packet(requestData);
 
         Assert.Equal("fsys", packet.Type);
         Assert.Equal((uint)1, packet.Id);
         Assert.Equal(0xc0000000, packet.TransmissionType);
         Assert.Equal("Hello", packet["TXN"]);
+        Assert.Equal(requestData.Length, (int)packet.Length);
     }
 }
