@@ -58,7 +58,6 @@ public class TheaterServerHandler
             return;
         }
 
-        _logger.LogDebug("Incoming Type: {type}", packetType);
         await handler(packet);
     }
 

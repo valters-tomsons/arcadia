@@ -64,7 +64,6 @@ public class FeslServerHandler
             return;
         }
 
-        _logger.LogDebug("Incoming Type: {type} | TXN: {txn}", packet.Type, reqTxn);
         await handler(packet);
     }
 
