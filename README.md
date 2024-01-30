@@ -35,9 +35,11 @@ bfbc2-ps3.fesl.ea.com=127.0.0.1&&beach-ps3.fesl.ea.com&&bfbc-ps3.fesl.ea.com&&th
 
 ## PC Client Configuration
 
-**Notice:** Arcadia will not support PC clients, see below if you're a developer. 
+**Notice:** Arcadia will not support PC clients, instruction below only for development purposes.
 
 1. Override hosts as seen in `dist/pc/hosts.etc` or configure the DNS server
+2. When logging in: enter username in email field, leave the password empty and make sure "Remember password" is not checked
+3. When logging in again, make sure to clear the password field and uncheck "Remember password"
 
 ## Special Thanks
 

@@ -80,6 +80,7 @@ public class SharedCache(ILogger<SharedCache> logger)
 
     public IDictionary<string, object>? GetGameServerDataByGid(long serverGid)
     {
+        if (serverGid is 0) return null;
         return _gameServers.SingleOrDefault(x => x.GameId == serverGid)?.InfoData;
     }
 
