@@ -51,11 +51,11 @@ public class EAConnection : IEAConnection
     {
         _logger = logger;
 
+        int read;
+        byte[] readBuffer = new byte[8096];
+
         while (NetworkStream?.CanRead == true || !ct.IsCancellationRequested)
         {
-            int read;
-            byte[] readBuffer = new byte[8096];
-
             try
             {
                 read = await NetworkStream!.ReadAsync(readBuffer.AsMemory(), ct);
@@ -71,9 +71,32 @@ public class EAConnection : IEAConnection
                 continue;
             }
 
-            var packet = new Packet(readBuffer[..read]);
-            logger.LogTrace("Incoming '{type}' data:{data}", packet.Type, Encoding.ASCII.GetString(readBuffer[..read]));
-            yield return packet;
+            var incomingData = readBuffer[..read];
+            var dataProcessed = 0;
+
+            logger.LogTrace("Incoming packet data:{data}", Encoding.ASCII.GetString(incomingData));
+
+            while (dataProcessed < read)
+            {
+                var buffer = incomingData[dataProcessed..];
+                if (buffer.Length <= 12)
+                {
+                    _logger.LogCritical("Unexpected incoming message length");
+                    throw new NotImplementedException();
+                }
+
+                var packet = new Packet(buffer);
+
+                if (packet.Length == 0)
+                {
+                    _logger.LogCritical("Unexpected packet length");
+                    throw new NotImplementedException();
+                }
+
+                logger.LogTrace("'{type}' processed:{data}", packet.Type, Encoding.ASCII.GetString(packet.Data ?? []));
+                dataProcessed += (int)packet.Length;
+                yield return packet;
+            }
         }
 
         logger.LogInformation("Connection has been closed: {endpoint}", ClientEndpoint);
