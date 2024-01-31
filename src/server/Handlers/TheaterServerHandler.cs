@@ -150,25 +150,22 @@ public class TheaterServerHandler
 
     private async Task HandleUBRA(Packet request)
     {
-        if (request["START"] != "1")
+        if (request["START"] == "1")
         {
-            var originalTid = (request.DataDict["TID"] as int?) - (_brackets / 2) ?? 0;
-            for (var i = 0; i < _brackets; i++)
-            {
-                var data = new Dictionary<string, object>
-                {
-                    //TODO: Server responds with unknown if tid=i+1?
-                    ["TID"] = request["TID"]
-                };
-
-                var packet = new Packet(request.Type, TheaterTransmissionType.OkResponse, 0, data);
-                await _conn.SendPacket(packet);
-                Interlocked.Decrement(ref _brackets);
-            }
+            Interlocked.Add(ref _brackets, 2);
         }
         else
         {
-            Interlocked.Add(ref _brackets, 2);
+            var reqTid = int.Parse(request["TID"]);
+            var originalTid = reqTid - _brackets / 2;
+
+            for (var packet = 0; packet < Thread.VolatileRead(ref _brackets); packet++)
+            {
+                var response = new Packet(request.Type, TheaterTransmissionType.OkResponse, 0);
+                response.DataDict["TID"] = originalTid + packet;
+                await _conn.SendPacket(response);
+                Interlocked.Decrement(ref _brackets);
+            }
         }
     }
 
