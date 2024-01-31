@@ -237,7 +237,8 @@ public class TheaterClientHandler
             ["D-ThreeDSpotting"] = serverInfo["D-ThreeDSpotting"]
         };
 
-        for (var i = 0; i < 32; i++)
+        var maxPlayers = int.Parse((string)serverInfo["MAX-PLAYERS"]);
+        for (var i = 0; i < maxPlayers; i++)
         {
             var pdatId = $"D-pdat{i:D2}";
             var validId = serverInfo.TryGetValue(pdatId, out var pdat);
