@@ -497,7 +497,8 @@ public class FeslClientHandler
     {
         var response = new Dictionary<string, object>
         {
-            { "TXN", request.TXN }
+            { "TXN", request.TXN },
+            { "messages.[]", 0 }
         };
 
         var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, response);
@@ -508,8 +509,7 @@ public class FeslClientHandler
     {
         var response = new Dictionary<string, object>
         {
-            { "TXN", request.TXN },
-            { "messages.[]", 0 },
+            { "TXN", request.TXN }
         };
 
         var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, response);
