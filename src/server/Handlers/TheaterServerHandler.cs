@@ -156,10 +156,11 @@ public class TheaterServerHandler
         }
         else
         {
+            var brackets = Thread.VolatileRead(ref _brackets);
             var reqTid = int.Parse(request["TID"]);
-            var originalTid = reqTid - _brackets / 2;
+            var originalTid = reqTid - brackets / 2;
 
-            for (var packet = 0; packet < Thread.VolatileRead(ref _brackets); packet++)
+            for (var packet = 0; packet < brackets; packet++)
             {
                 var response = new Packet(request.Type, TheaterTransmissionType.OkResponse, 0);
                 response.DataDict["TID"] = originalTid + packet;
