@@ -134,7 +134,8 @@ public class FeslServerHandler
 
     private async Task HandleNuLogin(Packet request)
     {
-        _sessionCache["personaName"] = request["nuid"];
+        var host = request["nuid"].Split('@')[0];
+        _sessionCache["personaName"] = host;
 
         var loginResponseData = new Dictionary<string, object>
         {
