@@ -33,7 +33,9 @@ public class TheaterClientHandler
             ["USER"] = HandleUSER,
             ["ECNL"] = HandleECNL,
             ["EGAM"] = HandleEGAM,
-            ["GDAT"] = HandleGDAT
+            ["GDAT"] = HandleGDAT,
+            ["LLST"] = HandleLLST,
+            ["GLST"] = HandleGLST
         };
     }
 
@@ -177,7 +179,7 @@ public class TheaterClientHandler
             ["GID"] = serverInfo["GID"],
 
             ["HU"] = "1000000000001",
-            ["HN"] = "bfbc.server.ps3@ea.com",
+            ["HN"] = "beach.server.ps3",
 
             ["I"] = _arcadiaSettings.Value.GameServerAddress,
             ["P"] = serverInfo["PORT"],
@@ -192,18 +194,16 @@ public class TheaterClientHandler
             ["TYPE"] = serverInfo["TYPE"],
             ["J"] = serverInfo["JOIN"],
 
-            ["B-U-balance"] = serverInfo["B-U-balance"],
             ["B-U-Hardcore"] = serverInfo["B-U-Hardcore"],
             ["B-U-HasPassword"] = serverInfo["B-U-HasPassword"],
             ["B-U-Punkbuster"] = serverInfo["B-U-Punkbuster"],
             ["B-version"] = serverInfo["B-version"],
-            ["V"] = "530204",
+            ["V"] = "1.0",
             ["B-U-level"] = serverInfo["B-U-level"],
             ["B-U-gamemode"] = serverInfo["B-U-gamemode"],
             ["B-U-sguid"] = serverInfo["B-U-sguid"],
             ["B-U-Time"] = serverInfo["B-U-Time"],
             ["B-U-hash"] = serverInfo["B-U-hash"],
-            ["B-U-type"] = serverInfo["B-U-type"],
             ["B-U-region"] = serverInfo["B-U-region"],
             ["B-U-public"] = serverInfo["B-U-public"],
             ["B-U-elo"] = serverInfo["B-U-elo"],
@@ -258,7 +258,7 @@ public class TheaterClientHandler
 
         var serverInfo = new Dictionary<string, object>
         {
-            ["PL"] = "ps3",
+            ["PL"] = "pc",
             ["TICKET"] = ticket,
             ["PID"] = _sessionCache["UID"],
             ["HUID"] = "1000000000001",
@@ -278,5 +278,90 @@ public class TheaterClientHandler
         _logger.LogTrace("Sending EGEG to client at {endpoint}", _conn.ClientEndpoint);
         var packet = new Packet("EGEG", TheaterTransmissionType.OkResponse, 0, serverInfo);
         await _conn.SendPacket(packet);
+    }
+
+    private async Task HandleLLST(Packet request)
+    {
+        var lobbyList = new Dictionary<string, object>
+        {
+            ["TID"] = request["TID"],
+            ["NUM-LOBBIES"] = 1
+        };
+        await _conn.SendPacket(new Packet("LLST", TheaterTransmissionType.OkResponse, 0, lobbyList));
+
+        var lobbyData = new Dictionary<string, object>
+        {
+            ["TID"] = request["TID"],
+            ["LID"] = _sharedCounters.GetNextLobbyId(),
+            ["PASSING"] = 1,
+            ["NAME"] = "bc2222",
+            ["LOCALE"] = "en_US",
+            ["MAX-GAMES"] = 1000,
+            ["FAVORITE-GAMES"] = 0,
+            ["FAVORITE-PLAYERS"] = 0,
+            ["NUM-GAMES"] = 1,
+        };
+        await _conn.SendPacket(new Packet("LDAT", TheaterTransmissionType.OkResponse, 0, lobbyData));
+    }
+
+    public async Task HandleGLST(Packet request)
+    {
+        var gameList = new Dictionary<string, object>
+        {
+            ["TID"] = request["TID"],
+            ["LID"] = request["LID"],
+            ["LOBBY-NUM-GAMES"] = 1,
+            ["LOBBY-MAX-GAMES"] = 1000,
+            ["FAVORITE-GAMES"] = 0,
+            ["FAVORITE-PLAYERS"] = 0,
+            ["NUM-GAMES"] = 1
+        };
+        await _conn.SendPacket(new Packet("GLST", TheaterTransmissionType.OkResponse, 0, gameList));
+
+        var gameServers = _sharedCache.ListServersGIDs();
+        
+        foreach(var serverGid in gameServers)
+        {
+            var serverInfo = _sharedCache.GetGameServerDataByGid(serverGid) ?? throw new NotImplementedException();
+
+            var gameData = new Dictionary<string, object>
+            {
+                ["TID"] = request["TID"],
+                ["LID"] = request["LID"],
+                ["GID"] = serverGid,
+                ["HN"] = "bfbc2.server.pc",
+                ["HU"] = 1000000000001,
+                ["N"] = "Server 01",
+
+                ["I"] = _arcadiaSettings.Value.GameServerAddress,
+                ["P"] = 16420,
+
+                ["PL"] = "pc",
+
+                ["PW"] = 0,
+                ["TYPE"] = serverInfo["TYPE"],
+                ["J"] = serverInfo["JOIN"],
+
+                // ["B-U-balance"] = serverInfo["B-U-balance"],
+                ["B-U-Hardcore"] = serverInfo["B-U-Hardcore"],
+                ["B-U-HasPassword"] = serverInfo["B-U-HasPassword"],
+                ["B-U-Punkbuster"] = serverInfo["B-U-Punkbuster"],
+                ["B-version"] = serverInfo["B-version"],
+                ["V"] = "1.0",
+                ["B-U-level"] = serverInfo["B-U-level"],
+                ["B-U-gamemode"] = serverInfo["B-U-gamemode"],
+                ["B-U-sguid"] = serverInfo["B-U-sguid"],
+                ["B-U-Time"] = serverInfo["B-U-Time"],
+                ["B-U-hash"] = serverInfo["B-U-hash"],
+                // ["B-U-type"] = serverInfo["B-U-type"],
+                ["B-U-region"] = serverInfo["B-U-region"],
+                ["B-U-public"] = serverInfo["B-U-public"],
+                ["B-U-elo"] = serverInfo["B-U-elo"],
+                ["B-numObservers"] = serverInfo["B-numObservers"],
+                ["B-maxObservers"] = serverInfo["B-maxObservers"]
+            };
+
+            await _conn.SendPacket(new Packet("GDAT", TheaterTransmissionType.OkResponse, 0, gameData));
+        }
     }
 }
