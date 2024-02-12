@@ -10,7 +10,7 @@ public class SharedCache(ILogger<SharedCache> logger)
     private readonly ConcurrentDictionary<string, string> _lkeyUsernames = new();
     private readonly ConcurrentBag<GameServerListing> _gameServers = [];
 
-    public void AddUserWithKey(string lkey, string username)
+    public void AddUserWithLKey(string lkey, string username)
     {
         _lkeyUsernames.TryAdd(lkey, username);
     }

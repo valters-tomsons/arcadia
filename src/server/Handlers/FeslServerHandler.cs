@@ -167,7 +167,7 @@ public class FeslServerHandler
         var uid = _sharedCounters.GetNextUserId();
         _sessionCache["UID"] = uid;
 
-        _sharedCache.AddUserWithKey((string)_sessionCache["LKEY"], (string)_sessionCache["personaName"]);
+        _sharedCache.AddUserWithLKey((string)_sessionCache["LKEY"], (string)_sessionCache["personaName"]);
         var loginResponseData = new Dictionary<string, object>
         {
             { "TXN", request.TXN },

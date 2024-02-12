@@ -292,9 +292,9 @@ public class TheaterClientHandler
         var lobbyData = new Dictionary<string, object>
         {
             ["TID"] = request["TID"],
-            ["LID"] = _sharedCounters.GetNextLobbyId(),
+            ["LID"] = 1,
             ["PASSING"] = 1,
-            ["NAME"] = "bc2222",
+            ["NAME"] = "bfbc2_01",
             ["LOCALE"] = "en_US",
             ["MAX-GAMES"] = 1000,
             ["FAVORITE-GAMES"] = 0,
@@ -309,7 +309,7 @@ public class TheaterClientHandler
         var gameList = new Dictionary<string, object>
         {
             ["TID"] = request["TID"],
-            ["LID"] = request["LID"],
+            ["LID"] = 1,
             ["LOBBY-NUM-GAMES"] = 1,
             ["LOBBY-MAX-GAMES"] = 1000,
             ["FAVORITE-GAMES"] = 0,
@@ -323,26 +323,33 @@ public class TheaterClientHandler
         foreach(var serverGid in gameServers)
         {
             var serverInfo = _sharedCache.GetGameServerDataByGid(serverGid) ?? throw new NotImplementedException();
+            // var serverHn = _sharedCache.GetUsernameByLKey((string)serverLkey);
+            // var serverLkey = _sharedCache.GetLKeyByUsername(serverHn);
 
             var gameData = new Dictionary<string, object>
             {
                 ["TID"] = request["TID"],
-                ["LID"] = request["LID"],
+                ["LID"] = 1,
                 ["GID"] = serverGid,
-                ["HN"] = "bfbc2.server.pc",
-                ["HU"] = 1000000000001,
-                ["N"] = "Server 01",
+                ["HN"] = 1000000000001,
+                ["HU"] = 10,
+                ["N"] = serverInfo["NAME"],
 
                 ["I"] = _arcadiaSettings.Value.GameServerAddress,
                 ["P"] = 16420,
 
-                ["PL"] = "pc",
+                ["JP"] = 0,
+                ["QP"] = 0,
+                ["AP"] = 0,
+                ["MP"] = serverInfo["MAX-PLAYERS"],
+                ["PL"] = "PC",
 
-                ["PW"] = 0,
-                ["TYPE"] = serverInfo["TYPE"],
+                ["F"] = 0,
+                ["NF"] = 0,
                 ["J"] = serverInfo["JOIN"],
+                ["TYPE"] = serverInfo["TYPE"],
+                ["PW"] = 0,
 
-                // ["B-U-balance"] = serverInfo["B-U-balance"],
                 ["B-U-Hardcore"] = serverInfo["B-U-Hardcore"],
                 ["B-U-HasPassword"] = serverInfo["B-U-HasPassword"],
                 ["B-U-Punkbuster"] = serverInfo["B-U-Punkbuster"],
@@ -353,12 +360,17 @@ public class TheaterClientHandler
                 ["B-U-sguid"] = serverInfo["B-U-sguid"],
                 ["B-U-Time"] = serverInfo["B-U-Time"],
                 ["B-U-hash"] = serverInfo["B-U-hash"],
-                // ["B-U-type"] = serverInfo["B-U-type"],
+                ["B-U-type"] = serverInfo["B-U-type"],
                 ["B-U-region"] = serverInfo["B-U-region"],
                 ["B-U-public"] = serverInfo["B-U-public"],
                 ["B-U-elo"] = serverInfo["B-U-elo"],
+
                 ["B-numObservers"] = serverInfo["B-numObservers"],
-                ["B-maxObservers"] = serverInfo["B-maxObservers"]
+                ["B-maxObservers"] = serverInfo["B-maxObservers"],
+
+                // ["B-U-Provider"] = serverInfo["B-U-Provider"],
+                // ["B-U-gameMod"] = serverInfo["B-U-gameMod"],
+                // ["B-U-QueueLength"] = serverInfo["B-U-QueueLength"]
             };
 
             await _conn.SendPacket(new Packet("GDAT", TheaterTransmissionType.OkResponse, 0, gameData));

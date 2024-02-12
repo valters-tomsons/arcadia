@@ -376,7 +376,7 @@ public class FeslClientHandler
         var uid = _sharedCounters.GetNextUserId();
         _sessionCache["UID"] = uid;
 
-        _sharedCache.AddUserWithKey((string)_sessionCache["LKEY"], (string)_sessionCache["personaName"]);
+        _sharedCache.AddUserWithLKey((string)_sessionCache["LKEY"], (string)_sessionCache["personaName"]);
         var loginResponseData = new Dictionary<string, object>
         {
             { "TXN", request.TXN },
@@ -441,7 +441,7 @@ public class FeslClientHandler
         _sessionCache["LKEY"] = SharedCounters.GetNextLkey();
         _sessionCache["UID"] = _sharedCounters.GetNextUserId();
 
-        _sharedCache.AddUserWithKey((string)_sessionCache["LKEY"], (string)_sessionCache["personaName"]);
+        _sharedCache.AddUserWithLKey((string)_sessionCache["LKEY"], (string)_sessionCache["personaName"]);
 
         var loginResponseData = new Dictionary<string, object>
         {
@@ -455,7 +455,7 @@ public class FeslClientHandler
         await _conn.SendPacket(loginPacket);
     }
 
-    private async Task SendInvalidLogin(Packet request)
+    private async Task SendInvalidLogin1943(Packet request)
     {
         var loginResponseData = new Dictionary<string, object>
         {
