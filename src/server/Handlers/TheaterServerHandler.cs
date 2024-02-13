@@ -67,10 +67,7 @@ public class TheaterServerHandler
 
         _logger.LogInformation("CONN: {tid}", tid);
 
-        if (request["PLAT"] == "PC")
-        {
-            _sharedCounters.SetServerTheaterNetworkStream(_conn.NetworkStream!);
-        }
+        _sharedCounters.SetServerTheaterNetworkStream(_conn.NetworkStream!);
 
         var response = new Dictionary<string, object>
         {
