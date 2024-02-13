@@ -9,7 +9,6 @@ using Arcadia.EA;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 using Arcadia.Storage;
-using Arcadia.Internal;
 using NReco.Logging.File;
 
 var host = Host.CreateDefaultBuilder()
@@ -32,7 +31,6 @@ var host = Host.CreateDefaultBuilder()
             .AddSingleton<SharedCache>();
 
         services
-            .AddScoped<ConnectionLogScope>()
             .AddScoped<Rc4TlsCrypto>()
             .AddScoped<IEAConnection, EAConnection>()
             .AddScoped<FeslServerHandler>()

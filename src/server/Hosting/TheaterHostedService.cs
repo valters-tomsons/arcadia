@@ -3,7 +3,6 @@ using System.Net;
 using System.Net.Sockets;
 using Arcadia.EA.Ports;
 using Arcadia.Handlers;
-using Arcadia.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -68,13 +67,6 @@ public class TheaterHostedService(ILogger<TheaterHostedService> logger, IOptions
         _logger.LogInformation("Opening connection from: {clientEndpoint} to {port}", clientEndpoint, connectionPort);
 
         using var scope = _scopeFactory.CreateAsyncScope();
-
-        var scopeData = scope.ServiceProvider.GetRequiredService<ConnectionLogScope>();
-        scopeData.ClientEndpoint = clientEndpoint;
-
-        using var logScope = _logger.BeginScope(scopeData);
-        _logger.LogDebug("Creating new connectionId: {connId}", scopeData.ConnectionId);
-
         var networkStream = tcpClient.GetStream();
 
         switch (connectionPort)
@@ -94,6 +86,8 @@ public class TheaterHostedService(ILogger<TheaterHostedService> logger, IOptions
         }
 
         tcpClient.Close();
+        await networkStream.DisposeAsync();
+        tcpClient.Dispose();
     }
 
     public Task StopAsync(CancellationToken cancellationToken)

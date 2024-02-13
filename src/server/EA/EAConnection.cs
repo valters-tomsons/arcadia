@@ -74,7 +74,7 @@ public class EAConnection : IEAConnection
             var incomingData = readBuffer[..read];
             var dataProcessed = 0;
 
-            logger.LogTrace("Incoming packet data:{data}", Encoding.ASCII.GetString(incomingData));
+            // logger.LogTrace("Incoming packet data:{data}", Encoding.ASCII.GetString(incomingData));
 
             while (dataProcessed < read)
             {

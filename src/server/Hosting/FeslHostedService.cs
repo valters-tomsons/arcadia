@@ -2,7 +2,6 @@ using System.Collections.Concurrent;
 using System.Net.Sockets;
 using Arcadia.EA;
 using Arcadia.Handlers;
-using Arcadia.Internal;
 using Arcadia.Tls;
 using Arcadia.Tls.Crypto;
 using Microsoft.Extensions.DependencyInjection;
@@ -83,12 +82,6 @@ public class FeslHostedService : IHostedService
         _logger.LogInformation("Opening connection from: {clientEndpoint} to {port}", clientEndpoint, connectionPort);
 
         using var scope = _scopeFactory.CreateAsyncScope();
-        var scopeData = scope.ServiceProvider.GetRequiredService<ConnectionLogScope>();
-        scopeData.ClientEndpoint = clientEndpoint;
-
-        using var logScope = _logger.BeginScope(scopeData);
-        _logger.LogDebug("Creating new connectionId: {connId}", scopeData.ConnectionId);
-
         var networkStream = tcpClient.GetStream();
 
         var crypto = scope.ServiceProvider.GetRequiredService<Rc4TlsCrypto>();
@@ -113,6 +106,8 @@ public class FeslHostedService : IHostedService
         }
 
         tcpClient.Close();
+        await networkStream.DisposeAsync();
+        tcpClient.Dispose();
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
