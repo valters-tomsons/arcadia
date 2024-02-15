@@ -13,7 +13,7 @@ Currently, enough is implemented to allow connection to backend services and bro
 Both PSN and RPCN clients are supported unless noted otherwise.
 
 * **BC2** - login, partial game server connection
-* **BC2 PC server** - login, create game, initialize player connection
+* **BC2 Server** - login, create game, initialize player connection
 * **1943** - login *(easy access to game tutorial)*
 * **BC1** - partial connection, requires a game patch, PSN likely won't be supported
 
