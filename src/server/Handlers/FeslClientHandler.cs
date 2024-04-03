@@ -39,6 +39,7 @@ public class FeslClientHandler
             ["fsys/GetPingSites"] = HandleGetPingSites,
             ["pnow/Start"] = HandlePlayNow,
             ["acct/NuPS3Login"] = HandleNuPs3Login,
+            ["acct/PS3Login"] = HandlePs3Login,
             ["acct/NuLogin"] = HandleNuLogin,
             ["acct/NuGetPersonas"] = HandleNuGetPersonas,
             ["acct/NuLoginPersona"] = HandleNuLoginPersona,
@@ -416,6 +417,30 @@ public class FeslClientHandler
         await _conn.SendPacket(packet);
     }
 
+    // BC1, AO2
+    private async Task HandlePs3Login(Packet request)
+    {
+        var loginTicket = request.DataDict["ticket"] as string ?? string.Empty;
+        var ticketData = TicketDecoder.DecodeFromASCIIString(loginTicket, _logger);
+        var onlineId = (ticketData[5] as BStringData)?.Value?.TrimEnd('\0');
+
+        _sessionCache["personaName"] = onlineId ?? throw new NotImplementedException();
+        _sessionCache["LKEY"] = SharedCounters.GetNextLkey();
+        _sessionCache["UID"] = _sharedCounters.GetNextUserId();
+
+        var loginResponseData = new Dictionary<string, object>
+        {
+            { "TXN", request.TXN },
+            { "lkey", _sessionCache["LKEY"] },
+            { "userId", _sessionCache["UID"] },
+            { "screenName", _sessionCache["personaName"] }
+        };
+
+        var loginPacket = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
+        await _conn.SendPacket(loginPacket);
+    }
+
+    // BC2, 1943
     private async Task HandleNuPs3Login(Packet request)
     {
         // var tosAccepted = request.DataDict.TryGetValue("tosVersion", out var tosAcceptedValue);
