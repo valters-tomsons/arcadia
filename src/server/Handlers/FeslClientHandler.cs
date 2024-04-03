@@ -320,6 +320,9 @@ public class FeslClientHandler
                 return TheaterGamePort.BeachPS3;
             case FeslGamePort.BadCompanyPS3:
                 return TheaterGamePort.BadCompanyPS3;
+            case FeslGamePort.ArmyOfTwoPS3:
+                _logger.LogWarning("Army of Two detected, using Bad Company port");
+                return TheaterGamePort.BadCompanyPS3;
             default:
                 _logger.LogError("Unknown FESL service port: {port}", (int)_servicePort);
                 return TheaterGamePort.BeachPS3;

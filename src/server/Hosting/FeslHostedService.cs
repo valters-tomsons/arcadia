@@ -45,7 +45,8 @@ public class FeslHostedService : IHostedService
             (int)FeslGamePort.BadCompanyPS3,
             (int)FeslGamePort.RomePS3,
             (int)FeslGamePort.RomePC,
-            (int)FeslServerPort.RomePC
+            (int)FeslGamePort.ArmyOfTwoPS3,
+            (int)FeslServerPort.RomePC,
         };
 
         foreach (var port in listeningPorts)

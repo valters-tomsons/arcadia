@@ -5,7 +5,8 @@ public enum FeslGamePort : int
     BadCompanyPS3 = 18800,
     RomePS3 = 18121,
     BeachPS3 = 18231,
-    RomePC = 18390
+    RomePC = 18390,
+    ArmyOfTwoPS3 = 18340
 }
 
 public enum TheaterGamePort : int
