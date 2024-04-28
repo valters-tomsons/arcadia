@@ -40,7 +40,7 @@ public class DnsHostedService : IHostedService
 
         _server.Listening += (sender, args) => _logger.LogInformation("DNS server listening!");
         _server.Requested += (sender, args) => _logger.LogDebug("DNS request: {Request}", args.Request);
-        _server.Responded += (sender, args) => _logger.LogDebug("DNS response: {Response}", args.Response);
+        _server.Responded += (sender, args) => _logger.LogTrace("DNS response: {Response}", args.Response);
         _server.Errored += (sender, args) => _logger.LogError("DNS error: {Exception}", args.Exception);
     }
 
