@@ -30,10 +30,15 @@ public class DnsHostedService : IHostedService
         // Override EA PS3 backends
         _masterFile.AddIPAddressResourceRecord("beach-ps3.fesl.ea.com", options.ArcadiaAddress);
         _masterFile.AddIPAddressResourceRecord("beach-ps3.theater.ea.com", options.ArcadiaAddress);
+
         _masterFile.AddIPAddressResourceRecord("bfbc-ps3.fesl.ea.com", options.ArcadiaAddress);
         _masterFile.AddIPAddressResourceRecord("bfbc-ps3.theater.ea.com", options.ArcadiaAddress);
+
         _masterFile.AddIPAddressResourceRecord("bfbc2-ps3.fesl.ea.com", options.ArcadiaAddress);
         _masterFile.AddIPAddressResourceRecord("bfbc2-ps3.theater.ea.com", options.ArcadiaAddress);
+
+        _masterFile.AddIPAddressResourceRecord("ao2-ps3.fesl.ea.com", options.ArcadiaAddress);
+        _masterFile.AddIPAddressResourceRecord("ao2-ps3.theater.ea.com", options.ArcadiaAddress);
 
         // Block EA Telemetry (breaks BFBC1)
         // _masterFile.AddIPAddressResourceRecord("messaging.ea.com", "127.0.0.1");

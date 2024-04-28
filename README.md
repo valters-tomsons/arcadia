@@ -30,7 +30,7 @@ Both PSN and RPCN clients are supported unless noted otherwise.
 1. Set IP/Hosts switches to:
 
 ```
-bfbc2-ps3.fesl.ea.com=127.0.0.1&&beach-ps3.fesl.ea.com&&bfbc-ps3.fesl.ea.com&&theater.ps3.arcadia=127.0.0.1
+bfbc2-ps3.fesl.ea.com=127.0.0.1&&beach-ps3.fesl.ea.com&&bfbc-ps3.fesl.ea.com&&theater.ps3.arcadia=127.0.0.1&&ao2-ps3.fesl.ea.com=127.0.0.1
 ```
 
 ## PC Client Configuration
