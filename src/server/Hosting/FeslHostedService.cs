@@ -92,6 +92,7 @@ public class FeslHostedService : IHostedService
 
         switch (connectionPort)
         {
+            case (int)FeslGamePort.ArmyOfTwoPS3:
             case (int)FeslGamePort.BeachPS3:
             case (int)FeslGamePort.RomePS3:
             case (int)FeslGamePort.RomePC:
