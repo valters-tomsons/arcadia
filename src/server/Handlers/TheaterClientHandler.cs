@@ -87,6 +87,7 @@ public class TheaterClientHandler
 
         _sessionCache["NAME"] = username;
         _sessionCache["UID"] = _sharedCounters.GetNextUserId();
+        _sessionCache["PID"] = _sharedCounters.GetNextPid();
         _logger.LogInformation("USER: {name} {lkey}", username, lkey);
 
         var response = new Dictionary<string, object>
@@ -149,7 +150,7 @@ public class TheaterClientHandler
             ["NAME"] = _sessionCache["NAME"],
             ["PTYPE"] = request["PTYPE"],
             ["TICKET"] = ticket,
-            ["PID"] = _sessionCache["UID"],
+            ["PID"] = _sessionCache["PID"],
             ["UID"] = _sessionCache["UID"],
             ["IP"] = _conn.ClientEndpoint.Split(":")[0],
             ["LID"] = request.DataDict["LID"],
