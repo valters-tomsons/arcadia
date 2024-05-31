@@ -74,7 +74,8 @@ public class TheaterServerHandler
             ["TIME"] = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             ["TID"] = tid,
             ["activityTimeoutSecs"] = 0,
-            ["PROT"] = request.DataDict["PROT"]
+            ["PROT"] = request.DataDict["PROT"],
+            ["NAME"] = "bfbc.server.ps3"
         };
 
         var packet = new Packet("CONN", TheaterTransmissionType.OkResponse, 0, response);

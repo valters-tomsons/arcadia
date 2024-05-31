@@ -288,7 +288,7 @@ public class TheaterClientHandler
         var lobbyData = new Dictionary<string, object>
         {
             ["TID"] = request["TID"],
-            ["LID"] = 1,
+            ["LID"] = request["LID"],
             ["PASSING"] = 1,
             ["NAME"] = "bfbc2_01",
             ["LOCALE"] = "en_US",
@@ -305,7 +305,7 @@ public class TheaterClientHandler
         var gameList = new Dictionary<string, object>
         {
             ["TID"] = request["TID"],
-            ["LID"] = 1,
+            ["LID"] = request["LID"],
             ["LOBBY-NUM-GAMES"] = 1,
             ["LOBBY-MAX-GAMES"] = 1000,
             ["FAVORITE-GAMES"] = 0,
@@ -325,7 +325,7 @@ public class TheaterClientHandler
             var gameData = new Dictionary<string, object>
             {
                 ["TID"] = request["TID"],
-                ["LID"] = 1,
+                ["LID"] = request["LID"],
                 ["GID"] = serverGid,
                 ["HN"] = 1000000000001,
                 ["HU"] = 10,
