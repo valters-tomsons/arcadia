@@ -100,7 +100,7 @@ public class FeslClientHandler
                     { "domainPartition.domain", "ps3" },
                     { "messengerIp", "127.0.0.1" },
                     { "messengerPort", 0 },
-                    { "domainPartition.subDomain", "BEACH" },
+                    { "domainPartition.subDomain", "BFBC2" },
                     { "TXN", "Hello" },
                     { "activityTimeoutSecs", 0 },
                     { "curTime", currentTime },
@@ -138,7 +138,7 @@ public class FeslClientHandler
         {
             { "TXN", "Start" },
             { "id.id", pnowId },
-            { "id.partition", "/ps3/BEACH" },
+            { "id.partition", "/ps3/BFBC2" },
         };
 
         var packet1 = new Packet("pnow", FeslTransmissionType.SinglePacketResponse, request.Id, data1);
@@ -148,7 +148,7 @@ public class FeslClientHandler
         {
             { "TXN", "Status" },
             { "id.id", pnowId },
-            { "id.partition", "/ps3/BEACH" },
+            { "id.partition", "/ps3/BFBC2" },
             { "sessionState", "COMPLETE" },
             { "props.{}", 3 },
             { "props.{resultType}", "JOIN" },

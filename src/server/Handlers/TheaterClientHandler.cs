@@ -175,7 +175,7 @@ public class TheaterClientHandler
             ["GID"] = serverInfo["GID"],
 
             ["HU"] = "1000000000001",
-            ["HN"] = "beach.server.ps3",
+            ["HN"] = "bfbc.server.ps3",
 
             ["I"] = _arcadiaSettings.Value.GameServerAddress,
             ["P"] = serverInfo["PORT"],

@@ -80,7 +80,7 @@ public class FeslServerHandler
                     { "domainPartition.domain", "ps3" },
                     { "messengerIp", "127.0.0.1" },
                     { "messengerPort", 0 },
-                    { "domainPartition.subDomain", "BEACH" },
+                    { "domainPartition.subDomain", "BFBC2" },
                     { "TXN", "Hello" },
                     { "activityTimeoutSecs", 0 },
                     { "curTime", currentTime },
