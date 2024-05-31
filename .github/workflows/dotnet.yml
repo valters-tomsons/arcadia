@@ -2,7 +2,7 @@ name: .NET
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "*" ]
     paths:
       - 'src/**'
   pull_request:
