@@ -64,7 +64,8 @@ var host = Host.CreateDefaultBuilder()
                     x.AddFilter("Arcadia.EA.EAConnection", LogLevel.Trace);
                 });
 
-                log.AddFile("arcadia.log", append: true);
+                var startTs = DateTime.Now.Ticks;
+                log.AddFile($"arcadia.{startTs}.log", append: true);
             }
         });
     })
