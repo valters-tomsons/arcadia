@@ -65,7 +65,7 @@ var host = Host.CreateDefaultBuilder()
                 });
 
                 var startTs = DateTime.Now.Ticks;
-                log.AddFile($"arcadia.{startTs}.log", append: true);
+                log.AddFile($"logs/arcadia.{startTs}.log", append: true);
             }
         });
     })
