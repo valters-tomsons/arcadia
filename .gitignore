@@ -8,5 +8,6 @@
 **.pem
 
 # logs and dumps
+**/logs/
 **.log
 **/dumps/priv/*
