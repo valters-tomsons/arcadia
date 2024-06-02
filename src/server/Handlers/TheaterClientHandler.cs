@@ -88,6 +88,7 @@ public class TheaterClientHandler
         var username = _sharedCache.GetUsernameByLKey((string)lkey);
 
         _sessionCache["NAME"] = username;
+        _sessionCache["personaName"] = username;
         _sessionCache["UID"] = _sharedCounters.GetNextUserId();
         _sessionCache["PID"] = _sharedCounters.GetNextPid();
         _logger.LogInformation("USER: {name} {lkey}", username, lkey);
@@ -122,6 +123,9 @@ public class TheaterClientHandler
     // EnterGameRequest
     private async Task HandleEGAM(Packet request)
     {
+        var srvData = _sharedCache.GetGameServerDataByGid(_sharedCache.ListServersGIDs().First());
+        _sessionCache["UGID"] = srvData["UGID"];
+
         var clientResponse = new Dictionary<string, object>
         {
             ["TID"] = request.DataDict["TID"],
@@ -135,38 +139,35 @@ public class TheaterClientHandler
         _sessionCache["TICKET"] = ticket;
 
         // var srvData = _sharedCache.GetGameServerDataByGid(long.Parse(request["GID"])) ?? throw new NotImplementedException();
-        var srvData = _sharedCache.GetGameServerDataByGid(_sharedCache.ListServersGIDs().First());
-        _sessionCache["UGID"] = srvData["UGID"];
 
-        await SendEGRQToHost(request, ticket);
+        await SendEGRQToHost(request, srvData);
         await _conn.SendPacket(clientPacket);
         await SendEGEG(request, ticket, srvData);
     }
 
-    private async Task SendEGRQToHost(Packet request, long ticket)
+    private async Task SendEGRQToHost(Packet request, IDictionary<string, object> server)
     {
         var serverNetwork = _sharedCounters.GetServerTheaterNetworkStream();
-        if (serverNetwork != null)
-        {
-            var serverMessage = new Dictionary<string, object>
-            {
-                ["R-INT-PORT"] = request["R-INT-PORT"],
-                ["R-INT-IP"] = request["R-INT-IP"],
-                ["PORT"] = request["PORT"],
-                ["NAME"] = _sessionCache["NAME"],
-                ["PTYPE"] = request["PTYPE"],
-                // ["TICKET"] = ticket,
-                ["PID"] = _sessionCache["PID"],
-                ["UID"] = _sessionCache["UID"],
-                ["IP"] = _conn.ClientEndpoint.Split(":")[0],
-                // ["LID"] = request.DataDict["LID"],
-                // ["GID"] = request.DataDict["GID"],
-            };
+        var gameId = server["GID"];
 
-            var serverPacket = new Packet("EGRQ", TheaterTransmissionType.OkResponse, 0, serverMessage);
-            var serverData = await serverPacket.Serialize();
-            await serverNetwork.WriteAsync(serverData);
-        }
+        var serverMessage = new Dictionary<string, object>
+        {
+            ["LID"] = 0xfffffffe,
+            ["GID"] = gameId,
+            ["R-INT-PORT"] = request["R-INT-PORT"],
+            ["R-INT-IP"] = request["R-INT-IP"],
+            ["PORT"] = request["PORT"],
+            ["NAME"] = _sessionCache["personaName"],
+            ["PTYPE"] = request["PTYPE"],
+            ["PID"] = _sessionCache["PID"],
+            ["UID"] = _sessionCache["UID"],
+            ["IP"] = request["R-INT-IP"],
+            ["TICKET"] = $"0x{gameId:X0}"
+        };
+
+        var serverPacket = new Packet("EGRQ", TheaterTransmissionType.OkResponse, 0, serverMessage);
+        var serverData = await serverPacket.Serialize();
+        await serverNetwork.WriteAsync(serverData);
     }
 
     private async Task HandleGDAT(Packet request)
@@ -180,10 +181,10 @@ public class TheaterClientHandler
             ["LID"] = serverInfo["LID"],
             ["GID"] = serverInfo["GID"],
 
-            ["HU"] = "1000000000001",
-            ["HN"] = "bfbc.server.ps3",
+            ["HU"] = serverInfo["UID"],
+            ["HN"] = serverInfo["NAME"],
 
-            ["I"] = _arcadiaSettings.Value.GameServerAddress,
+            ["I"] = serverInfo["IP"],
             ["P"] = serverInfo["PORT"],
 
             ["N"] = serverInfo["NAME"],
@@ -235,15 +236,16 @@ public class TheaterClientHandler
     {
         var serverInfo = new Dictionary<string, object>
         {
-            ["PL"] = "pc",
+            ["PL"] = "ps3",
             ["TICKET"] = ticket,
             ["PID"] = _sessionCache["PID"],
             ["HUID"] = serverData["UID"],
-            ["EKEY"] = "AIBSgPFqRDg0TfdXW1zUGa4%3d",
+            // ["EKEY"] = "AIBSgPFqRDg0TfdXW1zUGa4%3d",
+            ["EKEY"] = "NOENCYRPTIONKEY",
             ["UGID"] = serverData["UGID"],
 
             ["INT-IP"] = serverData["INT-IP"],
-            ["INT-PORT"] = serverData["PORT"],
+            ["INT-PORT"] = serverData["INT-PORT"],
 
             ["I"] = serverData["INT-IP"],
             ["P"] = serverData["PORT"],
@@ -309,7 +311,7 @@ public class TheaterClientHandler
                 ["LID"] = request["LID"],
                 ["GID"] = serverGid,
                 ["HN"] = serverInfo["PID"],
-                ["HU"] = 10,
+                ["HU"] = serverInfo["UID"],
                 ["N"] = serverInfo["NAME"],
 
                 ["I"] = serverInfo["INT-IP"],
@@ -352,12 +354,11 @@ public class TheaterClientHandler
         {
             ["TID"] = request["TID"],
             ["MAX-PLAYERS"] = request["MAX-PLAYERS"],
-            ["EKEY"] = "AIBSgPFqRDg0TfdXW1zUGa4%3d",
-            ["UGID"] = ugid,
+            ["EKEY"] = "NOENCYRPTIONKEY",
+            ["UGID"] = "NOGUID",
             ["JOIN"] = request["JOIN"],
-            ["SECRET"] = request["SECRET"],
-            ["LID"] = lid,
-            ["J"] = request["JOIN"],
+            ["SECRET"] = "NOSECRET",
+            ["LID"] = 0xfffffffe,
             ["GID"] = gid
         };
 
@@ -367,15 +368,13 @@ public class TheaterClientHandler
 
     private async Task HandlePENT(Packet request)
     {
-        // var response = new Dictionary<string, object>
-        // {
-        //     ["TID"] = request["TID"],
-        //     ["PID"] = request["PID"],
-        //     ["GID"] = request["GID"],
-        //     ["LID"] = request["LID"],
-        // };
+        var response = new Dictionary<string, object>
+        {
+            ["PID"] = request["PID"],
+            ["TID"] = request["TID"]
+        };
 
-        // var packet = new Packet("PENT", TheaterTransmissionType.OkResponse, 0, response);
-        // await _conn.SendPacket(packet);
+        var packet = new Packet("PENT", TheaterTransmissionType.OkResponse, 0, response);
+        await _conn.SendPacket(packet);
     }
 }
