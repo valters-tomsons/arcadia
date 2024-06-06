@@ -74,8 +74,6 @@ public class EAConnection : IEAConnection
             var incomingData = readBuffer[..read];
             var dataProcessed = 0;
 
-            // logger.LogTrace("Incoming packet data:{data}", Encoding.ASCII.GetString(incomingData));
-
             while (dataProcessed < read)
             {
                 var buffer = incomingData[dataProcessed..];
@@ -93,7 +91,7 @@ public class EAConnection : IEAConnection
                     throw new NotImplementedException();
                 }
 
-                logger.LogTrace("'{type}' processed:{data}", packet.Type, Encoding.ASCII.GetString(packet.Data ?? []));
+                logger.LogTrace("'{type}' incoming:{data}", packet.Type, Encoding.ASCII.GetString(packet.Data ?? []));
                 dataProcessed += (int)packet.Length;
                 yield return packet;
             }
