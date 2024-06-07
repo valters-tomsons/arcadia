@@ -7,7 +7,7 @@ public class SharedCounters
     private long _ticket = 1500000000;
     private long _gameId = 800000;
     private long _pnowId = 350000;
-    private long _pid = 60;
+    private long _pid = 0;
     private long _lid = 255;
 
     private static readonly Random _random = new();
