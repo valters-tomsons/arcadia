@@ -126,8 +126,8 @@ public class FeslClientHandler
 
     private async Task HandlePlayNow(Packet request)
     {
-        var servers = _sharedCache.ListServersGIDs();
-        var serverData = _sharedCache.GetGameServerDataByGid(servers.FirstOrDefault());
+        var server = _sharedCache.ListServersGIDs().FirstOrDefault();
+        var serverData = _sharedCache.GetGameServerDataByGid(server);
 
         // Should return approprate error to user
         if (serverData is null) throw new NotImplementedException();
