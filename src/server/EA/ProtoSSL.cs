@@ -67,7 +67,7 @@ public class ProtoSSL(ILogger<ProtoSSL> logger)
         _logger.LogDebug("Certificate generated for: {domain}", certDomain);
 
         store.SetCertificateEntry(certDomain, certEntry);
-        store.SetKeyEntry(certDomain, new AsymmetricKeyEntry(cKeyPair.Private), new[] { certEntry });
+        store.SetKeyEntry(certDomain, new AsymmetricKeyEntry(cKeyPair.Private), [certEntry]);
 
         var chain = new TlsCertificate[] { new BcTlsCertificate(crypto, certEntry.Certificate.GetEncoded()) };
         var finalCertificate = new Certificate(chain);
