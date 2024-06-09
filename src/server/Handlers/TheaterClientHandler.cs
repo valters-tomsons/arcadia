@@ -92,7 +92,7 @@ public class TheaterClientHandler
 
         _sessionCache["NAME"] = username;
         _sessionCache["personaName"] = username;
-        _sessionCache["UID"] = _sharedCounters.GetNextUserId();
+        _sessionCache["UID"] = _sharedCounters.GetNextUserId() - 1;
         _sessionCache["PID"] = _sharedCounters.GetNextPid();
         _logger.LogInformation("USER: {name} {lkey}", username, lkey);
 
@@ -109,14 +109,11 @@ public class TheaterClientHandler
     // LeaveGame
     private async Task HandleECNL(Packet request)
     {
-        // !TODO: set gid to a valid game id
-        // !TODO: set lid to a valid lobby id
-
         var response = new Dictionary<string, object>
         {
-            ["TID"] = request.DataDict["TID"],
-            ["LID"] = request.DataDict["LID"],
-            ["GID"] = request.DataDict["GID"],
+            ["TID"] = request["TID"],
+            ["LID"] = request["LID"],
+            ["GID"] = request["GID"],
         };
 
         var packet = new Packet("ECNL", TheaterTransmissionType.OkResponse, 0, response);
@@ -128,53 +125,51 @@ public class TheaterClientHandler
     {
         var reqGid = request["GID"];
         var gid = string.IsNullOrWhiteSpace(reqGid) ? 0 : int.Parse(reqGid);
+        IDictionary<string, object>? srvData;
+
         if (gid == 0)
         {
             gid = (int)_sharedCache.ListServersGIDs().First();
-            var srvData = _sharedCache.GetGameServerDataByGid(gid) ?? throw new NotImplementedException();
-
-            var clientResponse = new Dictionary<string, object>
-            {
-                ["LID"] = srvData["LID"],
-                ["GID"] = gid,
-                ["TID"] = request["TID"],
-            };
-
-            var clientPacket = new Packet("EGAM", TheaterTransmissionType.OkResponse, 0, clientResponse);
-            await _conn.SendPacket(clientPacket);
-
-            var ticket = $"0x{gid:X0}";
-            _sessionCache["TICKET"] = ticket;
-            await SendEGEG(request, ticket, srvData);
+            srvData = _sharedCache.GetGameServerDataByGid(gid) ?? throw new NotImplementedException();
         }
-        else{
-            var srvData = _sharedCache.GetGameServerDataByGid(gid) ?? throw new NotImplementedException();
-            await SendEGRQToHost(request, srvData);
+        else
+        {
+            srvData = _sharedCache.GetGameServerDataByGid(gid) ?? throw new NotImplementedException();
         }
+
+        var clientResponse = new Dictionary<string, object>
+        {
+            ["TID"] = request["TID"],
+            ["LID"] = srvData["LID"],
+            ["GID"] = gid,
+        };
+
+        var clientPacket = new Packet("EGAM", TheaterTransmissionType.OkResponse, 0, clientResponse);
+        await _conn.SendPacket(clientPacket);
+
+        await SendEGRQToHost(request, srvData);
     }
 
     private async Task SendEGRQToHost(Packet request, IDictionary<string, object> server)
     {
-        var serverNetwork = _sharedCounters.GetServerTheaterNetworkStream();
         var gameId = server["GID"];
-
         var serverMessage = new Dictionary<string, object>
         {
-            ["TID"] = request["TID"],
-            ["LID"] = server["LID"],
-            ["GID"] = gameId,
-            ["NAME"] = _sessionCache["personaName"],
-            ["UID"] = _sessionCache["UID"],
-            ["PID"] = _sessionCache["PID"],
-            ["TICKET"] = $"0x{gameId:X0}",
-            ["PTYPE"] = request["PTYPE"],
             ["R-INT-PORT"] = request["R-INT-PORT"],
             ["R-INT-IP"] = request["R-INT-IP"],
-            ["R-PORT"] = request["PORT"],
-            ["R-IP"] = request["R-INT-IP"],
+            ["PORT"] = request["PORT"],
+            ["NAME"] = _sessionCache["personaName"],
+            ["PTYPE"] = request["PTYPE"],
+            ["TICKET"] = $"0x{gameId:X0}",
+            ["PID"] = _sessionCache["PID"],
+            ["UID"] = _sessionCache["UID"],
+            ["IP"] = server["INT-IP"],
+            ["LID"] = server["LID"],
+            ["GID"] = gameId,
         };
 
         var serverPacket = new Packet("EGRQ", TheaterTransmissionType.OkResponse, 0, serverMessage);
+        var serverNetwork = _sharedCounters.GetServerTheaterNetworkStream();
         var serverData = await serverPacket.Serialize();
         await serverNetwork.WriteAsync(serverData);
     }
@@ -202,7 +197,7 @@ public class TheaterClientHandler
             ["I"] = serverInfo["INT-IP"],
             ["P"] = serverInfo["PORT"],
 
-            ["N"] = serverInfo["personaName"],
+            ["N"] = serverInfo["NAME"],
             ["AP"] = 0,
             ["MP"] = serverInfo["MAX-PLAYERS"],
             ["JP"] = 1,
@@ -247,24 +242,23 @@ public class TheaterClientHandler
         await _conn.SendPacket(packet);
     }
 
-    private async Task SendEGEG(Packet request, string ticket, IDictionary<string, object> serverData)
+    private async Task SendEGEG(Packet request, int gid, IDictionary<string, object> serverData)
     {
+        var ticket = $"0x{gid:X0}";
+        _sessionCache["TICKET"] = ticket;
+
         var serverInfo = new Dictionary<string, object>
         {
-            ["TID"] = request["TID"],
             ["PL"] = "ps3",
             ["TICKET"] = ticket,
             ["PID"] = serverData["PID"],
+            ["P"] = serverData["INT-IP"],
             ["HUID"] = serverData["UID"],
-            ["EKEY"] = serverData["EKEY"],
-            ["UGID"] = serverData["UGID"],
-
-            ["INT-IP"] = serverData["INT-IP"],
             ["INT-PORT"] = serverData["INT-PORT"],
-
+            ["EKEY"] = serverData["EKEY"],
+            ["INT-IP"] = serverData["INT-IP"],
+            ["UGID"] = serverData["UGID"],
             ["I"] = serverData["INT-IP"],
-            ["P"] = serverData["PORT"],
-
             ["LID"] = serverData["LID"],
             ["GID"] = serverData["GID"]
         };
@@ -385,6 +379,8 @@ public class TheaterClientHandler
             { "B-version", request["B-version"] },
             { "JOIN", request["JOIN"] },
             { "RT", request["RT"] },
+
+            { "PID", _sessionCache["PID"] }
         });
 
         _sharedCounters.SetServerTheaterNetworkStream(_conn.NetworkStream!);
@@ -392,13 +388,14 @@ public class TheaterClientHandler
         var response = new Dictionary<string, object>
         {
             ["TID"] = request["TID"],
-            ["LID"] = lid,
-            ["GID"] = gid,
             ["MAX-PLAYERS"] = request["MAX-PLAYERS"],
-            ["JOIN"] = request["JOIN"],
-            ["SECRET"] = secret,
-            ["UGID"] = ugid,
             ["EKEY"] = ekey,
+            ["UGID"] = ugid,
+            ["JOIN"] = request["JOIN"],
+            ["LID"] = lid,
+            ["SECRET"] = secret,
+            ["J"] = request["JOIN"],
+            ["GID"] = gid,
         };
 
         var packet = new Packet("CGAM", TheaterTransmissionType.OkResponse, 0, response);
@@ -421,11 +418,18 @@ public class TheaterClientHandler
     {
         var response = new Dictionary<string, object>
         {
-            ["TID"] = request.DataDict["TID"],
+            ["TID"] = request["TID"]
         };
 
         var packet = new Packet("EGRS", TheaterTransmissionType.OkResponse, 0, response);
         await _conn.SendPacket(packet);
+
+        if (request["ALLOWED"] == "1")
+        {
+            var gid = int.Parse(request["GID"]);
+            var srvData = _sharedCache.GetGameServerDataByGid(gid);
+            await SendEGEG(request, gid, srvData); // i guess this should be sent to joining player instead!
+        }
     }
 
     private int _brackets = 0;
@@ -454,7 +458,6 @@ public class TheaterClientHandler
     private Task HandleUGAM(Packet request)
     {
         var gid = long.Parse(request["GID"]);
-        _logger.LogInformation("Server GID={gid} updating data!", gid);
 
         _sharedCache.UpsertGameServerDataByGid(gid, new() 
         {

@@ -3,7 +3,6 @@ namespace Arcadia.Storage;
 public class SharedCounters
 {
     private long _userId = 1000000000000;
-    private long _lobbyId = 255;
     private long _ticket = 1500000000;
     private long _gameId = 800000;
     private long _pnowId = 350000;
@@ -15,11 +14,6 @@ public class SharedCounters
     public long GetNextUserId()
     {
         return Interlocked.Increment(ref _userId);
-    }
-
-    public long GetNextLobbyId()
-    {
-        return Interlocked.Increment(ref _lobbyId);
     }
 
     public long GetNextTicket()
