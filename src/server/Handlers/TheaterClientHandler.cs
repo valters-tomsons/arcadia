@@ -147,6 +147,8 @@ public class TheaterClientHandler
         var clientPacket = new Packet("EGAM", TheaterTransmissionType.OkResponse, 0, clientResponse);
         await _conn.SendPacket(clientPacket);
 
+        _sharedCounters.SetJoiningPlayerStream(_conn.NetworkStream);
+
         await SendEGRQToHost(request, srvData);
     }
 
@@ -160,7 +162,7 @@ public class TheaterClientHandler
             ["PORT"] = request["PORT"],
             ["NAME"] = _sessionCache["personaName"],
             ["PTYPE"] = request["PTYPE"],
-            ["TICKET"] = $"0x{gameId:X0}",
+            ["TICKET"] = server["TICKET"],
             ["PID"] = _sessionCache["PID"],
             ["UID"] = _sessionCache["UID"],
             ["IP"] = server["INT-IP"],
@@ -169,6 +171,7 @@ public class TheaterClientHandler
         };
 
         var serverPacket = new Packet("EGRQ", TheaterTransmissionType.OkResponse, 0, serverMessage);
+
         var serverNetwork = _sharedCounters.GetServerTheaterNetworkStream();
         var serverData = await serverPacket.Serialize();
         await serverNetwork.WriteAsync(serverData);
@@ -242,16 +245,13 @@ public class TheaterClientHandler
         await _conn.SendPacket(packet);
     }
 
-    private async Task SendEGEG(Packet request, int gid, IDictionary<string, object> serverData)
+    private async Task SendEGEGToPlayer(Packet request, IDictionary<string, object> serverData)
     {
-        var ticket = $"0x{gid:X0}";
-        _sessionCache["TICKET"] = ticket;
-
         var serverInfo = new Dictionary<string, object>
         {
             ["PL"] = "ps3",
-            ["TICKET"] = ticket,
-            ["PID"] = serverData["PID"],
+            ["TICKET"] = serverData["TICKET"],
+            ["PID"] = request["PID"],
             ["P"] = serverData["INT-IP"],
             ["HUID"] = serverData["UID"],
             ["INT-PORT"] = serverData["INT-PORT"],
@@ -265,7 +265,10 @@ public class TheaterClientHandler
 
         _logger.LogTrace("Sending EGEG to client at {endpoint}", _conn.ClientEndpoint);
         var packet = new Packet("EGEG", TheaterTransmissionType.OkResponse, 0, serverInfo);
-        await _conn.SendPacket(packet);
+
+        var playerNetwork = _sharedCounters.GetJoiningPlayerStream();
+        var packetBuf = await packet.Serialize();
+        await playerNetwork.WriteAsync(packetBuf);
     }
 
     private async Task HandleLLST(Packet request)
@@ -319,7 +322,7 @@ public class TheaterClientHandler
                 ["TID"] = request["TID"],
                 ["LID"] = request["LID"],
                 ["GID"] = serverGid,
-                ["HN"] = serverInfo["PID"],
+                ["HN"] = serverInfo["NAME"],
                 ["HU"] = serverInfo["UID"],
                 ["N"] = serverInfo["NAME"],
 
@@ -353,6 +356,7 @@ public class TheaterClientHandler
         var ugid = "NOGUID";
         var ekey = "NOENCYRPTIONKEY"; // Yes, that's the actual string
         var secret = "NOSECRET";
+        var ticket = _sharedCounters.GetNextTicket();
 
         // _sharedCache.UpsertGameServerDataByGid(gid, request.DataDict);
         _sharedCache.UpsertGameServerDataByGid(gid, new() { 
@@ -361,6 +365,7 @@ public class TheaterClientHandler
             { "LID", lid },
             { "SECRET", secret },
             { "EKEY", ekey },
+            { "TICKET", ticket },
 
             { "UID", _sessionCache["UID"] },
             { "RESERVE-HOST", request["RESERVE-HOST"] },
@@ -428,7 +433,11 @@ public class TheaterClientHandler
         {
             var gid = int.Parse(request["GID"]);
             var srvData = _sharedCache.GetGameServerDataByGid(gid);
-            await SendEGEG(request, gid, srvData); // i guess this should be sent to joining player instead!
+            await SendEGEGToPlayer(request, srvData);
+        }
+        else
+        {
+            _logger.LogWarning("Host disallowed player join!");
         }
     }
 
@@ -458,14 +467,13 @@ public class TheaterClientHandler
     private Task HandleUGAM(Packet request)
     {
         var gid = long.Parse(request["GID"]);
+        var serverData = _sharedCache.GetGameServerDataByGid(gid) ?? throw new NotImplementedException();
 
-        _sharedCache.UpsertGameServerDataByGid(gid, new() 
+        if (serverData["UID"] == _sessionCache["UID"])
         {
-            { "JOIN", request["JOIN"] },
-            { "MAX-PLAYERS", request["MAX-PLAYERS"] },
-            { "B-maxObservers", request["B-maxObservers"] },
-            { "B-numObservers", request["B-numObservers"] },
-        });
+            _logger.LogInformation("Updating server data");
+            _sharedCache.UpsertGameServerDataByGid(gid, request.DataDict);
+        }
 
         return Task.CompletedTask;
     }

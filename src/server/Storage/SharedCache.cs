@@ -20,12 +20,19 @@ public class SharedCache(ILogger<SharedCache> logger)
         return _lkeyUsernames[lkey];
     }
 
+    private readonly string[] blacklist = ["TID", "PID", ];
+
     public void UpsertGameServerDataByGid(long serverGid, Dictionary<string, object> data)
     {
         if (serverGid < 1)
         {
             _logger.LogWarning("Tried to update server with GID=0");
             return;
+        }
+
+        foreach(var item in blacklist)
+        {
+            data.Remove(item);
         }
 
         var server = _gameServers.SingleOrDefault(x => x.GameId == serverGid);
