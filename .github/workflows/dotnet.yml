@@ -35,6 +35,15 @@ jobs:
         root_dir: ./linux-release
         file_path: arcadia_canary_linux.tar.xz
 
+    - name: Publish Linux-arm64 Release
+      run: dotnet publish ./src/server -c Release -r linux-arm64 -o ./linuxarm-release
+
+    - name: Archive Linux-arm64 Release
+      uses: ihiroky/archive-action@v1
+      with:
+        root_dir: ./linuxarm-release
+        file_path: arcadia_canary_linuxarm.tar.xz
+
     - name: Publish Windows Release
       run: dotnet publish ./src/server -c Release -r win-x64 -o ./windows-release
 
