@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text;
 using Org.BouncyCastle.Tls.Crypto;
@@ -112,5 +113,20 @@ public static class Utils
         }
 
         return -1;
+    }
+
+    public static void RemoveItemFromBag<T>(this ConcurrentBag<T> bag, T item)
+    {
+        while (!bag.IsEmpty)
+        {
+            bag.TryTake(out T? result);
+            if (result is null) continue;
+            if (result.Equals(item))
+            {
+                break;
+            }
+
+            bag.Add(result);
+        }
     }
 }

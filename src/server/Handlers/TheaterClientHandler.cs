@@ -37,7 +37,9 @@ public class TheaterClientHandler
             ["PENT"] = HandlePENT,
             ["EGRS"] = HandleEGRS,
             ["UBRA"] = HandleUBRA,
-            ["UGAM"] = HandleUGAM
+            ["UGAM"] = HandleUGAM,
+            ["RGAM"] = HandleRGAM,
+            ["PLVT"] = HandlePLVT
         };
     }
 
@@ -472,5 +474,40 @@ public class TheaterClientHandler
         }
 
         return Task.CompletedTask;
+    }
+
+    private async Task HandleRGAM(Packet request)
+    {
+        var gid = long.Parse(request["GID"]);
+        var game = _sharedCache.GetGameByGid(gid) ?? throw new NotImplementedException();
+
+        var response = new Dictionary<string, object>
+        {
+            ["TID"] = request["TID"]
+        };
+
+        var packet = new Packet("RGAM", TheaterTransmissionType.OkResponse, 0, response);
+        await _conn.SendPacket(packet);
+
+        _sharedCache.RemoveGame(game);
+    }
+
+    private async Task HandlePLVT(Packet request)
+    {
+        var gid = long.Parse(request["GID"]);
+        var game = _sharedCache.GetGameByGid(gid) ?? throw new NotImplementedException();
+
+        var pid = int.Parse(request["PID"]);
+        var player = game.ConnectedPlayers.SingleOrDefault(x => x.PID == pid);
+
+        var response = new Dictionary<string, object>
+        {
+            ["TID"] = request["TID"]
+        };
+
+        var packet = new Packet("PLVT", TheaterTransmissionType.OkResponse, 0, response);
+        await _conn.SendPacket(packet);
+
+        game.ConnectedPlayers.RemoveItemFromBag(player);
     }
 }
