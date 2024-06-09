@@ -5,7 +5,7 @@ on:
     branches: [ "*" ]
     paths:
       - 'src/**'
-      - '.github/workflows'
+      - '.github/workflows/**'
   pull_request:
     branches: [ "main" ]
 
