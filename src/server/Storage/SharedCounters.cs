@@ -6,7 +6,6 @@ public class SharedCounters
     private long _ticket = 1500000000;
     private long _gameId = 800000;
     private long _pnowId = 350000;
-    private int _pid = 0;
     private long _lid = 255;
 
     private static readonly Random _random = new();
@@ -31,11 +30,6 @@ public class SharedCounters
         return Interlocked.Increment(ref _pnowId);
     }
 
-    public int GetNextPid()
-    {
-        return Interlocked.Increment(ref _pid);
-    }
-
     public long GetNextLid()
     {
         return Interlocked.Increment(ref _lid);
@@ -46,28 +40,5 @@ public class SharedCounters
         var key = _random.Next(100000000, 999999999);
         const string keyTempl = "W5NyZzx{0}Cki6GQAAKDw.";
         return string.Format(keyTempl, key);
-    }
-
-    private Stream? _serverStream;
-
-    public void SetServerTheaterNetworkStream(Stream stream)
-    {
-        _serverStream = stream;
-    }
-
-    public Stream? GetServerTheaterNetworkStream()
-    {
-        return _serverStream;
-    }
-
-    private Stream? _playerStream;
-    public void SetJoiningPlayerStream(Stream stream)
-    {
-        _playerStream = stream;
-    }
-
-    public Stream? GetJoiningPlayerStream()
-    {
-        return _playerStream;
     }
 }

@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Arcadia.EA;
 using Microsoft.Extensions.Logging;
 
 namespace Arcadia.Storage;
@@ -9,6 +10,7 @@ public class SharedCache(ILogger<SharedCache> logger)
 
     private readonly ConcurrentDictionary<string, string> _lkeyUsernames = new();
     private readonly ConcurrentBag<GameServerListing> _gameServers = [];
+    private readonly ConcurrentBag<TheaterClient> _theaterConnections = [];
 
     public void AddUserWithLKey(string lkey, string username)
     {
@@ -20,7 +22,7 @@ public class SharedCache(ILogger<SharedCache> logger)
         return _lkeyUsernames[lkey];
     }
 
-    private readonly string[] blacklist = ["TID", "PID", ];
+    private readonly string[] blacklist = ["TID", "PID" ];
 
     public void UpsertGameServerDataByGid(long serverGid, Dictionary<string, object> data)
     {
@@ -35,76 +37,72 @@ public class SharedCache(ILogger<SharedCache> logger)
             data.Remove(item);
         }
 
-        var server = _gameServers.SingleOrDefault(x => x.GameId == serverGid);
+        var server = _gameServers.SingleOrDefault(x => x.GID == serverGid);
         if (server is null)
         {
             _gameServers.Add(new()
             {
-                GameId = serverGid,
-                InfoData = new ConcurrentDictionary<string, object>(data)
+                GID = serverGid,
+                Data = new ConcurrentDictionary<string, object>(data)
             });
 
             return;
         }
 
-        var serverData = server.InfoData;
-        if (serverData is null)
-        {
-            server.InfoData = new ConcurrentDictionary<string, object>(data);
-            return;
-        }
-
         foreach (var line in data)
         {
-            var removed = serverData.Remove(line.Key, out var _);
-            serverData.TryAdd(line.Key, line.Value);
+            var removed = server.Data.Remove(line.Key, out var _);
+            server.Data.TryAdd(line.Key, line.Value);
         }
-    }
-
-    public void UpsertGameServerValueByGid(long serverGid, string key, object value)
-    {
-        if (serverGid < 1)
-        {
-            _logger.LogWarning("Tried to update server with GID=0");
-            return;
-        }
-
-        var server = _gameServers.SingleOrDefault(x => x.GameId == serverGid);
-        if (server is null)
-        {
-            throw new NotImplementedException();
-        }
-
-        var serverData = server.InfoData;
-        if (serverData is null)
-        {
-            throw new NotImplementedException();
-        }
-
-        serverData.Remove(key, out var _);
-        serverData.TryAdd(key, value);
-    }
-
-    public IDictionary<string, object>? GetGameServerDataByGid(long serverGid)
-    {
-        if (serverGid is 0) return null;
-        return _gameServers.SingleOrDefault(x => x.GameId == serverGid)?.InfoData;
-    }
-
-    public long[] ListServersGIDs()
-    {
-        return _gameServers.Select(x => x.GameId).ToArray();
     }
 
     public GameServerListing? GetGameByGid(long serverGid)
     {
-        return _gameServers.SingleOrDefault(x => x.GameId == serverGid);
+        if (serverGid is 0) return null;
+        return _gameServers.SingleOrDefault(x => x.GID == serverGid);
     }
+
+    public long[] ListGameGids()
+    {
+        return _gameServers.Select(x => x.GID).ToArray();
+    }
+
+    public void AddTheaterConnection(TheaterClient conn)
+    {
+        _theaterConnections.Add(conn);
+    }
+
+    public void AddGame(GameServerListing game)
+    {
+        _gameServers.Add(game);
+    }
+}
+
+public class TheaterClient
+{
+    public IEAConnection? TheaterConnection { get; init; }
+
+    public long UID { get; init; }
+    public string NAME { get; init; } = string.Empty;
+    public string LKEY { get; init; } = string.Empty;
+
+    public int PID { get; set; }
 }
 
 public class GameServerListing
 {
-    public long HostPersonaId { get; set; }
-    public long GameId { get; set; }
-    public ConcurrentDictionary<string, object> InfoData { get; set; } = new();
+    public IEAConnection? TheaterConnection { get; init; }
+    public ConcurrentDictionary<string, object> Data { get; init; } = new();
+
+    public long UID { get; init; }
+    public long GID { get; init; }
+    public int LID { get; init; }
+
+    public string UGID { get; init; } = string.Empty;
+    public string SECRET { get; init; } = string.Empty;
+    public string EKEY { get; init; } = string.Empty;
+    public string NAME { get; init; } = string.Empty;
+
+    public ConcurrentQueue<TheaterClient> JoiningPlayers { get; init; } = [];
+    public ConcurrentBag<TheaterClient> ConnectedPlayers { get; init; } = [];
 }

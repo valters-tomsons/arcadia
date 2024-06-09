@@ -67,7 +67,7 @@ public class TheaterServerHandler
 
         _logger.LogInformation("CONN: {tid}", tid);
 
-        _sharedCounters.SetServerTheaterNetworkStream(_conn.NetworkStream!);
+        // _sharedCounters.SetServerTheaterNetworkStream(_conn.NetworkStream!);
 
         var response = new Dictionary<string, object>
         {
@@ -109,9 +109,9 @@ public class TheaterServerHandler
         var ugid = Guid.NewGuid().ToString();
 
         _sharedCache.UpsertGameServerDataByGid(gid, request.DataDict);
-        _sharedCache.UpsertGameServerValueByGid(gid, "UGID", ugid);
+        // _sharedCache.UpsertGameServerValueByGid(gid, "UGID", ugid);
 
-        var serverData = _sharedCache.GetGameServerDataByGid(gid) ?? throw new NotImplementedException();
+        var serverData = _sharedCache.GetGameByGid(gid) ?? throw new NotImplementedException();
 
         var response = new Dictionary<string, object>
         {

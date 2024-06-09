@@ -126,11 +126,8 @@ public class FeslClientHandler
 
     private async Task HandlePlayNow(Packet request)
     {
-        var server = _sharedCache.ListServersGIDs().FirstOrDefault();
-        var serverData = _sharedCache.GetGameServerDataByGid(server);
-
-        // Should return approprate error to user
-        if (serverData is null) throw new NotImplementedException();
+        var firstGid = _sharedCache.ListGameGids().FirstOrDefault();
+        var server = _sharedCache.GetGameByGid(firstGid) ?? throw new NotImplementedException();
 
         var pnowId = _sharedCounters.GetNextPnowId();
 
@@ -154,8 +151,8 @@ public class FeslClientHandler
             { "props.{resultType}", "JOIN" },
             { "props.{avgFit}", "1.0" },
             { "props.{games}.[]", 1 },
-            { "props.{games}.0.gid", serverData["GID"] },
-            { "props.{games}.0.lid", serverData["LID"] }
+            { "props.{games}.0.gid", server.Data["GID"] },
+            { "props.{games}.0.lid", server.Data["LID"] }
         };
 
         var packet2 = new Packet("pnow", FeslTransmissionType.SinglePacketResponse, request.Id, data2);
