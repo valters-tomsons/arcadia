@@ -60,6 +60,12 @@ jobs:
         name: linux-x64
         path: arcadia_canary_linux.tar.xz
 
+    - name: Upload Linux-arm64 Release
+      uses: actions/upload-artifact@v2.3.1
+      with:
+        name: linux-arm64
+        path: arcadia_canary_linuxarm.tar.xz
+
     - name: Upload Windows Release
       uses: actions/upload-artifact@v2.3.1
       with:
