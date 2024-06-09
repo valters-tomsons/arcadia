@@ -81,6 +81,17 @@ public class SharedCache(ILogger<SharedCache> logger)
     {
         _gameServers.RemoveItemFromBag(game);
     }
+
+    public GameServerListing? GetJoinableGame()
+    {
+        return _gameServers.Where
+        (
+            x =>
+            x.ConnectedPlayers.Count < 4 &&
+            x.JoiningPlayers.Count < 3
+        )
+        .OrderBy(x => x.GID).FirstOrDefault();
+    } 
 }
 
 public class TheaterClient

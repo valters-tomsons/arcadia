@@ -128,13 +128,13 @@ public class TheaterClientHandler
         if (_session is null) throw new NotImplementedException();
 
         var reqGid = request["GID"];
-        var gid = string.IsNullOrWhiteSpace(reqGid) ? 0 : int.Parse(reqGid);
+        var gid = string.IsNullOrWhiteSpace(reqGid) ? 0 : long.Parse(reqGid);
 
         GameServerListing? game;
         if (gid == 0)
         {
-            gid = (int)_sharedCache.ListGameGids().First();
-            game = _sharedCache.GetGameByGid(gid);
+            game = _sharedCache.GetJoinableGame();
+            gid = game.GID;
         }
         else
         {
@@ -186,12 +186,17 @@ public class TheaterClientHandler
     {
         var reqGid = request["GID"];
         var serverGid = string.IsNullOrWhiteSpace(reqGid) ? 0 : int.Parse(reqGid);
+
+        GameServerListing? game;
         if (serverGid == 0)
         {
-            serverGid = (int)_sharedCache.ListGameGids().First();
+            game = _sharedCache.GetJoinableGame();
+        }
+        else
+        {
+            game = _sharedCache.GetGameByGid(serverGid);
         }
 
-        var game = _sharedCache.GetGameByGid(serverGid) ?? throw new NotImplementedException();
         var serverInfo = game.Data;
 
         var serverInfoResponse = new Dictionary<string, object>

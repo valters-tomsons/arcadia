@@ -126,9 +126,7 @@ public class FeslClientHandler
 
     private async Task HandlePlayNow(Packet request)
     {
-        var firstGid = _sharedCache.ListGameGids().FirstOrDefault();
-        var server = _sharedCache.GetGameByGid(firstGid) ?? throw new NotImplementedException();
-
+        var server = _sharedCache.GetJoinableGame();
         var pnowId = _sharedCounters.GetNextPnowId();
 
         var data1 = new Dictionary<string, object>
