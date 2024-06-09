@@ -76,6 +76,11 @@ public class SharedCache(ILogger<SharedCache> logger)
     {
         _gameServers.Add(game);
     }
+
+    public void RemoveGame(GameServerListing game)
+    {
+        _gameServers.RemoveItemFromBag(game);
+    }
 }
 
 public class TheaterClient
