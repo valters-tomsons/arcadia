@@ -10,10 +10,8 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build:
-
+  build-linux-x64:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v3
     - name: Setup .NET
@@ -30,44 +28,8 @@ jobs:
     - name: Publish Linux Release
       run: dotnet publish ./src/server -c Release -r linux-x64 -o ./linux-release
 
-    - name: Archive Linux Release
-      uses: ihiroky/archive-action@v1
-      with:
-        root_dir: ./linux-release
-        file_path: arcadia_canary_linux.tar.xz
-
-    - name: Publish Linux-arm64 Release
-      run: dotnet publish ./src/server -c Release -r linux-arm64 -o ./linuxarm-release
-
-    - name: Archive Linux-arm64 Release
-      uses: ihiroky/archive-action@v1
-      with:
-        root_dir: ./linuxarm-release
-        file_path: arcadia_canary_linuxarm.tar.xz
-
-    - name: Publish Windows Release
-      run: dotnet publish ./src/server -c Release -r win-x64 -o ./windows-release
-
-    - name: Archive Windows Release
-      uses: ihiroky/archive-action@v1
-      with:
-        root_dir: ./windows-release
-        file_path: arcadia_canary_windows.tar.xz
-
     - name: Upload Linux Release
       uses: actions/upload-artifact@v2.3.1
       with:
-        name: linux-x64
-        path: arcadia_canary_linux.tar.xz
-
-    - name: Upload Linux-arm64 Release
-      uses: actions/upload-artifact@v2.3.1
-      with:
-        name: linux-arm64
-        path: arcadia_canary_linuxarm.tar.xz
-
-    - name: Upload Windows Release
-      uses: actions/upload-artifact@v2.3.1
-      with:
-        name: win-x64
-        path: arcadia_canary_windows.tar.xz
+        name: arcadia_canary_linux
+        path: linux-release
