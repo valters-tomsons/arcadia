@@ -34,7 +34,7 @@ public class FeslHandlerTests
     [InlineData("beach-ps3")]
     public async Task ClientHello_Responds_ServerHelloAndMemCheck(string clientString, string? clientType = null)
     {
-        Dictionary<string, object> requestData = new() {
+        Dictionary<string, string> requestData = new() {
             ["TXN"] = "Hello",
             ["clientString"] = clientString };
         if (clientType is not null) requestData.Add("clientType", clientType);

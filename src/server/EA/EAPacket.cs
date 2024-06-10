@@ -4,17 +4,17 @@ namespace Arcadia.EA;
 
 public readonly struct Packet
 {
-    public Dictionary<string, object> DataDict { get; }
+    public Dictionary<string, string> DataDict { get; }
     public string this[string key]
     {
-        get => DataDict.GetValueOrDefault(key) as string ?? string.Empty;
+        get => DataDict.GetValueOrDefault(key) ?? string.Empty;
         set => DataDict[key] = value;
     }
 
     /// <summary>
     /// Helper method for quick access to TXN. Used only in fesl/plasma connections.
     /// </summary>
-    public string TXN => DataDict.GetValueOrDefault(nameof(TXN)) as string ?? string.Empty;
+    public string TXN => DataDict.GetValueOrDefault(nameof(TXN)) ?? string.Empty;
 
     /// <summary>
     /// Deserializes into the first packet from a given byte buffer, used for reading incoming data.
@@ -39,7 +39,7 @@ public readonly struct Packet
     /// <summary>
     /// Initializes a new packet from the given parameters, used for outgoing data before it is Serialize()'d for wire.
     /// </summary>
-    public Packet(string type, uint transmissionType, uint packetId, Dictionary<string, object>? dataDict = null)
+    public Packet(string type, uint transmissionType, uint packetId, Dictionary<string, string>? dataDict = null)
     {
         Type = type.Trim();
         TransmissionType = transmissionType;

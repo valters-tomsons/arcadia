@@ -34,8 +34,8 @@ public class TheaterHandlerTests
     [InlineData("PS3", "0")]
     public async Task ClientConn_ServerResponds(string plat, string prot)
     {
-        Dictionary<string, object> requestData = new() {
-            ["TID"] = 0,
+        Dictionary<string, string> requestData = new() {
+            ["TID"] = "0",
             ["PLAT"] = plat,
             ["PROT"] = prot
         };
@@ -47,6 +47,6 @@ public class TheaterHandlerTests
         Assert.NotEmpty(responses);
         Assert.True(responses.TryDequeue(out var response));
         Assert.Equal("CONN", response.Type);
-        Assert.NotEqual(0, (long)response.DataDict["TIME"]);
+        Assert.NotEqual("0", response["TIME"]);
     }
 }
