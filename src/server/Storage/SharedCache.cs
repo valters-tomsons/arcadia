@@ -24,7 +24,7 @@ public class SharedCache(ILogger<SharedCache> logger)
 
     private readonly string[] blacklist = ["TID", "PID" ];
 
-    public void UpsertGameServerDataByGid(long serverGid, Dictionary<string, object> data)
+    public void UpsertGameServerDataByGid(long serverGid, Dictionary<string, string> data)
     {
         if (serverGid < 1)
         {
@@ -43,7 +43,7 @@ public class SharedCache(ILogger<SharedCache> logger)
             _gameServers.Add(new()
             {
                 GID = serverGid,
-                Data = new ConcurrentDictionary<string, object>(data)
+                Data = new ConcurrentDictionary<string, string>(data)
             });
 
             return;
@@ -108,7 +108,7 @@ public class TheaterClient
 public class GameServerListing
 {
     public IEAConnection? TheaterConnection { get; init; }
-    public ConcurrentDictionary<string, object> Data { get; init; } = new();
+    public ConcurrentDictionary<string, string> Data { get; init; } = new();
 
     public long UID { get; init; }
     public long GID { get; init; }

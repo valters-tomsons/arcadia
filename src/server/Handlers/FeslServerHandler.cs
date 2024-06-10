@@ -19,7 +19,7 @@ public class FeslServerHandler
 
     private readonly Dictionary<string, Func<Packet, Task>> _handlers;
 
-    private readonly Dictionary<string, object> _sessionCache = [];
+    private readonly Dictionary<string, string> _sessionCache = [];
     private uint _feslTicketId;
 
     public FeslServerHandler(IEAConnection conn, ILogger<FeslServerHandler> logger, IOptions<ArcadiaSettings> settings, SharedCounters sharedCounters, SharedCache sharedCache)
@@ -75,17 +75,17 @@ public class FeslServerHandler
         }
 
         var currentTime = DateTime.UtcNow.ToString("MMM-dd-yyyy HH:mm:ss 'UTC'", CultureInfo.InvariantCulture);
-        var serverHelloData = new Dictionary<string, object>
+        var serverHelloData = new Dictionary<string, string>
                 {
                     { "domainPartition.domain", "ps3" },
                     { "messengerIp", "127.0.0.1" },
-                    { "messengerPort", 0 },
+                    { "messengerPort", "0" },
                     { "domainPartition.subDomain", "BFBC2" },
                     { "TXN", "Hello" },
-                    { "activityTimeoutSecs", 0 },
+                    { "activityTimeoutSecs", "0" },
                     { "curTime", currentTime },
                     { "theaterIp", _settings.Value.TheaterAddress },
-                    { "theaterPort", (int)TheaterServerPort.RomePC }
+                    { "theaterPort", $"{(int)TheaterServerPort.RomePC}" }
                 };
 
         var helloPacket = new Packet("fsys", FeslTransmissionType.SinglePacketResponse, request.Id, serverHelloData);
@@ -95,8 +95,8 @@ public class FeslServerHandler
 
     private async Task HandleGetAssociations(Packet request)
     {
-        var assoType = request.DataDict["type"] as string ?? string.Empty;
-        var responseData = new Dictionary<string, object>
+        var assoType = request["type"];
+        var responseData = new Dictionary<string, string>
         {
             { "TXN", "GetAssociations" },
             { "domainPartition.domain", request.DataDict["domainPartition.domain"] },
@@ -105,7 +105,7 @@ public class FeslServerHandler
             { "owner.type", "1" },
             { "type", assoType },
             { "members.[]", "0" },
-            { "maxListSize", 100 }
+            { "maxListSize", "100" }
         };
 
         _logger.LogInformation("Association type: {assoType}", assoType);
@@ -118,7 +118,7 @@ public class FeslServerHandler
     {
         const string serverIp = "127.0.0.1";
 
-        var responseData = new Dictionary<string, object>
+        var responseData = new Dictionary<string, string>
         {
             { "TXN", "GetPingSites" },
             { "pingSite.[]", "4"},
@@ -137,7 +137,7 @@ public class FeslServerHandler
         var host = request["nuid"].Split('@')[0];
         _sessionCache["personaName"] = host;
 
-        var loginResponseData = new Dictionary<string, object>
+        var loginResponseData = new Dictionary<string, string>
         {
             { "TXN", request.TXN },
             { "encryptedLoginInfo", "Ciyvab0tregdVsBtboIpeChe4G6uzC1v5_-SIxmvSL" + "bjbfvmobxvmnawsthtgggjqtoqiatgilpigaqqzhejglhbaokhzltnstufrfouwrvzyphyrspmnzprxcocyodg" }
@@ -149,10 +149,10 @@ public class FeslServerHandler
 
     private async Task HandleNuGetPersonas(Packet request)
     {
-        var loginResponseData = new Dictionary<string, object>
+        var loginResponseData = new Dictionary<string, string>
         {
             { "TXN", request.TXN },
-            { "personas.[]", 1 },
+            { "personas.[]", "1" },
             { "personas.0", _sessionCache["personaName"] },
         };
 
@@ -165,15 +165,15 @@ public class FeslServerHandler
         _sessionCache["LKEY"] = SharedCounters.GetNextLkey();
 
         var uid = _sharedCounters.GetNextUserId();
-        _sessionCache["UID"] = uid;
+        // _sessionCache["UID"] = uid;
 
         _sharedCache.AddUserWithLKey((string)_sessionCache["LKEY"], (string)_sessionCache["personaName"]);
-        var loginResponseData = new Dictionary<string, object>
+        var loginResponseData = new Dictionary<string, string>
         {
             { "TXN", request.TXN },
             { "lkey", _sessionCache["LKEY"] },
-            { "profileId", uid },
-            { "userId", uid },
+            { "profileId", $"{uid}" },
+            { "userId", $"{uid}" }
         };
 
         var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
@@ -187,7 +187,7 @@ public class FeslServerHandler
 
     private async Task SendMemCheck()
     {
-        var memCheckData = new Dictionary<string, object>
+        var memCheckData = new Dictionary<string, string>
                 {
                     { "TXN", "MemCheck" },
                     { "memcheck.[]", "0" },

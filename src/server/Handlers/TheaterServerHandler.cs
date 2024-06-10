@@ -15,7 +15,7 @@ public class TheaterServerHandler
 
     private readonly Dictionary<string, Func<Packet, Task>> _handlers;
 
-    private readonly Dictionary<string, object> _sessionCache = [];
+    private readonly Dictionary<string, string> _sessionCache = [];
 
     private int _brackets = 0;
 
@@ -67,15 +67,13 @@ public class TheaterServerHandler
 
         _logger.LogInformation("CONN: {tid}", tid);
 
-        // _sharedCounters.SetServerTheaterNetworkStream(_conn.NetworkStream!);
-
-        var response = new Dictionary<string, object>
+        var response = new Dictionary<string, string>
         {
-            ["TIME"] = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-            ["TID"] = tid,
-            ["activityTimeoutSecs"] = 0,
-            ["PROT"] = request.DataDict["PROT"],
-            ["NAME"] = "bfbc.server.ps3"
+            ["TIME"] = $"{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}",
+            ["TID"] = $"{tid}",
+            ["activityTimeoutSecs"] = $"{0}",
+            ["PROT"] = request["PROT"],
+            ["NAME"] = $"{"bfbc.server.ps3"}"
         };
 
         var packet = new Packet("CONN", TheaterTransmissionType.OkResponse, 0, response);
@@ -88,10 +86,10 @@ public class TheaterServerHandler
         var username = _sharedCache.GetUsernameByLKey((string)lkey);
 
         _sessionCache["NAME"] = username;
-        _sessionCache["UID"] = _sharedCounters.GetNextUserId();
+        // _sessionCache["UID"] = _sharedCounters.GetNextUserId();
         _logger.LogInformation("USER: {name} {lkey}", username, lkey);
 
-        var response = new Dictionary<string, object>
+        var response = new Dictionary<string, string>
         {
             ["NAME"] = username,
             ["TID"] = request.DataDict["TID"]
@@ -113,7 +111,7 @@ public class TheaterServerHandler
 
         var serverData = _sharedCache.GetGameByGid(gid) ?? throw new NotImplementedException();
 
-        var response = new Dictionary<string, object>
+        var response = new Dictionary<string, string>
         {
             ["TID"] = request["TID"],
             ["MAX-PLAYERS"] = request["MAX-PLAYERS"],
@@ -121,9 +119,9 @@ public class TheaterServerHandler
             ["UGID"] = ugid,
             ["JOIN"] = request["JOIN"],
             ["SECRET"] = request["SECRET"],
-            ["LID"] = lid,
+            ["LID"] = $"{lid}",
             ["J"] = request["JOIN"],
-            ["GID"] = gid
+            ["GID"] = $"{gid}"
         };
 
         var packet = new Packet("CGAM", TheaterTransmissionType.OkResponse, 0, response);
@@ -132,7 +130,7 @@ public class TheaterServerHandler
 
     private async Task HandleEGRS(Packet request)
     {
-        var serverInfo = new Dictionary<string, object>
+        var serverInfo = new Dictionary<string, string>
         {
             ["TID"] = request.DataDict["TID"],
         };
@@ -161,7 +159,7 @@ public class TheaterServerHandler
             for (var packet = 0; packet < brackets; packet++)
             {
                 var response = new Packet(request.Type, TheaterTransmissionType.OkResponse, 0);
-                response.DataDict["TID"] = originalTid + packet;
+                response.DataDict["TID"] = $"{originalTid + packet}";
                 await _conn.SendPacket(response);
                 Interlocked.Decrement(ref _brackets);
             }

@@ -10,7 +10,7 @@ public static class Utils
 {
     public static byte[] HexStringToBytes(string value)
     {
-        string cleanedRequest = value.Replace(" ", "").Replace("\n", "");
+        string cleanedRequest = value.Replace(" ", string.Empty).Replace("\n", string.Empty);
         byte[] byteArray = Enumerable.Range(0, cleanedRequest.Length)
                              .Where(x => x % 2 == 0)
                              .Select(x => Convert.ToByte(cleanedRequest.Substring(x, 2), 16))
@@ -38,14 +38,14 @@ public static class Utils
         return [first, second];
     }
 
-    public static Dictionary<string, object> ParseFeslPacketToDict(byte[] data)
+    public static Dictionary<string, string> ParseFeslPacketToDict(byte[] data)
     {
         var dataString = Encoding.ASCII.GetString(data);
 
         var dataSplit = dataString.Split('\n').Where(x => !string.IsNullOrWhiteSpace(x.Replace("\0", string.Empty))).ToArray();
         dataSplit = dataSplit.Select(x => x.Replace("\0", string.Empty)).ToArray();
 
-        var dataDict = new Dictionary<string, object>();
+        var dataDict = new Dictionary<string, string>();
         for (var i = 0; i < dataSplit.Length; i++)
         {
             var entrySplit = dataSplit[i].Split('=', StringSplitOptions.TrimEntries);
@@ -59,7 +59,7 @@ public static class Utils
         return dataDict;
     }
 
-    public static StringBuilder DataDictToPacketString(Dictionary<string, object> packetData)
+    public static StringBuilder DataDictToPacketString(Dictionary<string, string> packetData)
     {
         var dataBuilder = new StringBuilder();
 

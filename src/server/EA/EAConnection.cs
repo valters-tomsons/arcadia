@@ -51,11 +51,10 @@ public class EAConnection : IEAConnection
     {
         _logger = logger;
 
-        int read;
-        byte[] readBuffer = new byte[8096];
-
+        var readBuffer = new byte[8096];
         while (NetworkStream?.CanRead == true || !ct.IsCancellationRequested)
         {
+            int read;
             try
             {
                 read = await NetworkStream!.ReadAsync(readBuffer.AsMemory(), ct);
