@@ -172,7 +172,8 @@ public class TheaterClientHandler
             ["PID"] = $"{session.PID}",
             ["UID"] = $"{session.UID}",
             ["LID"] = $"{server.LID}",
-            ["GID"] = $"{gameId}"
+            ["GID"] = $"{gameId}",
+            ["IP"] = session.TheaterConnection.NetworkAddress
         };
 
         var enterGameRequestPacket = new Packet("EGRQ", TheaterTransmissionType.OkResponse, 0, response);
@@ -262,7 +263,7 @@ public class TheaterClientHandler
             ["EKEY"] = $"{game.EKEY}",
             ["INT-IP"] = $"{serverData["INT-IP"]}",
             ["UGID"] = $"{game.UGID}",
-            ["I"] = $"{serverData["INT-IP"]}",
+            ["I"] = game.TheaterConnection.NetworkAddress,
             ["LID"] = $"{game.LID}",
             ["GID"] = $"{game.GID}"
         };
