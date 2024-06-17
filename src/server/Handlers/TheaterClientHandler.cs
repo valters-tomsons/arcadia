@@ -256,7 +256,7 @@ public class TheaterClientHandler
             ["PL"] = $"{"ps3"}",
             ["TICKET"] = $"{serverData["TICKET"]}",
             ["PID"] = $"{request["PID"]}",
-            ["P"] = $"{serverData["INT-IP"]}",
+            ["P"] = $"{serverData["INT-PORT"]}",
             ["HUID"] = $"{game.UID}",
             ["INT-PORT"] = $"{serverData["INT-PORT"]}",
             ["EKEY"] = $"{game.EKEY}",
