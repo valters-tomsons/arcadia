@@ -12,10 +12,12 @@ Currently, enough is implemented to allow connection to backend services and bro
 
 Both PSN and RPCN clients are supported unless noted otherwise.
 
-* **BC2** - login, 2-player onslaught
-* **BC2 Server** - login, create game, initialize player connection
-* **1943** - login *(easy access to game tutorial)*
-* **BC1** - partial connection, requires a game patch, PSN likely won't be supported
+Game | Status | Notes
+-----------------| ------   | -----
+Bad Company 2    | Playable | Player-hosted onslaught games are supported
+Battlefield 1943 | Login    | Can access the tutorial
+Bad Company 1    | Connect  | Needs patch/Connection breaks early
+Army of Two      | Connect  | Needs patch/Connection breaks early
 
 ## PS3 Client Configuration
 
