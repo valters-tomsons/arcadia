@@ -9,6 +9,7 @@ public interface IEAConnection
 {
     string ClientEndpoint { get; }
     Stream? NetworkStream { get; }
+    string NetworkAddress { get; }
 
     void InitializeInsecure(Stream network, string endpoint);
     void InitializeSecure(TlsServerProtocol network, string endpoint);
@@ -24,6 +25,8 @@ public class EAConnection : IEAConnection
 
     public string ClientEndpoint { get; private set; } = string.Empty;
     public Stream? NetworkStream { get; private set; }
+
+    public string NetworkAddress => ClientEndpoint.Split(':')[0];
 
     public void InitializeInsecure(Stream network, string endpoint)
     {
