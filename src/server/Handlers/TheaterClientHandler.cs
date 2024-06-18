@@ -254,10 +254,10 @@ public class TheaterClientHandler
         var serverData = game.Data;
         var response = new Dictionary<string, string>
         {
-            ["PL"] = $"{"ps3"}",
+            ["PL"] = "ps3",
             ["TICKET"] = $"{serverData["TICKET"]}",
             ["PID"] = $"{request["PID"]}",
-            ["P"] = $"{serverData["INT-PORT"]}",
+            ["P"] = $"{serverData["PORT"]}",
             ["HUID"] = $"{game.UID}",
             ["INT-PORT"] = $"{serverData["INT-PORT"]}",
             ["EKEY"] = $"{game.EKEY}",
