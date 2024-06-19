@@ -6,9 +6,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Arcadia.Handlers;
 
-public class TheaterClientHandler
+public class TheaterHandler
 {
-    private readonly ILogger<TheaterClientHandler> _logger;
+    private readonly ILogger<TheaterHandler> _logger;
     private readonly SharedCounters _sharedCounters;
     private readonly SharedCache _sharedCache;
     private readonly IEAConnection _conn;
@@ -17,7 +17,7 @@ public class TheaterClientHandler
 
     private TheaterClient? _session;
 
-    public TheaterClientHandler(IEAConnection conn, ILogger<TheaterClientHandler> logger, SharedCounters sharedCounters, SharedCache sharedCache)
+    public TheaterHandler(IEAConnection conn, ILogger<TheaterHandler> logger, SharedCounters sharedCounters, SharedCache sharedCache)
     {
         _logger = logger;
         _sharedCounters = sharedCounters;

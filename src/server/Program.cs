@@ -35,13 +35,11 @@ var host = Host.CreateDefaultBuilder()
             .AddScoped<IEAConnection, EAConnection>()
             .AddScoped<FeslServerHandler>()
             .AddScoped<FeslClientHandler>()
-            .AddScoped<TheaterServerHandler>()
-            .AddScoped<TheaterClientHandler>();
+            .AddScoped<TheaterHandler>();
 
         services
             .AddHostedService<DnsHostedService>()
-            .AddHostedService<FeslHostedService>()
-            .AddHostedService<TheaterHostedService>();
+            .AddHostedService<PlasmaHostedService>();
 
         services.AddLogging(log =>
         {
