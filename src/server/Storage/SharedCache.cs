@@ -67,6 +67,11 @@ public class SharedCache(ILogger<SharedCache> logger)
         return _gameServers.Select(x => x.GID).ToArray();
     }
 
+    public GameServerListing[] GetGameServers()
+    {
+        return [.. _gameServers];
+    }
+
     public void AddTheaterConnection(TheaterClient conn)
     {
         _theaterConnections.Add(conn);
@@ -81,17 +86,6 @@ public class SharedCache(ILogger<SharedCache> logger)
     {
         _gameServers.RemoveItemFromBag(game);
     }
-
-    public GameServerListing? GetJoinableGame()
-    {
-        return _gameServers.Where
-        (
-            x =>
-            x.ConnectedPlayers.Count < 4 &&
-            x.JoiningPlayers.Count < 3
-        )
-        .OrderBy(x => x.GID).FirstOrDefault();
-    } 
 }
 
 public class TheaterClient

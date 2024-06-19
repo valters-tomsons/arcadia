@@ -126,9 +126,7 @@ public class FeslClientHandler
 
     private async Task HandlePlayNow(Packet request)
     {
-        var server = _sharedCache.GetJoinableGame();
         var pnowId = _sharedCounters.GetNextPnowId();
-
         var data1 = new Dictionary<string, string>
         {
             { "TXN", "Start" },
@@ -139,6 +137,7 @@ public class FeslClientHandler
         var packet1 = new Packet("pnow", FeslTransmissionType.SinglePacketResponse, request.Id, data1);
         await _conn.SendPacket(packet1);
 
+        var servers = _sharedCache.GetGameServers();
         var data2 = new Dictionary<string, string>
         {
             { "TXN", "Status" },
@@ -148,10 +147,14 @@ public class FeslClientHandler
             { "props.{}", "3" },
             { "props.{resultType}", "JOIN" },
             { "props.{avgFit}", "1.0" },
-            { "props.{games}.[]", "1" },
-            { "props.{games}.0.gid", server.Data["GID"] },
-            { "props.{games}.0.lid", server.Data["LID"] }
+            { "props.{games}.[]", $"{servers.Length}" },
         };
+
+        for (var i = 0; i < servers.Length; i++)
+        {
+            data2.Add($"props.{{games}}.{i}.gid", servers[i].Data["GID"]);
+            data2.Add($"props.{{games}}.{i}.lid", servers[i].Data["LID"]);
+        }
 
         var packet2 = new Packet("pnow", FeslTransmissionType.SinglePacketResponse, request.Id, data2);
         await _conn.SendPacket(packet2);
