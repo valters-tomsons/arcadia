@@ -128,20 +128,21 @@ public class TheaterHandler
         var reqGid = request["GID"];
         var gid = string.IsNullOrWhiteSpace(reqGid) ? 0 : long.Parse(reqGid);
 
-        GameServerListing? game;
-        if (gid == 0)
-        {
-            game = _sharedCache.GetJoinableGame();
-            gid = game.GID;
-        }
-        else
-        {
-            game = _sharedCache.GetGameByGid(gid);
-        }
-
+        var game = _sharedCache.GetGameByGid(gid);
         if (game is null)
         {
-            throw new NotImplementedException();
+            await SendError(request);
+            return;
+        }
+
+        if (game.UID != _session.UID)
+        {
+            var canJoin = await AwaitOpenGame(game);
+            if (!canJoin)
+            {
+                await SendError(request);
+                return;
+            }
         }
 
         var response = new Dictionary<string, string>
@@ -156,6 +157,46 @@ public class TheaterHandler
 
         _session.PID = game.ConnectedPlayers.Count + game.JoiningPlayers.Count + 1;
         await SendEGRQToHost(request, _session, game);
+    }
+
+    private async Task SendError(Packet request)
+    {
+        var response = new Dictionary<string, string>
+        {
+            ["TID"] = $"{request["TID"]}",
+            ["localizedMessage"] = "Generic error",
+            ["errorContainer"] = "0",
+            ["errorCode"] = "100"
+        };
+
+        var clientPacket = new Packet(request.Type, TheaterTransmissionType.OkResponse, 0, response);
+        await _conn.SendPacket(clientPacket);
+    }
+
+    private async Task<bool> AwaitOpenGame(GameServerListing game)
+    {
+        int retries = 0;
+        while (!game.CanJoin)
+        {
+            _logger.LogDebug("Waiting for host game to open...");
+
+            retries++;
+            await Task.Delay(1000);
+
+            if (game.TheaterConnection is null || game.TheaterConnection.NetworkStream is null)
+            {
+                _logger.LogError("Not connecting to game, host not connected");
+                return false;
+            }
+
+            if (retries == 15)
+            {
+                _logger.LogWarning("Timeout reached");
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static async Task SendEGRQToHost(Packet request, TheaterClient session, GameServerListing server)
@@ -185,8 +226,14 @@ public class TheaterHandler
     {
         var reqGid = request["GID"];
         var serverGid = string.IsNullOrWhiteSpace(reqGid) ? 0 : int.Parse(reqGid);
-        
-        var game = serverGid == 0 ? _sharedCache.GetJoinableGame() : _sharedCache.GetGameByGid(serverGid);
+        var game = _sharedCache.GetGameByGid(serverGid);
+
+        if (game is null)
+        {
+            await SendError(request);
+            return;
+        }
+
         var serverInfo = game.Data;
         var response = new Dictionary<string, string>
         {
@@ -456,6 +503,11 @@ public class TheaterHandler
         {
             _logger.LogInformation("Updating server data");
             _sharedCache.UpsertGameServerDataByGid(gid, request.DataDict);
+
+            if (!string.IsNullOrWhiteSpace(request["B-U-level"]))
+            {
+                game.CanJoin = true;
+            }
         }
 
         return Task.CompletedTask;

@@ -121,4 +121,6 @@ public class GameServerListing
 
     public ConcurrentQueue<TheaterClient> JoiningPlayers { get; init; } = [];
     public ConcurrentBag<TheaterClient> ConnectedPlayers { get; init; } = [];
+
+    public bool CanJoin { get; set; }
 }
