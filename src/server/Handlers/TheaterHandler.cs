@@ -273,13 +273,13 @@ public class TheaterHandler
             ["UGID"] = $"{game.UGID}"
         };
 
-        var maxPlayers = int.Parse((string)game.Data["MAX-PLAYERS"]);
+        var maxPlayers = int.Parse(game.Data["MAX-PLAYERS"]);
         for (var i = 0; i < maxPlayers; i++)
         {
             var pdatId = $"D-pdat{i:D2}";
             var validId = game.Data.TryGetValue(pdatId, out var pdat);
-            if (!validId | string.IsNullOrEmpty(pdat as string)) break;
-            response.Add(pdatId, (pdat as string)!);
+            if (!validId | string.IsNullOrEmpty(pdat)) break;
+            response.Add(pdatId, pdat!);
         }
 
         _logger.LogTrace("Sending GDET to client at {endpoint}", _conn.ClientEndpoint);
