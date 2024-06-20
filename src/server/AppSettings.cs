@@ -3,10 +3,6 @@ namespace Arcadia;
 public record ArcadiaSettings
 {
     public string ListenAddress { get; init; } = System.Net.IPAddress.Loopback.ToString();
-    public string GameServerAddress { get; init; } = "gameserver1.ps3.arcadia";
-    public int GameServerPort { get; init; } = 1003;
-
-    // TODO: Get rid of this?
     public string TheaterAddress { get; init; } = "theater.ps3.arcadia";
 }
 
