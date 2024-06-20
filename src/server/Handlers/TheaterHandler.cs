@@ -373,7 +373,7 @@ public class TheaterHandler
                 ["HN"] = $"{game.NAME}",
                 ["HU"] = $"{game.UID}",
                 ["N"] = $"{game.NAME}",
-                ["I"] = $"{game.Data["INT-IP"]}",
+                ["I"] = $"{game.TheaterConnection.NetworkAddress}",
                 ["P"] = $"{game.Data["PORT"]}",
                 ["MP"] = $"{game.Data["MAX-PLAYERS"]}",
                 ["F"] = $"{0}",
