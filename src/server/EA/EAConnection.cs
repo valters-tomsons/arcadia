@@ -30,7 +30,7 @@ public class EAConnection : IEAConnection
 
     public void InitializeInsecure(Stream network, string endpoint)
     {
-        if (ClientEndpoint is null && NetworkStream is null)
+        if (NetworkStream is not null)
         {
             throw new InvalidOperationException("Tried to initialize an already initialized connection!");
         }
@@ -41,7 +41,7 @@ public class EAConnection : IEAConnection
 
     public void InitializeSecure(TlsServerProtocol network, string endpoint)
     {
-        if (ClientEndpoint is null && NetworkStream is null)
+        if (NetworkStream is not null)
         {
             throw new InvalidOperationException("Tried to initialize an already initialized connection!");
         }
@@ -54,8 +54,10 @@ public class EAConnection : IEAConnection
     {
         _logger = logger;
 
+        if (NetworkStream is null) throw new InvalidOperationException("Connection must be initialized before starting");
+
         var readBuffer = new byte[8096];
-        while (NetworkStream?.CanRead == true || !ct.IsCancellationRequested)
+        while (NetworkStream.CanRead == true || !ct.IsCancellationRequested)
         {
             int read;
             try
