@@ -19,9 +19,10 @@ jobs:
         os: [linux-x64, linux-arm64, win-x64]
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
+    
     - name: Setup .NET
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
 
@@ -31,14 +32,8 @@ jobs:
     - name: Build and Publish
       run: dotnet publish ./src/server -c Release -r ${{ matrix.os }} -o ./release-${{ matrix.os }}
 
-    - name: Archive Release
-      uses: ihiroky/archive-action@v1
-      with:
-        root_dir: ./release-${{ matrix.os }}
-        file_path: arcadia_canary_${{ matrix.os }}.tar.xz
-
     - name: Upload Release
-      uses: actions/upload-artifact@v2.3.1
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.os }}
-        path: arcadia_canary_${{ matrix.os }}.tar.xz
+        path: ./release-${{ matrix.os }}
