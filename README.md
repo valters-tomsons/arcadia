@@ -12,7 +12,7 @@ Currently, enough is implemented to allow connection to backend services and bro
 
 Both PSN and RPCN clients are supported unless noted otherwise.
 
-Game | Status | Notes
+Game             |   Status | Notes
 -----------------| ------   | -----
 Bad Company 2    | Playable | Player-hosted onslaught games are supported
 Battlefield 1943 | Login    | Can access the tutorial
@@ -32,7 +32,7 @@ Army of Two      | Connect  | Needs patch/Connection breaks early
 1. Set IP/Hosts switches to:
 
 ```
-bfbc2-ps3.fesl.ea.com=127.0.0.1&&beach-ps3.fesl.ea.com=127.0.0.1&&beach-ps3.fesl.stest.ea.com=127.0.0.1&&bfbc-ps3.fesl.ea.com=127.0.0.1&&theater.ps3.arcadia=127.0.0.1&&ao2-ps3.fesl.ea.com=127.0.0.1
+theater.ps3.arcadia=127.0.0.1&&bfbc2-ps3.fesl.ea.com=127.0.0.1&&beach-ps3.fesl.ea.com=127.0.0.1&&beach-ps3.fesl.stest.ea.com=127.0.0.1&&bfbc-ps3.fesl.ea.com=127.0.0.1&&ao2-ps3.fesl.ea.com=127.0.0.1
 ```
 
 ## PC Client Configuration
@@ -42,6 +42,17 @@ bfbc2-ps3.fesl.ea.com=127.0.0.1&&beach-ps3.fesl.ea.com=127.0.0.1&&beach-ps3.fesl
 1. Override hosts as seen in `dist/pc/hosts.etc` or configure the DNS server
 2. When logging in: enter username in email field, leave the password empty and make sure "Remember password" is not checked
 3. When logging in again, make sure to clear the password field and uncheck "Remember password"
+
+## Domain Name Reference Table
+
+Game             | FESL Domain
+-----------------| ------   
+Bad Company 2    | bfbc2-ps3.fesl.ea.com
+Battlefield 1943 | beach-ps3.fesl.ea.com
+Bad Company 1    | bfbc-ps3.fesl.ea.com
+Army of Two      | ao2-ps3.fesl.ea.com
+
+Theater address is generally controllable via FESL, so Arcadia uses `theater.ps3.arcadia`
 
 ## Special Thanks
 
