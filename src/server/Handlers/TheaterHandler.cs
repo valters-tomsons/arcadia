@@ -243,7 +243,7 @@ public class TheaterHandler
             ["GID"] = $"{game.GID}",
             ["HU"] = $"{game.UID}",
             ["HN"] = $"{game.NAME}",
-            ["I"] = $"{serverInfo["INT-PORT"]}",
+            ["I"] = game.TheaterConnection.NetworkAddress,
             ["P"] = $"{serverInfo["PORT"]}",
             ["N"] = $"{game.NAME}",
             ["AP"] = $"{0}",
