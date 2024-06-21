@@ -11,8 +11,7 @@ public class ShellInterfaceService(ILogger<ShellInterfaceService> logger, Shared
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        Console.WriteLine("CLI Background Service is running.");
-
+        _logger.LogInformation("Shell interface ready");
         while (!stoppingToken.IsCancellationRequested)
         {
             var command = Console.ReadLine();
