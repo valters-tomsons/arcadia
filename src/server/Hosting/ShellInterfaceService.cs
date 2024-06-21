@@ -11,10 +11,11 @@ public class ShellInterfaceService(ILogger<ShellInterfaceService> logger, Shared
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Shell interface ready");
+        using var inputStream = Console.OpenStandardInput();
+        _logger.LogInformation("Shell interface open");
         while (!stoppingToken.IsCancellationRequested)
         {
-            var command = Console.ReadLine();
+            var command = await ReadInputLine();
             if (!string.IsNullOrWhiteSpace(command))
             {
                 await ProcessCommand(command);
@@ -43,5 +44,24 @@ public class ShellInterfaceService(ILogger<ShellInterfaceService> logger, Shared
         }
 
         return Task.CompletedTask;
+    }
+
+    private static Task<string> ReadInputLine()
+    {
+        var tcs = new TaskCompletionSource<string>();
+        ThreadPool.QueueUserWorkItem(_ =>
+        {
+            try
+            {
+                var line = Console.ReadLine() ?? string.Empty;
+                tcs.SetResult(line);
+            }
+            catch (Exception ex)
+            {
+                tcs.SetException(ex);
+            }
+        });
+
+        return tcs.Task;
     }
 }
