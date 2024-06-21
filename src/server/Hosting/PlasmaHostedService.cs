@@ -1,6 +1,5 @@
 using System.Net.Sockets;
 using Arcadia.EA;
-using Arcadia.Handlers;
 using Arcadia.Tls;
 using Arcadia.Tls.Crypto;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,6 +10,7 @@ using System.Net;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Tls;
 using Arcadia.EA.Ports;
+using Arcadia.Handlers.EA;
 
 namespace Arcadia.Hosting;
 
@@ -82,11 +82,10 @@ public class PlasmaHostedService : IHostedService
 
         try
         {
-            var isFeslGame = Enum.IsDefined(typeof(FeslGamePort), connectionPort);
-            var isFeslServer = Enum.IsDefined(typeof(FeslServerPort), connectionPort);
+            var isFesl = Enum.IsDefined(typeof(FeslGamePort), connectionPort) || Enum.IsDefined(typeof(FeslServerPort), connectionPort);
             var isTheater = Enum.IsDefined(typeof(TheaterGamePort), connectionPort) || Enum.IsDefined(typeof(TheaterServerPort), connectionPort);
 
-            if (isFeslGame || isFeslServer)
+            if (isFesl)
             {
                 var crypto = scope.ServiceProvider.GetRequiredService<Rc4TlsCrypto>();
                 var connTls = new Ssl3TlsServer(crypto, _feslPubCert, _feslCertKey);

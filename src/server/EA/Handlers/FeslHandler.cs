@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Org.BouncyCastle.Tls;
 
-namespace Arcadia.Handlers;
+namespace Arcadia.Handlers.EA;
 
 public class FeslHandler
 {

@@ -4,7 +4,7 @@ using Arcadia.EA.Constants;
 using Arcadia.Storage;
 using Microsoft.Extensions.Logging;
 
-namespace Arcadia.Handlers;
+namespace Arcadia.Handlers.EA;
 
 public class TheaterHandler
 {

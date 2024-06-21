@@ -1,5 +1,4 @@
-﻿using Arcadia;
-using Arcadia.Handlers;
+using Arcadia;
 using Arcadia.Tls.Crypto;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
@@ -10,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 using Arcadia.Storage;
 using NReco.Logging.File;
+using Arcadia.Handlers.EA;
 
 var host = Host.CreateDefaultBuilder()
     .ConfigureAppConfiguration((_, config) => config
