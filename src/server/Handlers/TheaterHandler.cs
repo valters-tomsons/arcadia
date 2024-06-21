@@ -39,7 +39,8 @@ public class TheaterHandler
             ["UBRA"] = HandleUBRA,
             ["UGAM"] = HandleUGAM,
             ["RGAM"] = HandleRGAM,
-            ["PLVT"] = HandlePLVT
+            ["PLVT"] = HandlePLVT,
+            ["UGDE"] = HandleUGDE
         };
     }
 
@@ -492,6 +493,22 @@ public class TheaterHandler
                 Interlocked.Decrement(ref _brackets);
             }
         }
+    }
+
+    private Task HandleUGDE(Packet request)
+    {
+        var gid = long.Parse(request["GID"]);
+        var game = _sharedCache.GetGameByGid(gid) ?? throw new NotImplementedException();
+
+        _logger.LogInformation("Updating game details");
+        _sharedCache.UpsertGameServerDataByGid(gid, request.DataDict);
+
+        if (!string.IsNullOrWhiteSpace(request["B-U-level"]))
+        {
+            game.CanJoin = true;
+        }
+
+        return Task.CompletedTask;
     }
 
     private Task HandleUGAM(Packet request)

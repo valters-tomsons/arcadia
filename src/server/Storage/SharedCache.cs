@@ -22,8 +22,7 @@ public class SharedCache(ILogger<SharedCache> logger)
         return _lkeyUsernames[lkey];
     }
 
-    private readonly string[] blacklist = ["TID", "PID" ];
-
+    private readonly string[] blacklist = [ "TID", "PID" ];
     public void UpsertGameServerDataByGid(long serverGid, Dictionary<string, string> data)
     {
         if (serverGid < 1)
