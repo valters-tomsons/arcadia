@@ -10,9 +10,9 @@ using Org.BouncyCastle.Tls;
 
 namespace Arcadia.Handlers;
 
-public class FeslClientHandler
+public class FeslHandler
 {
-    private readonly ILogger<FeslClientHandler> _logger;
+    private readonly ILogger<FeslHandler> _logger;
     private readonly IOptions<ArcadiaSettings> _settings;
     private readonly SharedCounters _sharedCounters;
     private readonly SharedCache _sharedCache;
@@ -24,7 +24,7 @@ public class FeslClientHandler
     private FeslGamePort _servicePort;
     private uint _feslTicketId;
 
-    public FeslClientHandler(IEAConnection conn, ILogger<FeslClientHandler> logger, IOptions<ArcadiaSettings> settings, SharedCounters sharedCounters, SharedCache sharedCache)
+    public FeslHandler(IEAConnection conn, ILogger<FeslHandler> logger, IOptions<ArcadiaSettings> settings, SharedCounters sharedCounters, SharedCache sharedCache)
     {
         _logger = logger;
         _settings = settings;
@@ -89,11 +89,6 @@ public class FeslClientHandler
 
     private async Task HandleHello(Packet request)
     {
-        if (request["clientType"] == "server")
-        {
-            throw new NotSupportedException("Server tried connecting to a client port!");
-        }
-
         var currentTime = DateTime.UtcNow.ToString("MMM-dd-yyyy HH:mm:ss 'UTC'", CultureInfo.InvariantCulture);
         var serverHelloData = new Dictionary<string, string>
                 {
@@ -346,7 +341,13 @@ public class FeslClientHandler
 
     private async Task HandleNuLogin(Packet request)
     {
-        _sessionCache["personaName"] = request["nuid"];
+        var nuid = request["nuid"];
+        if (nuid.Contains('@'))
+        {
+            nuid = nuid.Split('@')[0];
+        }
+
+        _sessionCache["personaName"] = nuid;
 
         var loginResponseData = new Dictionary<string, string>
         {

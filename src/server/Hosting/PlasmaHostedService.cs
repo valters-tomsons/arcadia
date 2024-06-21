@@ -93,16 +93,8 @@ public class PlasmaHostedService : IHostedService
                 var serverProtocol = new TlsServerProtocol(networkStream);
                 serverProtocol.Accept(connTls);
 
-                if (isFeslGame)
-                {
-                    var clientHandler = scope.ServiceProvider.GetRequiredService<FeslClientHandler>();
-                    await clientHandler.HandleClientConnection(serverProtocol, clientEndpoint, (FeslGamePort)connectionPort);
-                }
-                else
-                {
-                    var serverHandler = scope.ServiceProvider.GetRequiredService<FeslServerHandler>();
-                    await serverHandler.HandleClientConnection(serverProtocol, clientEndpoint);
-                }
+                var clientHandler = scope.ServiceProvider.GetRequiredService<FeslHandler>();
+                await clientHandler.HandleClientConnection(serverProtocol, clientEndpoint, (FeslGamePort)connectionPort);
             }
             else if (isTheater)
             {

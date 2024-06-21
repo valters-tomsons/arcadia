@@ -13,7 +13,7 @@ public class FeslHandlerTests
 {
     private readonly IFixture fixture;
     private readonly Mock<IEAConnection> mockConnection;
-    private readonly FeslClientHandler handler;
+    private readonly FeslHandler handler;
 
     private readonly ConcurrentQueue<Packet> responses = new();
 
@@ -27,7 +27,7 @@ public class FeslHandlerTests
                       .Returns(Task.FromResult(true))
                       .Verifiable();
 
-        handler = fixture.Create<FeslClientHandler>();
+        handler = fixture.Create<FeslHandler>();
     }
 
     [Theory]
