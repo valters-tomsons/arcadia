@@ -432,6 +432,12 @@ public class TheaterHandler
             }
         };
 
+        if (string.IsNullOrWhiteSpace(game.NAME))
+        {
+            await SendError(request);
+            return;
+        }
+
         _sharedCache.AddGame(game);
 
         var response = new Dictionary<string, string>
