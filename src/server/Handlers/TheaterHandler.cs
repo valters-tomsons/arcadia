@@ -157,7 +157,7 @@ public class TheaterHandler
         await _conn.SendPacket(clientPacket);
 
         _session.PID = game.ConnectedPlayers.Count + game.JoiningPlayers.Count + 1;
-        await SendEGRQToHost(request, _session, game);
+        await SendEGRQ_ToGameHost(request, _session, game);
     }
 
     private async Task SendError(Packet request)
@@ -200,7 +200,7 @@ public class TheaterHandler
         return true;
     }
 
-    private static async Task SendEGRQToHost(Packet request, TheaterClient session, GameServerListing server)
+    private static async Task SendEGRQ_ToGameHost(Packet request, TheaterClient session, GameServerListing server)
     {
         var gameId = server.GID;
         var response = new Dictionary<string, string>
@@ -288,7 +288,7 @@ public class TheaterHandler
         await _conn.SendPacket(packet);
     }
 
-    private async Task SendEGEGToPlayer(Packet request, int gid)
+    private async Task SendEGEG_ToPlayerInQueue(Packet request, int gid)
     {
         var game = _sharedCache.GetGameByGid(gid) ?? throw new NotImplementedException();
         var joining = game.JoiningPlayers.TryDequeue(out var player);
@@ -469,7 +469,7 @@ public class TheaterHandler
         await _conn.SendPacket(packet);
 
         var gid = int.Parse(request["GID"]);
-        await SendEGEGToPlayer(request, gid);
+        await SendEGEG_ToPlayerInQueue(request, gid);
     }
 
     private int _brackets = 0;
