@@ -51,6 +51,11 @@ public class TheaterHandler
         {
             await HandlePacket(packet);
         }
+
+        if (_session is null) return;
+
+        _sharedCache.RemoveGameByUid(_session.UID);
+        _sharedCache.RemoveTheaterConnection(_session);
     }
 
     public async Task HandlePacket(Packet packet)

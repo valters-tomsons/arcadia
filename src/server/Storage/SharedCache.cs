@@ -76,6 +76,12 @@ public class SharedCache(ILogger<SharedCache> logger)
         _theaterConnections.Add(conn);
     }
 
+    public void RemoveTheaterConnection(TheaterClient? conn)
+    {
+        if (conn is null) return;
+        _theaterConnections.RemoveItemFromBag(conn);
+    }
+
     public void AddGame(GameServerListing game)
     {
         _gameServers.Add(game);
@@ -83,6 +89,13 @@ public class SharedCache(ILogger<SharedCache> logger)
 
     public void RemoveGame(GameServerListing game)
     {
+        _gameServers.RemoveItemFromBag(game);
+    }
+
+    public void RemoveGameByUid(long uid)
+    {
+        var game = _gameServers.FirstOrDefault(x => x.UID == uid);
+        if (game is null) return;
         _gameServers.RemoveItemFromBag(game);
     }
 }
