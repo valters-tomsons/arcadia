@@ -410,6 +410,7 @@ public class TheaterHandler
             UGID = "NOGUID",
             EKEY = "NOENCYRPTIONKEY", // Yes, that's the actual string
             SECRET = "NOSECRET",
+            NAME = request["NAME"],
             Data = new()
             {
                 ["RESERVE-HOST"] = request["RESERVE-HOST"],
