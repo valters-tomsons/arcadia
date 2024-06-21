@@ -48,7 +48,7 @@ public class PlasmaHostedService : IHostedService
             var listener = new TcpListener(IPAddress.Parse(_arcadiaSettings.ListenAddress), port);
             _tcpListeners.Add(listener);
 
-            Task.Run(async () =>
+            ThreadPool.QueueUserWorkItem(async callback =>
             {
                 listener.Start();
                 while (!processCt.IsCancellationRequested)
@@ -58,15 +58,16 @@ public class PlasmaHostedService : IHostedService
                         var tcpClient = await listener.AcceptTcpClientAsync(processCt);
                         _ = HandleTcpConnection(tcpClient, port);
                     }
-                    catch(TlsNoCloseNotifyException)
+                    catch (TlsNoCloseNotifyException)
                     {
+                        _logger.LogWarning("Client terminated the connection without warning on port {port}", port);
                     }
                     catch (Exception e)
                     {
                         _logger.LogError(e, "Error accepting client on port {port}", port);
                     }
                 }
-            }, processCt);
+            });
         }
 
         return Task.CompletedTask;
