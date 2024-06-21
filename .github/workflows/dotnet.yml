@@ -49,23 +49,20 @@ jobs:
           name: linux-arm64
           path: ./release-linux-arm64
 
+      - name: Write SSH credentials
+        run: |
+          install -m 600 -D /dev/null ~/.ssh/id_rsa
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          host='${{ secrets.SSH_HOST }}'
+          hosts="$(dig +short "$host" | grep -v '\.$' | sed -z 's|\n|,|g')$host"
+          ssh-keyscan -H "$hosts" > ~/.ssh/known_hosts
+
       - name: Deploy to server
         run: |
-          mkdir -p ~/.ssh/
-          echo "$SSH_PRIVATE_KEY" > ../private.key
-          sudo chmod 600 ../private.key
-          echo "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
-
           chmod +x ./release-linux-arm64/Arcadia
 
-          scp ./release-linux-arm64/Arcadia $SSH_CONN:/home/$SSH_USER/server/
+          scp -i $SSH_KEY_PATH ./release-linux-arm64/Arcadia ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/${{ secrets.SSH_USER }}/server/
           ssh -i $SSH_KEY_PATH $SSH_CONN << 'EOF'
-            tmux new-session -d -s arcadia_server 'cd /home/$SSH_USER/server && ./Arcadia'
+            tmux new-session -d -s arcadia_server 'cd /home/${{ secrets.SSH_USER }}/server && ./Arcadia'
           EOF
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
-          SSH_CONN: ${{ secrets.SSH_CONN }}
-          SSH_USER: ${{ secrets.SSH_USER }}
-          SSH_KEY_PATH: ${{ github.workspace }}/../private.key
         shell: bash
