@@ -1,4 +1,4 @@
-using Arcadia;
+﻿using Arcadia;
 using Arcadia.Tls.Crypto;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
@@ -38,7 +38,8 @@ var host = Host.CreateDefaultBuilder()
 
         services
             .AddHostedService<DnsHostedService>()
-            .AddHostedService<PlasmaHostedService>();
+            .AddHostedService<PlasmaHostedService>()
+            .AddHostedService<ShellInterfaceService>();
 
         services.AddLogging(log =>
         {
