@@ -108,8 +108,6 @@ public class ProtoSSL(ILogger<ProtoSSL> logger)
         // Patch the second signature to TLS_NULL_WITH_NULL_NULL
         certDer[signature2Offset + 8] = 0x01;
 
-        using var derStream = new MemoryStream(certDer);
-        var parser = new X509CertificateParser();
-        return parser.ReadCertificate(derStream);
+        return new X509Certificate(certDer);
     }
 }
