@@ -58,7 +58,7 @@ var host = Host.CreateDefaultBuilder()
             {
                 services.Configure<LoggerFilterOptions>(x =>
                 {
-                    x.AddFilter("Arcadia.Handlers.*", LogLevel.Trace);
+                    x.AddFilter("Arcadia.EA.Handlers.*", LogLevel.Trace);
                     x.AddFilter("Arcadia.EA.EAConnection", LogLevel.Trace);
                 });
 
