@@ -1,11 +1,11 @@
 using Arcadia.EA;
 using static Arcadia.EA.Constants.FeslTransmissionType;
-using Arcadia.Handlers;
 using AutoFixture;
 using AutoFixture.AutoMoq;
 using Moq;
 using Xunit;
 using System.Collections.Concurrent;
+using Arcadia.EA.Handlers;
 
 namespace tests;
 

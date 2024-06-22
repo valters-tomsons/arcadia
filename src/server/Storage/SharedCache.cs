@@ -4,22 +4,49 @@ using Microsoft.Extensions.Logging;
 
 namespace Arcadia.Storage;
 
-public class SharedCache(ILogger<SharedCache> logger)
+public class SharedCache(ILogger<SharedCache> logger, SharedCounters counters)
 {
     private readonly ILogger<SharedCache> _logger = logger;
+    private readonly SharedCounters _counters = counters;
 
-    private readonly ConcurrentDictionary<string, string> _lkeyUsernames = new();
     private readonly ConcurrentBag<GameServerListing> _gameServers = [];
-    private readonly ConcurrentBag<TheaterClient> _theaterConnections = [];
+    private readonly ConcurrentBag<PlasmaConnection> _connections = [];
 
-    public void AddUserWithLKey(string lkey, string username)
+    public PlasmaConnection CreatePlasmaConnection(IEAConnection fesl, string onlineId)
     {
-        _lkeyUsernames.TryAdd(lkey, username);
+        PlasmaConnection result = new()
+        {
+            FeslConnection = fesl,
+            UID = _counters.GetNextUserId(),
+            LKEY = SharedCounters.GenerateLKey(),
+            NAME = onlineId
+        };
+
+        _connections.Add(result);
+        return result;
     }
 
-    public string GetUsernameByLKey(string lkey)
+    public PlasmaConnection AddTheaterConnection(IEAConnection _conn, string lkey)
     {
-        return _lkeyUsernames[lkey];
+        var plasma = _connections.SingleOrDefault(x => x.LKEY == lkey) ?? throw new Exception();
+        plasma.TheaterConnection = _conn;
+        return plasma;
+    }
+
+    public void RemoveConnection(PlasmaConnection plasma)
+    {
+        var hostedGames = _gameServers.Where(x => x.UID == plasma.UID);
+        foreach (var game in hostedGames)
+        {
+            _gameServers.RemoveItemFromBag(game);
+        }
+
+        _connections.RemoveItemFromBag(plasma);
+    }
+
+    public PlasmaConnection[] GetConnectedClients()
+    {
+        return [.. _connections];
     }
 
     private readonly string[] blacklist = [ "TID", "PID" ];
@@ -71,17 +98,6 @@ public class SharedCache(ILogger<SharedCache> logger)
         return [.. _gameServers];
     }
 
-    public void AddTheaterConnection(TheaterClient conn)
-    {
-        _theaterConnections.Add(conn);
-    }
-
-    public void RemoveTheaterConnection(TheaterClient? conn)
-    {
-        if (conn is null) return;
-        _theaterConnections.RemoveItemFromBag(conn);
-    }
-
     public void AddGame(GameServerListing game)
     {
         _gameServers.Add(game);
@@ -91,23 +107,16 @@ public class SharedCache(ILogger<SharedCache> logger)
     {
         _gameServers.RemoveItemFromBag(game);
     }
-
-    public void RemoveGameByUid(long uid)
-    {
-        var game = _gameServers.FirstOrDefault(x => x.UID == uid);
-        if (game is null) return;
-        _gameServers.RemoveItemFromBag(game);
-    }
 }
 
-public class TheaterClient
+public class PlasmaConnection
 {
-    public IEAConnection? TheaterConnection { get; init; }
+    public IEAConnection? FeslConnection { get; set; }
+    public IEAConnection? TheaterConnection { get; set; }
 
     public long UID { get; init; }
     public string NAME { get; init; } = string.Empty;
     public string LKEY { get; init; } = string.Empty;
-
     public int PID { get; set; }
 }
 
@@ -125,8 +134,8 @@ public class GameServerListing
     public string EKEY { get; init; } = string.Empty;
     public string NAME { get; init; } = string.Empty;
 
-    public ConcurrentQueue<TheaterClient> JoiningPlayers { get; init; } = [];
-    public ConcurrentBag<TheaterClient> ConnectedPlayers { get; init; } = [];
+    public ConcurrentQueue<PlasmaConnection> JoiningPlayers { get; init; } = [];
+    public ConcurrentBag<PlasmaConnection> ConnectedPlayers { get; init; } = [];
 
     public bool CanJoin { get; set; }
 }

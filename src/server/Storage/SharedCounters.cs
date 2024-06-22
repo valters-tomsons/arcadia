@@ -1,3 +1,5 @@
+using Org.BouncyCastle.Security;
+
 namespace Arcadia.Storage;
 
 public class SharedCounters
@@ -8,7 +10,7 @@ public class SharedCounters
     private long _pnowId = 350000;
     private long _lid = 255;
 
-    private static readonly Random _random = new();
+    private static readonly SecureRandom _random = new();
 
     public long GetNextUserId()
     {
@@ -35,7 +37,7 @@ public class SharedCounters
         return Interlocked.Increment(ref _lid);
     }
 
-    public static string GetNextLkey()
+    public static string GenerateLKey()
     {
         var key = _random.Next(100000000, 999999999);
         const string keyTempl = "W5NyZzx{0}Cki6GQAAKDw.";

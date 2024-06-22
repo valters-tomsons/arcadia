@@ -4,7 +4,7 @@ using Arcadia.EA.Constants;
 using Arcadia.Storage;
 using Microsoft.Extensions.Logging;
 
-namespace Arcadia.Handlers.EA;
+namespace Arcadia.EA.Handlers;
 
 public class TheaterHandler
 {
@@ -15,7 +15,7 @@ public class TheaterHandler
 
     private readonly Dictionary<string, Func<Packet, Task>> _handlers;
 
-    private TheaterClient? _session;
+    private PlasmaConnection? _plasma;
 
     public TheaterHandler(IEAConnection conn, ILogger<TheaterHandler> logger, SharedCounters sharedCounters, SharedCache sharedCache)
     {
@@ -44,7 +44,7 @@ public class TheaterHandler
         };
     }
 
-    public async Task HandleClientConnection(NetworkStream network, string clientEndpoint)
+    public async Task<PlasmaConnection> HandleClientConnection(NetworkStream network, string clientEndpoint)
     {
         _conn.InitializeInsecure(network, clientEndpoint);
         await foreach (var packet in _conn.StartConnection(_logger))
@@ -52,10 +52,7 @@ public class TheaterHandler
             await HandlePacket(packet);
         }
 
-        if (_session is null) return;
-
-        _sharedCache.RemoveGameByUid(_session.UID);
-        _sharedCache.RemoveTheaterConnection(_session);
+        return _plasma ?? throw new NotImplementedException();
     }
 
     public async Task HandlePacket(Packet packet)
@@ -91,20 +88,12 @@ public class TheaterHandler
     private async Task HandleUSER(Packet request)
     {
         var lkey = request["LKEY"];
+        _plasma = _sharedCache.AddTheaterConnection(_conn, lkey);
 
-        _session = new()
-        {
-            UID = _sharedCounters.GetNextUserId() - 1,
-            LKEY = lkey,
-            NAME = _sharedCache.GetUsernameByLKey(lkey),
-            TheaterConnection = _conn
-        };
-        _sharedCache.AddTheaterConnection(_session);
-
-        _logger.LogInformation("USER: {name} {lkey}", _session.NAME, lkey);
+        _logger.LogInformation("USER: {name} {lkey}", _plasma.NAME, lkey);
         var response = new Dictionary<string, string>
         {
-            ["NAME"] = _session.NAME,
+            ["NAME"] = _plasma.NAME,
             ["TID"] = request.DataDict["TID"]
         };
 
@@ -129,7 +118,7 @@ public class TheaterHandler
     // EnterGameRequest
     private async Task HandleEGAM(Packet request)
     {
-        if (_session is null) throw new NotImplementedException();
+        if (_plasma is null) throw new NotImplementedException();
 
         var reqGid = request["GID"];
         var gid = string.IsNullOrWhiteSpace(reqGid) ? 0 : long.Parse(reqGid);
@@ -141,7 +130,7 @@ public class TheaterHandler
             return;
         }
 
-        if (game.UID != _session.UID)
+        if (game.UID != _plasma.UID)
         {
             var canJoin = await AwaitOpenGame(game);
             if (!canJoin)
@@ -161,8 +150,8 @@ public class TheaterHandler
         var clientPacket = new Packet("EGAM", TheaterTransmissionType.OkResponse, 0, response);
         await _conn.SendPacket(clientPacket);
 
-        _session.PID = game.ConnectedPlayers.Count + game.JoiningPlayers.Count + 1;
-        await SendEGRQ_ToGameHost(request, _session, game);
+        _plasma.PID = game.ConnectedPlayers.Count + game.JoiningPlayers.Count + 1;
+        await SendEGRQ_ToGameHost(request, _plasma, game);
     }
 
     private async Task SendError(Packet request)
@@ -205,7 +194,7 @@ public class TheaterHandler
         return true;
     }
 
-    private static async Task SendEGRQ_ToGameHost(Packet request, TheaterClient session, GameServerListing server)
+    private static async Task SendEGRQ_ToGameHost(Packet request, PlasmaConnection session, GameServerListing server)
     {
         var gameId = server.GID;
         var response = new Dictionary<string, string>
@@ -399,12 +388,12 @@ public class TheaterHandler
     // CreateGame
     private async Task HandleCGAM(Packet request)
     {
-        if (_session is null) throw new NotImplementedException();
+        if (_plasma is null) throw new NotImplementedException();
 
         var game = new GameServerListing()
         {
             TheaterConnection = _conn,
-            UID = _session.UID,
+            UID = _plasma.UID,
             GID = _sharedCounters.GetNextGameId(),
             LID = 257,
             UGID = "NOGUID",
@@ -528,7 +517,7 @@ public class TheaterHandler
         var gid = long.Parse(request["GID"]);
         var game = _sharedCache.GetGameByGid(gid) ?? throw new NotImplementedException();
 
-        if (game.UID == _session?.UID)
+        if (game.UID == _plasma?.UID)
         {
             _logger.LogInformation("Updating server data");
             _sharedCache.UpsertGameServerDataByGid(gid, request.DataDict);

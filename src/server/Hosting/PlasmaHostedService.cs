@@ -10,7 +10,8 @@ using System.Net;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Tls;
 using Arcadia.EA.Ports;
-using Arcadia.Handlers.EA;
+using Arcadia.Storage;
+using Arcadia.EA.Handlers;
 
 namespace Arcadia.Hosting;
 
@@ -19,7 +20,7 @@ public class PlasmaHostedService : IHostedService
     private readonly ILogger<PlasmaHostedService> _logger;
     private readonly ArcadiaSettings _arcadiaSettings;
     private readonly IServiceScopeFactory _scopeFactory;
-
+    private readonly SharedCache _sharedCache;
     private readonly AsymmetricKeyParameter _feslCertKey;
     private readonly Certificate _feslPubCert;
 
@@ -32,10 +33,11 @@ public class PlasmaHostedService : IHostedService
             (int)TheaterServerPort.RomePC
     ];
 
-    public PlasmaHostedService(ILogger<PlasmaHostedService> logger, IOptions<ArcadiaSettings> arcadiaSettings, ProtoSSL certGenerator, IServiceScopeFactory scopeFactory)
+    public PlasmaHostedService(ILogger<PlasmaHostedService> logger, IOptions<ArcadiaSettings> arcadiaSettings, ProtoSSL certGenerator, IServiceScopeFactory scopeFactory, SharedCache sharedCache)
     {
         _logger = logger;
         _scopeFactory = scopeFactory;
+        _sharedCache = sharedCache;
         _arcadiaSettings = arcadiaSettings.Value;
         (_feslCertKey, _feslPubCert) = certGenerator.GetFeslEaCert();
     }
@@ -79,12 +81,15 @@ public class PlasmaHostedService : IHostedService
         _logger.LogInformation("Opening connection from: {clientEndpoint} to {port}", clientEndpoint, connectionPort);
 
         using var scope = _scopeFactory.CreateAsyncScope();
+
         var networkStream = tcpClient.GetStream();
+        PlasmaConnection? plasma = null;
 
         try
         {
             var isFesl = Enum.IsDefined(typeof(FeslGamePort), connectionPort) || Enum.IsDefined(typeof(FeslServerPort), connectionPort);
             var isTheater = Enum.IsDefined(typeof(TheaterGamePort), connectionPort) || Enum.IsDefined(typeof(TheaterServerPort), connectionPort);
+
 
             if (isFesl)
             {
@@ -94,12 +99,12 @@ public class PlasmaHostedService : IHostedService
                 serverProtocol.Accept(connTls);
 
                 var clientHandler = scope.ServiceProvider.GetRequiredService<FeslHandler>();
-                await clientHandler.HandleClientConnection(serverProtocol, clientEndpoint, (FeslGamePort)connectionPort);
+                plasma = await clientHandler.HandleClientConnection(serverProtocol, clientEndpoint, (FeslGamePort)connectionPort);
             }
             else if (isTheater)
             {
                 var clientHandler = scope.ServiceProvider.GetRequiredService<TheaterHandler>();
-                await clientHandler.HandleClientConnection(networkStream, clientEndpoint);
+                plasma = await clientHandler.HandleClientConnection(networkStream, clientEndpoint);
             }
             else
             {
@@ -108,11 +113,18 @@ public class PlasmaHostedService : IHostedService
         }
         finally
         {
-            _logger.LogInformation("Closing connection from: {clientEndpoint}", clientEndpoint);
+            _logger.LogInformation("Closing connection: {clientEndpoint}", clientEndpoint);
 
-            networkStream.Close();
+            if (plasma != null)
+            {
+                _logger.LogInformation("Terminating plasma session: {uid}, {name} | fesl={fesl}, thea={thea}", plasma.UID, plasma.NAME, plasma.FeslConnection is not null, plasma.TheaterConnection is not null);
+
+                plasma.FeslConnection?.NetworkStream?.Close();
+                plasma.TheaterConnection?.NetworkStream?.Close();
+                _sharedCache.RemoveConnection(plasma);
+            }
+
             await networkStream.DisposeAsync();
-
             tcpClient.Close();
             tcpClient.Dispose();
         }

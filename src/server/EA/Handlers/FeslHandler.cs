@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Org.BouncyCastle.Tls;
 
-namespace Arcadia.Handlers.EA;
+namespace Arcadia.EA.Handlers;
 
 public class FeslHandler
 {
@@ -20,9 +20,8 @@ public class FeslHandler
 
     private readonly Dictionary<string, Func<Packet, Task>> _handlers;
 
-    private readonly Dictionary<string, string> _sessionCache = [];
     private FeslGamePort _servicePort;
-    private uint _feslTicketId;
+    private PlasmaConnection? _plasma;
 
     public FeslHandler(IEAConnection conn, ILogger<FeslHandler> logger, IOptions<ArcadiaSettings> settings, SharedCounters sharedCounters, SharedCache sharedCache)
     {
@@ -61,7 +60,7 @@ public class FeslHandler
         };
     }
 
-    public async Task HandleClientConnection(TlsServerProtocol tlsProtocol, string clientEndpoint, FeslGamePort servicePort)
+    public async Task<PlasmaConnection> HandleClientConnection(TlsServerProtocol tlsProtocol, string clientEndpoint, FeslGamePort servicePort)
     {
         _servicePort = servicePort;
         _conn.InitializeSecure(tlsProtocol, clientEndpoint);
@@ -69,6 +68,8 @@ public class FeslHandler
         {
             await HandlePacket(packet);
         }
+
+        return _plasma ?? throw new NotImplementedException();
     }
 
     public async Task HandlePacket(Packet packet)
@@ -80,7 +81,6 @@ public class FeslHandler
         if (handler is null)
         {
             _logger.LogWarning("Unknown packet type: {type}, TXN: {txn}", packet.Type, reqTxn);
-            Interlocked.Increment(ref _feslTicketId);
             return;
         }
 
@@ -100,7 +100,7 @@ public class FeslHandler
                     { "activityTimeoutSecs", "0" },
                     { "curTime", currentTime },
                     { "theaterIp", _settings.Value.TheaterAddress },
-                    { "theaterPort", $"{(int)GetTheaterPort()}" }
+                    { "theaterPort", "18126" }
                 };
 
         var helloPacket = new Packet("fsys", FeslTransmissionType.SinglePacketResponse, request.Id, serverHelloData);
@@ -224,7 +224,7 @@ public class FeslHandler
             { "responses.0.outcome", "0" },
             { "responses.[]", "1" },
             { "responses.0.owner.type", "1" },
-            { "responses.0.owner.id", _sessionCache["UID"] },
+            { "responses.0.owner.id", _plasma.UID.ToString() },
         };
 
         var packet = new Packet("pres", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
@@ -248,7 +248,7 @@ public class FeslHandler
         {
             { "TXN", "NuLookupUserInfo" },
             { "userInfo.[]", "1" },
-            { "userInfo.0.userName", _sessionCache["personaName"] },
+            { "userInfo.0.userName", _plasma.NAME },
         };
 
         var packet = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
@@ -263,7 +263,7 @@ public class FeslHandler
             { "TXN", "GetAssociations" },
             { "domainPartition.domain", request.DataDict["domainPartition.domain"] },
             { "domainPartition.subDomain", request.DataDict["domainPartition.subDomain"] },
-            { "owner.id", _sessionCache["UID"] },
+            { "owner.id", _plasma.UID.ToString() },
             { "owner.type", "1" },
             { "type", assoType },
             { "members.[]", "0" },
@@ -272,7 +272,7 @@ public class FeslHandler
         if (assoType == "PlasmaMute")
         {
             responseData.Add("maxListSize", "100");
-            responseData.Add("owner.name", _sessionCache["personaName"]);
+            responseData.Add("owner.name", _plasma.NAME);
         }
         else
         {
@@ -301,28 +301,6 @@ public class FeslHandler
         await _conn.SendPacket(packet);
     }
 
-
-    private TheaterGamePort GetTheaterPort()
-    {
-        switch (_servicePort)
-        {
-            case FeslGamePort.RomePC:
-                return TheaterGamePort.RomePC;
-            case FeslGamePort.RomePS3:
-                return TheaterGamePort.RomePS3;
-            case FeslGamePort.BeachPS3:
-                return TheaterGamePort.BeachPS3;
-            case FeslGamePort.BadCompanyPS3:
-                return TheaterGamePort.BadCompanyPS3;
-            case FeslGamePort.ArmyOfTwoPS3:
-                _logger.LogWarning("Army of Two detected, using Bad Company port");
-                return TheaterGamePort.BadCompanyPS3;
-            default:
-                _logger.LogError("Unknown FESL service port: {port}", (int)_servicePort);
-                return TheaterGamePort.BeachPS3;
-        }
-    }
-
     private async Task HandleGetTos(Packet request)
     {
         // TODO Same as with stats, usually sent as multi-packed response
@@ -347,7 +325,7 @@ public class FeslHandler
             nuid = nuid.Split('@')[0];
         }
 
-        _sessionCache["personaName"] = nuid;
+        _plasma = _sharedCache.CreatePlasmaConnection(_conn, nuid);
 
         var loginResponseData = new Dictionary<string, string>
         {
@@ -365,31 +343,32 @@ public class FeslHandler
         {
             { "TXN", request.TXN },
             { "personas.[]", "1" },
-            { "personas.0", _sessionCache["personaName"] },
+            { "personas.0", _plasma.NAME },
         };
 
         var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
         await _conn.SendPacket(packet);
     }
     
-    private async Task HandleNuLoginPersona(Packet request)
+    private Task HandleNuLoginPersona(Packet request)
     {
-        _sessionCache["LKEY"] = SharedCounters.GetNextLkey();
+        throw new NotImplementedException();
+        // _sessionCache["LKEY"] = SharedCounters.GenerateLKey();
 
-        var uid = _sharedCounters.GetNextUserId().ToString();
-        _sessionCache["UID"] = uid;
+        // var uid = _sharedCounters.GetNextUserId().ToString();
+        // _sessionCache["UID"] = uid;
 
-        _sharedCache.AddUserWithLKey(_sessionCache["LKEY"], _sessionCache["personaName"]);
-        var loginResponseData = new Dictionary<string, string>
-        {
-            { "TXN", request.TXN },
-            { "lkey", _sessionCache["LKEY"] },
-            { "profileId", uid },
-            { "userId", uid },
-        };
+        // _sharedCache.AddUserWithLKey(_sessionCache["LKEY"], _sessionCache["personaName"]);
+        // var loginResponseData = new Dictionary<string, string>
+        // {
+        //     { "TXN", request.TXN },
+        //     { "lkey", _sessionCache["LKEY"] },
+        //     { "profileId", uid },
+        //     { "userId", uid },
+        // };
 
-        var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
-        await _conn.SendPacket(packet);
+        // var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
+        // await _conn.SendPacket(packet);
     }
 
     private async Task HandleNuGetEntitlements(Packet request)
@@ -419,20 +398,19 @@ public class FeslHandler
     // BC1, AO2
     private async Task HandlePs3Login(Packet request)
     {
-        var loginTicket = request.DataDict["ticket"] as string ?? string.Empty;
+        var loginTicket = request["ticket"];
         var ticketData = TicketDecoder.DecodeFromASCIIString(loginTicket, _logger);
         var onlineId = (ticketData[5] as BStringData)?.Value?.TrimEnd('\0');
 
-        _sessionCache["personaName"] = onlineId ?? throw new NotImplementedException();
-        _sessionCache["LKEY"] = SharedCounters.GetNextLkey();
-        _sessionCache["UID"] = _sharedCounters.GetNextUserId().ToString();
+        if (string.IsNullOrWhiteSpace(onlineId)) throw new NotImplementedException();
 
+        _plasma = _sharedCache.CreatePlasmaConnection(_conn, onlineId);
         var loginResponseData = new Dictionary<string, string>
         {
             { "TXN", request.TXN },
-            { "lkey", _sessionCache["LKEY"] },
-            { "userId", _sessionCache["UID"] },
-            { "screenName", _sessionCache["personaName"] }
+            { "lkey", _plasma.LKEY },
+            { "userId", _plasma.UID.ToString() },
+            { "screenName", _plasma.NAME }
         };
 
         var loginPacket = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
@@ -460,22 +438,17 @@ public class FeslHandler
         // }
         // else
 
-        var loginTicket = request.DataDict["ticket"] as string ?? string.Empty;
+        var loginTicket = request.DataDict["ticket"] ?? string.Empty;
         var ticketData = TicketDecoder.DecodeFromASCIIString(loginTicket, _logger);
-        var onlineId = (ticketData[5] as BStringData)?.Value?.TrimEnd('\0');
+        var onlineId = (ticketData[5] as BStringData)?.Value?.TrimEnd('\0') ?? throw new NotImplementedException();
 
-        _sessionCache["personaName"] = onlineId ?? throw new NotImplementedException();
-        _sessionCache["LKEY"] = SharedCounters.GetNextLkey();
-        _sessionCache["UID"] = _sharedCounters.GetNextUserId().ToString();
-
-        _sharedCache.AddUserWithLKey(_sessionCache["LKEY"], _sessionCache["personaName"]);
-
+        _plasma = _sharedCache.CreatePlasmaConnection(_conn, onlineId);
         var loginResponseData = new Dictionary<string, string>
         {
             { "TXN", "NuPS3Login" },
-            { "lkey", _sessionCache["LKEY"] },
-            { "userId", _sessionCache["UID"] },
-            { "personaName", _sessionCache["personaName"] }
+            { "lkey", _plasma.LKEY },
+            { "userId", _plasma.UID.ToString() },
+            { "personaName", _plasma.NAME }
         };
 
         var loginPacket = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
