@@ -10,9 +10,10 @@ public interface IEAConnection
     string ClientEndpoint { get; }
     Stream? NetworkStream { get; }
     string NetworkAddress { get; }
+    string ServerAddress { get; }
 
-    void InitializeInsecure(Stream network, string endpoint);
-    void InitializeSecure(TlsServerProtocol network, string endpoint);
+    void InitializeInsecure(Stream network, string clientEndpoint, string serverEndpoint);
+    void InitializeSecure(TlsServerProtocol network, string clientEndpoint, string serverEndpoint);
 
     IAsyncEnumerable<Packet> StartConnection(ILogger logger, CancellationToken ct = default);
 
@@ -28,26 +29,31 @@ public class EAConnection : IEAConnection
 
     public string NetworkAddress => ClientEndpoint.Split(':')[0];
 
-    public void InitializeInsecure(Stream network, string endpoint)
+    private string _serverAddress = string.Empty;
+    public string ServerAddress => _serverAddress;
+
+    public void InitializeInsecure(Stream network, string clientEndpoint, string serverEndpoint)
     {
         if (NetworkStream is not null)
         {
             throw new InvalidOperationException("Tried to initialize an already initialized connection!");
         }
 
-        ClientEndpoint = endpoint;
+        ClientEndpoint = clientEndpoint;
         NetworkStream = network;
+        _serverAddress = serverEndpoint.Split(':')[0];
     }
 
-    public void InitializeSecure(TlsServerProtocol network, string endpoint)
+    public void InitializeSecure(TlsServerProtocol network, string clientEndpoint, string serverEndpoint)
     {
         if (NetworkStream is not null)
         {
             throw new InvalidOperationException("Tried to initialize an already initialized connection!");
         }
 
-        ClientEndpoint = endpoint;
+        ClientEndpoint = clientEndpoint;
         NetworkStream = network.Stream;
+        _serverAddress = serverEndpoint.Split(':')[0];
     }
 
     public async IAsyncEnumerable<Packet> StartConnection(ILogger logger, [EnumeratorCancellation] CancellationToken ct = default)

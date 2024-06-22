@@ -60,10 +60,9 @@ public class FeslHandler
         };
     }
 
-    public async Task<PlasmaConnection> HandleClientConnection(TlsServerProtocol tlsProtocol, string clientEndpoint, FeslGamePort servicePort)
+    public async Task<PlasmaConnection> HandleClientConnection(TlsServerProtocol tlsProtocol, string clientEndpoint, string serverEndpoint)
     {
-        _servicePort = servicePort;
-        _conn.InitializeSecure(tlsProtocol, clientEndpoint);
+        _conn.InitializeSecure(tlsProtocol, clientEndpoint, serverEndpoint);
         await foreach (var packet in _conn.StartConnection(_logger))
         {
             await HandlePacket(packet);
@@ -285,8 +284,7 @@ public class FeslHandler
 
     private async Task HandleGetPingSites(Packet request)
     {
-        const string serverIp = "127.0.0.1";
-
+        var serverIp = _plasma!.FeslConnection!.ServerAddress;
         var responseData = new Dictionary<string, string>
         {
             { "TXN", "GetPingSites" },

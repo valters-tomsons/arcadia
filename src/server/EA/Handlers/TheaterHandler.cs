@@ -1,5 +1,4 @@
 using System.Net.Sockets;
-using Arcadia.EA;
 using Arcadia.EA.Constants;
 using Arcadia.Storage;
 using Microsoft.Extensions.Logging;
@@ -44,9 +43,9 @@ public class TheaterHandler
         };
     }
 
-    public async Task<PlasmaConnection> HandleClientConnection(NetworkStream network, string clientEndpoint)
+    public async Task<PlasmaConnection> HandleClientConnection(NetworkStream network, string clientEndpoint, string serverEndpoint)
     {
-        _conn.InitializeInsecure(network, clientEndpoint);
+        _conn.InitializeInsecure(network, clientEndpoint, serverEndpoint);
         await foreach (var packet in _conn.StartConnection(_logger))
         {
             await HandlePacket(packet);
