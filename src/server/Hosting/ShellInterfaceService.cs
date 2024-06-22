@@ -36,6 +36,7 @@ public class ShellInterfaceService(ILogger<ShellInterfaceService> logger, Shared
                 _logger.LogInformation("> Total hosted games: {games}", games.Length);
                 foreach (var game in games)
                 {
+                    if (game is null) continue;
                     _logger.LogInformation("> GAME {gid}: name={name}, uid={uid}, ready={canJoin}, players={players}, joining={joining}", game.GID, game.NAME, game.UID, game.CanJoin, game.ConnectedPlayers.Count, game.JoiningPlayers.Count);
                 }
                 break;
@@ -44,6 +45,7 @@ public class ShellInterfaceService(ILogger<ShellInterfaceService> logger, Shared
                 _logger.LogInformation("> Total players online: {clients}", clients.Length);
                 foreach (var client in clients)
                 {
+                    if (client is null) continue;
                     _logger.LogInformation("> {name}: {uid} | fesl={fesl}, theater={thea}", client.NAME, client.UID, client.FeslConnection?.NetworkStream is not null, client.TheaterConnection?.NetworkStream is not null);
                 }
                 break;
