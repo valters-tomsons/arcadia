@@ -61,11 +61,12 @@ jobs:
         run: |
           chmod +x ./release-linux-arm64/Arcadia
 
-          scp -i ~/.ssh/id_rsa ./release-linux-arm64/Arcadia ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/${{ secrets.SSH_USER }}/server/
+          scp -i ~/.ssh/id_rsa ./release-linux-arm64/Arcadia ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/${{ secrets.SSH_USER }}/server/Arcadia.new
           ssh -i ~/.ssh/id_rsa ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
             if tmux has-session -t arcadia_server 2>/dev/null; then
               tmux send-keys -t arcadia_server C-c 'exit' Enter
             fi
+            mv /home/${{ secrets.SSH_USER }}/server/Arcadia.new /home/${{ secrets.SSH_USER }}/server/Arcadia
             tmux new-session -d -s arcadia_server 'cd /home/${{ secrets.SSH_USER }}/server && ./Arcadia'
           EOF
         shell: bash
