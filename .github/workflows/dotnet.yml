@@ -64,7 +64,7 @@ jobs:
           scp -i ~/.ssh/id_rsa ./release-linux-arm64/Arcadia ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/${{ secrets.SSH_USER }}/server/
           ssh -i ~/.ssh/id_rsa ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
             if tmux has-session -t arcadia_server 2>/dev/null; then
-              tmux kill-session -t arcadia_server
+              tmux send-keys -t arcadia_server C-c 'exit' Enter
             fi
             tmux new-session -d -s arcadia_server 'cd /home/${{ secrets.SSH_USER }}/server && ./Arcadia'
           EOF
