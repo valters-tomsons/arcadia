@@ -33,6 +33,7 @@ public class ShellInterfaceService(ILogger<ShellInterfaceService> logger, Shared
                 break;
             case "list games":
                 var games = _storage.GetGameServers();
+                _logger.LogInformation("> Total hosted games: {games}", games.Length);
                 foreach (var game in games)
                 {
                     _logger.LogInformation("> GAME {gid}: name={name}, uid={uid}, ready={canJoin}, players={players}, joining={joining}", game.GID, game.NAME, game.UID, game.CanJoin, game.ConnectedPlayers.Count, game.JoiningPlayers.Count);
