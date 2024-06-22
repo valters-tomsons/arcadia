@@ -12,6 +12,8 @@ using Org.BouncyCastle.Tls;
 using Arcadia.EA.Ports;
 using Arcadia.Storage;
 using Arcadia.EA.Handlers;
+using System.Text;
+using Arcadia.EA.Constants;
 
 namespace Arcadia.Hosting;
 
@@ -25,6 +27,7 @@ public class PlasmaHostedService : IHostedService
     private readonly Certificate _feslPubCert;
 
     private readonly List<TcpListener> _tcpListeners = [];
+    private readonly List<UdpClient> _udpListeners = [];
 
     private readonly static int[] _listeningPorts = [
             (int)FeslGamePort.RomePS3,
@@ -46,30 +49,75 @@ public class PlasmaHostedService : IHostedService
     {
         foreach (var port in _listeningPorts)
         {
-            _logger.LogInformation("Listening on {address}:{port}", _arcadiaSettings.ListenAddress, port);
-            var listener = new TcpListener(IPAddress.Parse(_arcadiaSettings.ListenAddress), port);
-            _tcpListeners.Add(listener);
-
-            ThreadPool.QueueUserWorkItem(async callback =>
             {
-                listener.Start();
-                while (!processCt.IsCancellationRequested)
+                _logger.LogInformation("Listening on {address}:{port}", _arcadiaSettings.ListenAddress, port);
+                var listener = new TcpListener(IPAddress.Parse(_arcadiaSettings.ListenAddress), port);
+                _tcpListeners.Add(listener);
+
+                ThreadPool.QueueUserWorkItem(async callback =>
                 {
-                    try
+                    listener.Start();
+                    while (!processCt.IsCancellationRequested)
                     {
-                        var tcpClient = await listener.AcceptTcpClientAsync(processCt);
-                        _ = HandleTcpConnection(tcpClient, port);
+                        try
+                        {
+                            var tcpClient = await listener.AcceptTcpClientAsync(processCt);
+                            _ = HandleTcpConnection(tcpClient, port);
+                        }
+                        catch (TlsNoCloseNotifyException)
+                        {
+                            _logger.LogWarning("Client terminated the connection without warning on port {port}", port);
+                        }
+                        catch (Exception e)
+                        {
+                            _logger.LogError(e, "Error accepting client on port {port}", port);
+                        }
                     }
-                    catch (TlsNoCloseNotifyException)
+                });
+            }
+            {
+                var listener = new UdpClient(port);
+                _udpListeners.Add(listener);
+
+                ThreadPool.QueueUserWorkItem(async callback =>
+                {
+                    while (!processCt.IsCancellationRequested)
                     {
-                        _logger.LogWarning("Client terminated the connection without warning on port {port}", port);
+                        try
+                        {
+                            var udpResult = await listener.ReceiveAsync();
+                            _logger.LogInformation("UDP incoming: {req}", Encoding.ASCII.GetString(udpResult.Buffer));
+
+                            var request = new Packet(udpResult.Buffer);
+                            if (request.Type == "ECHO")
+                            {
+                                Dictionary<string, string> data = new()
+                                {
+                                    { "TXN", "ECHO" },
+                                    { "IP", udpResult.RemoteEndPoint.Address.ToString() },
+                                    { "PORT", udpResult.RemoteEndPoint.Port.ToString() },
+                                    {"ERR", "0"},
+                                    {"TYPE", "1"},
+                                    { "TID", request["TID"] }
+                                };
+
+                                var response = await new Packet(request.Type, TheaterTransmissionType.OkResponse, 0, data).Serialize();
+                                _logger.LogInformation("UDP sending: {data}", Encoding.ASCII.GetString(response));
+
+                                await listener.SendAsync(response, udpResult.RemoteEndPoint, processCt);
+                            }
+                            else
+                            {
+                                _logger.LogError("Unknown UDP request type.");
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            _logger.LogError(e, "Error receiving UDP datagram on port {port}", port);
+                        }
                     }
-                    catch (Exception e)
-                    {
-                        _logger.LogError(e, "Error accepting client on port {port}", port);
-                    }
-                }
-            });
+                });
+            }
         }
 
         return Task.CompletedTask;
@@ -89,7 +137,6 @@ public class PlasmaHostedService : IHostedService
         {
             var isFesl = Enum.IsDefined(typeof(FeslGamePort), connectionPort) || Enum.IsDefined(typeof(FeslServerPort), connectionPort);
             var isTheater = Enum.IsDefined(typeof(TheaterGamePort), connectionPort) || Enum.IsDefined(typeof(TheaterServerPort), connectionPort);
-
 
             if (isFesl)
             {
