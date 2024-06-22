@@ -45,7 +45,7 @@ public class FeslHandler
             ["acct/NuGetTos"] = HandleGetTos,
             ["acct/GetTelemetryToken"] = HandleTelemetryToken,
             ["acct/NuPS3AddAccount"] = HandleAddAccount,
-            ["acct/NuLookupUserInfo"] = HandleLookupUserInfo,
+            ["acct/NuLookupUserInfo"] = HandleNuLookupUserInfo,
             ["acct/NuGetEntitlements"] = HandleNuGetEntitlements,
             ["acct/NuGrantEntitlement"] = HandleNuGrantEntitlement,
             ["acct/GetLockerURL"] = HandleGetLockerUrl,
@@ -241,14 +241,30 @@ public class FeslHandler
         await _conn.SendPacket(packet);
     }
 
-    private async Task HandleLookupUserInfo(Packet request)
+    private async Task HandleNuLookupUserInfo(Packet request)
     {
+        var queryCount = int.Parse(request["userInfo.[]"]);
+        var users = Enumerable.Range(0, queryCount)
+            .Select(i => request[$"userInfo.{i}.userName"])
+            .Select(query => new
+            {
+                query,
+                user = _sharedCache.FindPlayerByName(query)
+            })
+            .Where(x => x.user is not null)
+            .ToArray();
+
         var responseData = new Dictionary<string, string>
         {
             { "TXN", "NuLookupUserInfo" },
-            { "userInfo.[]", "1" },
-            { "userInfo.0.userName", _plasma.NAME },
+            { "userInfo.[]", users.Length.ToString() }
         };
+
+        for (var i = 0; i < users.Length; i++)
+        {
+            var result = users[i];
+            responseData.Add($"userInfo.{i}.userName", result.user!.NAME);
+        }
 
         var packet = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
         await _conn.SendPacket(packet);

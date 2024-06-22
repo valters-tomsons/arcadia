@@ -33,6 +33,11 @@ public class SharedCache(ILogger<SharedCache> logger, SharedCounters counters)
         return plasma;
     }
 
+    public PlasmaConnection? FindPlayerByName(string playerName)
+    {
+        return _connections.SingleOrDefault(x => x.NAME == playerName);
+    }
+
     public void RemoveConnection(PlasmaConnection plasma)
     {
         var hostedGames = _gameServers.Where(x => x.UID == plasma.UID);
@@ -82,6 +87,22 @@ public class SharedCache(ILogger<SharedCache> logger, SharedCounters counters)
             var removed = server.Data.Remove(line.Key, out var _);
             server.Data.TryAdd(line.Key, line.Value);
         }
+    }
+
+    public GameServerListing? FindGameWithPlayer(string playerName)
+    {
+        foreach (var game in _gameServers)
+        {
+            foreach (var player in game.ConnectedPlayers)
+            {
+                if (player.NAME == playerName)
+                {
+                    return game;
+                }
+            }
+        }
+
+        return null;
     }
 
     public GameServerListing? GetGameByGid(long serverGid)

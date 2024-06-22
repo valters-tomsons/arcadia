@@ -125,8 +125,14 @@ public class TheaterHandler
         var game = _sharedCache.GetGameByGid(gid);
         if (game is null)
         {
-            await SendError(request);
-            return;
+            var joinPlayerName = request["USER"];
+            game = _sharedCache.FindGameWithPlayer(joinPlayerName);
+
+            if (game is null)
+            {
+                await SendError(request);
+                return;
+            }
         }
 
         if (game.UID != _plasma.UID)
