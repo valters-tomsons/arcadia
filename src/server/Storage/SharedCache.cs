@@ -46,7 +46,9 @@ public class SharedCache(ILogger<SharedCache> logger, SharedCounters counters)
 
     public PlasmaConnection[] GetConnectedClients()
     {
-        return [.. _connections];
+#pragma warning disable IDE0305 // Simplify collection initialization
+        return _connections.ToArray();
+#pragma warning restore IDE0305 // Simplify collection initialization
     }
 
     private readonly string[] blacklist = [ "TID", "PID" ];
@@ -95,7 +97,9 @@ public class SharedCache(ILogger<SharedCache> logger, SharedCounters counters)
 
     public GameServerListing[] GetGameServers()
     {
-        return [.. _gameServers];
+#pragma warning disable IDE0305 // Simplify collection initialization
+        return _gameServers.ToArray();
+#pragma warning restore IDE0305 // Simplify collection initialization
     }
 
     public void AddGame(GameServerListing game)
