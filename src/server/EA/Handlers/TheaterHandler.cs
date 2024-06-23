@@ -39,7 +39,8 @@ public class TheaterHandler
             ["UGAM"] = HandleUGAM,
             ["RGAM"] = HandleRGAM,
             ["PLVT"] = HandlePLVT,
-            ["UGDE"] = HandleUGDE
+            ["UGDE"] = HandleUGDE,
+            ["PING"] = HandlePING
         };
     }
 
@@ -569,5 +570,10 @@ public class TheaterHandler
         await _conn.SendPacket(packet);
 
         game.ConnectedPlayers.RemoveItemFromBag(player);
+    }
+
+    private Task HandlePING(Packet _)
+    {
+        return Task.CompletedTask;
     }
 }

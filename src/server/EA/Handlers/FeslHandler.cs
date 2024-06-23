@@ -1,7 +1,5 @@
 using System.Globalization;
-using Arcadia.EA;
 using Arcadia.EA.Constants;
-using Arcadia.EA.Ports;
 using Arcadia.PSN;
 using Arcadia.Storage;
 using Microsoft.Extensions.Logging;
@@ -12,15 +10,14 @@ namespace Arcadia.EA.Handlers;
 
 public class FeslHandler
 {
+    private readonly Dictionary<string, Func<Packet, Task>> _handlers;
+
     private readonly ILogger<FeslHandler> _logger;
     private readonly IOptions<ArcadiaSettings> _settings;
     private readonly SharedCounters _sharedCounters;
     private readonly SharedCache _sharedCache;
     private readonly IEAConnection _conn;
 
-    private readonly Dictionary<string, Func<Packet, Task>> _handlers;
-
-    private FeslGamePort _servicePort;
     private PlasmaConnection? _plasma;
 
     public FeslHandler(IEAConnection conn, ILogger<FeslHandler> logger, IOptions<ArcadiaSettings> settings, SharedCounters sharedCounters, SharedCache sharedCache)
@@ -35,6 +32,7 @@ public class FeslHandler
         {
             ["fsys/Hello"] = HandleHello,
             ["fsys/MemCheck"] = HandleMemCheck,
+            ["fsys/Ping"] = HandlePing,
             ["fsys/GetPingSites"] = HandleGetPingSites,
             ["pnow/Start"] = HandlePlayNow,
             ["acct/NuPS3Login"] = HandleNuPs3Login,
@@ -56,7 +54,7 @@ public class FeslHandler
             ["pres/SetPresenceStatus"] = HandleSetPresenceStatus,
             ["rank/GetStats"] = HandleGetStats,
             ["xmsg/GetMessages"] = HandleGetMessages,
-            ["xmsg/ModifySettings"] = HandleModifySettings
+            ["xmsg/ModifySettings"] = HandleModifySettings,
         };
     }
 
@@ -530,24 +528,56 @@ public class FeslHandler
         await _conn.SendPacket(packet);
     }
 
-    private static Task HandleMemCheck(Packet _)
+    private Task HandlePing(Packet _)
     {
+        Task.Run(async () =>
+        {
+            await Task.Delay(1000 * 30);
+            await SendPing();
+        });
+
+        return Task.CompletedTask;
+    }
+
+    private Task HandleMemCheck(Packet packet)
+    {
+        Task.Run(async () =>
+        {
+            await Task.Delay(1000 * 60);
+            await SendMemCheck();
+        });
+
+        HandlePing(packet);
         return Task.CompletedTask;
     }
 
     private async Task SendMemCheck()
     {
         var memCheckData = new Dictionary<string, string>
-                {
-                    { "TXN", "MemCheck" },
-                    { "memcheck.[]", "0" },
-                    { "type", "0" },
-                    { "salt", PacketUtils.GenerateSalt() }
-                };
+            {
+                { "TXN", "MemCheck" },
+                { "memcheck.[]", "0" },
+                { "type", "0" },
+                { "salt", PacketUtils.GenerateSalt() }
+            };
 
         // FESL backend is requesting the client to respond to the memcheck, so this is a request
         // But since memchecks are not part of the meaningful conversation with the client, they don't have a packed id
         var memcheckPacket = new Packet("fsys", FeslTransmissionType.SinglePacketRequest, 0, memCheckData);
         await _conn.SendPacket(memcheckPacket);
+    }
+
+    private async Task SendPing()
+    {
+        var data = new Dictionary<string, string>
+            {
+                { "TXN", "Ping" }
+            };
+
+        var feslPing = new Packet("fsys", FeslTransmissionType.SinglePacketRequest, 0, data);
+        await _conn.SendPacket(feslPing);
+
+        var theaterPing = new Packet("PING", TheaterTransmissionType.Request, 0);
+        await _plasma?.TheaterConnection?.SendPacket(theaterPing);
     }
 }
