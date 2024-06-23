@@ -131,7 +131,8 @@ public class EAConnection : IEAConnection
 
         try
         {
-            await NetworkStream.WriteAsync(buffer);
+            NetworkStream.Write(buffer);
+            await NetworkStream.FlushAsync();
             _logger?.LogTrace("data sent:{data}", Encoding.ASCII.GetString(buffer));
             return true;
         }
