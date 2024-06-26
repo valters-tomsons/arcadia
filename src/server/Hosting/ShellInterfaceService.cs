@@ -18,39 +18,79 @@ public class ShellInterfaceService(ILogger<ShellInterfaceService> logger, Shared
             var command = await ReadInputLine();
             if (!string.IsNullOrWhiteSpace(command))
             {
-                await ProcessCommand(command);
+                try
+                {
+                    await ProcessCommand(command);
+                }
+                catch
+                {
+                    _logger.LogWarning("Error occured in command");
+                }
             }
         }
     }
 
     private Task ProcessCommand(string command)
     {
-        switch (command.ToLower())
+        var words = command.Split(' ', StringSplitOptions.RemoveEmptyEntries & StringSplitOptions.TrimEntries);
+
+        // so what?
+        switch (words[0].ToLower())
         {
-            case "list gid":
-                var gids = _storage.ListGameGids();
-                _logger.LogInformation("> gids: {gids}", string.Join(';', gids));
-                break;
-            case "list games":
-                var games = _storage.GetGameServers();
-                _logger.LogInformation("> Total hosted games: {games}", games.Length);
-                foreach (var game in games)
+            case "list":
+                switch (words[1].ToLower())
                 {
-                    if (game is null) continue;
-                    _logger.LogInformation("> GAME {gid}: name={name}, uid={uid}, ready={canJoin}, players={players}, joining={joining}", game.GID, game.NAME, game.UID, game.CanJoin, game.ConnectedPlayers.Count, game.JoiningPlayers.Count);
+                    case "gid":
+                        var gids = _storage.ListGameGids();
+                        _logger.LogInformation("> gids: {gids}", string.Join(';', gids));
+                        break;
+                    case "games":
+                        var games = _storage.GetGameServers();
+                        _logger.LogInformation("> Total hosted games: {games}", games.Length);
+                        foreach (var game in games)
+                        {
+                            if (game is null) continue;
+                            _logger.LogInformation("> GAME {gid}: name={name}, uid={uid}, ready={canJoin}, players={players}, joining={joining}", game.GID, game.NAME, game.UID, game.CanJoin, game.ConnectedPlayers.Count, game.JoiningPlayers.Count);
+                        }
+                        break;
+                    case "clients":
+                        var clients = _storage.GetConnectedClients();
+                        _logger.LogInformation("> Total players online: {clients}", clients.Length);
+                        foreach (var client in clients)
+                        {
+                            if (client is null) continue;
+                            _logger.LogInformation("> {name}: {uid} | fesl={fesl}, theater={thea}", client.NAME, client.UID, client.FeslConnection?.NetworkStream is not null, client.TheaterConnection?.NetworkStream is not null);
+                        }
+                        break;
+                    default:
+                        _logger.LogInformation("Unknown 'list' command");
+                        break;
                 }
                 break;
-            case "list clients":
-                var clients = _storage.GetConnectedClients();
-                _logger.LogInformation("> Total players online: {clients}", clients.Length);
-                foreach (var client in clients)
+            case "set":
+                switch (words[1].ToLower())
                 {
-                    if (client is null) continue;
-                    _logger.LogInformation("> {name}: {uid} | fesl={fesl}, theater={thea}", client.NAME, client.UID, client.FeslConnection?.NetworkStream is not null, client.TheaterConnection?.NetworkStream is not null);
+                    case "joinable":
+                        var gid = long.Parse(words[2]);
+                        var game = _storage.GetGameByGid(gid);
+                        if (game is not null)
+                        {
+                            game.CanJoin = true;
+                            _logger.LogInformation("true");
+                        }
+                        else
+                        {
+                            _logger.LogError("No Game with such ID");
+                        }
+
+                        break;
+                    default:
+                        _logger.LogInformation("Unknown 'set' command");
+                        break;
                 }
                 break;
             default:
-                Console.WriteLine("Unknown command.");
+                _logger.LogInformation("Unknown command root");
                 break;
         }
 
