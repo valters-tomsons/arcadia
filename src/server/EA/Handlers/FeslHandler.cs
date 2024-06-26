@@ -574,10 +574,13 @@ public class FeslHandler
                 { "TXN", "Ping" }
             };
 
-        var feslPing = new Packet("fsys", FeslTransmissionType.SinglePacketRequest, 0, data);
-        await _conn.SendPacket(feslPing);
+        if (_plasma?.FeslConnection?.NetworkStream?.CanWrite == true && _plasma.TheaterConnection?.NetworkStream?.CanWrite == true)
+        {
+            var feslPing = new Packet("fsys", FeslTransmissionType.SinglePacketRequest, 0, data);
+            await _conn.SendPacket(feslPing);
 
-        var theaterPing = new Packet("PING", TheaterTransmissionType.Request, 0);
-        await _plasma?.TheaterConnection?.SendPacket(theaterPing);
+            var theaterPing = new Packet("PING", TheaterTransmissionType.Request, 0);
+            await _plasma.TheaterConnection.SendPacket(theaterPing);
+        }
     }
 }
