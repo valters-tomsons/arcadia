@@ -205,12 +205,23 @@ public class FeslHandler
 
     private async Task HandleGetStats(Packet request)
     {
-        // TODO Not entirely sure if this works well with the game, since stats requests are usually sent as multi-packet queries with base64 encoded data
+        // TODO: Implement multi-packet responses 
         var responseData = new Dictionary<string, string>
         {
             { "TXN", "GetStats" },
-            { "stats.[]", "0" }
         };
+
+        // Override BF1943 minimum player count requirement
+        if (request["keys.1"] == "pm_minplayers")
+        {
+            responseData.Add("stats.[]", "1");
+            responseData.Add("stats.0.key", "pm_minplayers");
+            responseData.Add("stats.0.value", "1.0");
+        }
+        else
+        {
+            responseData.Add("stats.[]", "0");
+        }
 
         // TODO: Add some stats
         // var keysStr = request.DataDict["keys.[]"] as string ?? string.Empty;
