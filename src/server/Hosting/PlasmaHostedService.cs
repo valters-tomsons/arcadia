@@ -12,7 +12,6 @@ using Org.BouncyCastle.Tls;
 using Arcadia.EA.Ports;
 using Arcadia.Storage;
 using Arcadia.EA.Handlers;
-using System.Text;
 using Arcadia.EA.Constants;
 
 namespace Arcadia.Hosting;
@@ -86,8 +85,6 @@ public class PlasmaHostedService : IHostedService
                         try
                         {
                             var udpResult = await listener.ReceiveAsync();
-                            _logger.LogInformation("UDP incoming: {req}", Encoding.ASCII.GetString(udpResult.Buffer));
-
                             var request = new Packet(udpResult.Buffer);
                             if (request.Type == "ECHO")
                             {
@@ -96,19 +93,17 @@ public class PlasmaHostedService : IHostedService
                                     { "TXN", "ECHO" },
                                     { "IP", udpResult.RemoteEndPoint.Address.ToString() },
                                     { "PORT", udpResult.RemoteEndPoint.Port.ToString() },
-                                    {"ERR", "0"},
-                                    {"TYPE", "1"},
+                                    { "ERR", "0" },
+                                    { "TYPE", "1" },
                                     { "TID", request["TID"] }
                                 };
 
                                 var response = await new Packet(request.Type, TheaterTransmissionType.OkResponse, 0, data).Serialize();
-                                _logger.LogInformation("UDP sending: {data}", Encoding.ASCII.GetString(response));
-
                                 await listener.SendAsync(response, udpResult.RemoteEndPoint, processCt);
                             }
                             else
                             {
-                                _logger.LogError("Unknown UDP request type.");
+                                _logger.LogError("Unknown UDP request type: {type}", request.Type);
                             }
                         }
                         catch (Exception e)
