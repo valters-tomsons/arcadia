@@ -23,6 +23,7 @@ var host = Host.CreateDefaultBuilder()
         services
             .Configure<ArcadiaSettings>(config.GetSection(nameof(ArcadiaSettings)))
             .Configure<DnsSettings>(config.GetSection(nameof(DnsSettings)))
+            .Configure<FileServerSettings>(config.GetSection(nameof(FileServerSettings)))
             .Configure<DebugSettings>(config.GetSection(nameof(DebugSettings)));
 
         services
@@ -39,7 +40,8 @@ var host = Host.CreateDefaultBuilder()
         services
             .AddHostedService<DnsHostedService>()
             .AddHostedService<PlasmaHostedService>()
-            .AddHostedService<ShellInterfaceService>();
+            .AddHostedService<ShellInterfaceService>()
+            .AddHostedService<StaticFileHostedService>();
 
         services.AddLogging(log =>
         {
@@ -60,6 +62,7 @@ var host = Host.CreateDefaultBuilder()
                 {
                     x.AddFilter("Arcadia.EA.Handlers.*", LogLevel.Trace);
                     x.AddFilter("Arcadia.EA.EAConnection", LogLevel.Trace);
+                    x.AddFilter("Arcadia.Hosting.StaticFileHostedService", LogLevel.Trace);
                 });
 
                 var startTs = DateTime.Now.Ticks;
