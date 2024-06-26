@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net.Sockets;
 using Arcadia.EA.Constants;
 using Arcadia.Storage;
@@ -162,6 +163,8 @@ public class TheaterHandler
 
     private async Task SendError(Packet request)
     {
+        Debugger.Break();
+
         var response = new Dictionary<string, string>
         {
             ["TID"] = $"{request["TID"]}",
