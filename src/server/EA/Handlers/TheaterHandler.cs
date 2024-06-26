@@ -449,7 +449,8 @@ public class TheaterHandler
             ["LID"] = $"{game.LID}",
             ["SECRET"] = $"{game.SECRET}",
             ["J"] = $"{game.Data["JOIN"]}",
-            ["GID"] = $"{game.GID}"
+            ["GID"] = $"{game.GID}",
+            ["HXFR"] = game.Data["HXFR"]
         };
 
         var packet = new Packet("CGAM", TheaterTransmissionType.OkResponse, 0, response);
