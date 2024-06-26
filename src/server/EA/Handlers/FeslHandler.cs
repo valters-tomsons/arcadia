@@ -215,6 +215,8 @@ public class FeslHandler
 
     private async Task HandlePresenceSubscribe(Packet request)
     {
+        if (_plasma is null) throw new NotImplementedException();
+
         var responseData = new Dictionary<string, string>
         {
             { "TXN", "PresenceSubscribe" },
@@ -270,6 +272,8 @@ public class FeslHandler
 
     private async Task HandleGetAssociations(Packet request)
     {
+        if (_plasma is null) throw new NotImplementedException();
+
         var assoType = request.DataDict["type"] as string ?? string.Empty;
         var responseData = new Dictionary<string, string>
         {
@@ -351,6 +355,8 @@ public class FeslHandler
 
     private async Task HandleNuGetPersonas(Packet request)
     {
+        if (_plasma is null) throw new NotImplementedException();
+
         var loginResponseData = new Dictionary<string, string>
         {
             { "TXN", request.TXN },
@@ -496,9 +502,10 @@ public class FeslHandler
             {"TXN", "NuPS3AddAccount"}
         };
 
-        var email = request.DataDict["nuid"] as string;
-        var pass = request.DataDict["password"] as string;
+        var email = request.DataDict["nuid"];
+        var pass = request.DataDict["password"];
 
+        // TODO: maybe stop logging this eventually
         _logger.LogDebug("Trying to register user {email} with password {pass}", email, pass);
 
         var resultPacket = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, data);
