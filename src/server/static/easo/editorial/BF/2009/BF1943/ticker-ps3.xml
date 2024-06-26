@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ticker>
+
+	<!--
+
+	Supported language IDs are: en-US, de-DE, fr-FR, es-ES, it-IT, jp-JP
+
+	Displayed text will be choosen depending on what locale the receiver has set.
+
+	HOWEVER! The newsticker is only to be fed with LATIN-1 characters, anything else
+	is not supported by the game, so any other characters like japanese kanji, hiragana
+	or katakana will not display correctly.
+
+	If there is no provided text for a locale, the newsticker will default to the en-US
+	version.
+
+	-->
+	<lang id="en-US">
+		<item>For the latest Battlefield news head to www.battlefield.com --- </item>
+	</lang>
+	<lang id="de-DE">
+		<item>Aktuelle News zu Battlefield findest du auf www.battlefield.com --- </item>
+	</lang>
+	<lang id="fr-FR">
+		<item>Retrouvez les dernières actualités Battlefield sur www.battlefield.com --- </item>
+	</lang>
+	<lang id="es-ES">
+		<item>Entérate de todas las novedades de Battlefield en www.battlefield.com --- </item>
+	</lang>
+	<lang id="pl-PL">
+		<item>Najnowsze informacje na temat Battlefield znajdziesz na www.battlefield.com --- </item>
+	</lang>
+	<lang id="it-IT">
+		<item>Per le ultime notizie su Battlefield, vai su www.battlefield.com --- </item>
+	</lang>
+	<lang id="jp-JP">
+		<item>www.battlefield.comでバトルフィールドの最新情報を公開中 --- </item>
+	</lang>
+	<lang id="ru-RU">
+		<item>Все свежие новости о Battlefield — на www.battlefield.com --- </item>
+	</lang>
+</ticker>
+
