@@ -20,6 +20,12 @@ public class FeslHandler
 
     private PlasmaConnection? _plasma;
 
+    private readonly static TimeSpan PingPeriod = TimeSpan.FromSeconds(60);
+    private readonly static TimeSpan MemCheckPeriod = TimeSpan.FromSeconds(120);
+
+    private readonly Timer _pingTimer;
+    private readonly Timer _memchTimer;
+
     public FeslHandler(IEAConnection conn, ILogger<FeslHandler> logger, IOptions<ArcadiaSettings> settings, SharedCounters sharedCounters, SharedCache sharedCache)
     {
         _logger = logger;
@@ -27,6 +33,9 @@ public class FeslHandler
         _sharedCounters = sharedCounters;
         _sharedCache = sharedCache;
         _conn = conn;
+
+        _pingTimer = new(async _ => await SendPing(), null, Timeout.Infinite, Timeout.Infinite);
+        _memchTimer = new(async _ => await SendMemCheck(), null, Timeout.Infinite, Timeout.Infinite);
 
         _handlers = new Dictionary<string, Func<Packet, Task>>()
         {
@@ -65,6 +74,11 @@ public class FeslHandler
         {
             await HandlePacket(packet);
         }
+
+        _pingTimer.Change(Timeout.Infinite, Timeout.Infinite);
+        _memchTimer.Change(Timeout.Infinite, Timeout.Infinite);
+        await _pingTimer.DisposeAsync();
+        await _memchTimer.DisposeAsync();
 
         return _plasma ?? throw new NotImplementedException();
     }
@@ -537,24 +551,15 @@ public class FeslHandler
 
     private Task HandlePing(Packet _)
     {
-        Task.Run(async () =>
-        {
-            await Task.Delay(1000 * 30);
-            await SendPing();
-        });
-
+        _pingTimer.Change(PingPeriod, PingPeriod);
         return Task.CompletedTask;
     }
 
     private Task HandleMemCheck(Packet packet)
     {
-        Task.Run(async () =>
-        {
-            await Task.Delay(1000 * 60);
-            await SendMemCheck();
-        });
-
+        _memchTimer.Change(MemCheckPeriod, MemCheckPeriod);
         HandlePing(packet);
+
         return Task.CompletedTask;
     }
 
@@ -576,18 +581,15 @@ public class FeslHandler
 
     private async Task SendPing()
     {
-        var data = new Dictionary<string, string>
-            {
-                { "TXN", "Ping" }
-            };
-
-        if (_plasma?.FeslConnection?.NetworkStream?.CanWrite == true && _plasma.TheaterConnection?.NetworkStream?.CanWrite == true)
+        if (_plasma?.FeslConnection?.NetworkStream?.CanWrite != true || _plasma.TheaterConnection?.NetworkStream?.CanWrite != true)
         {
-            var feslPing = new Packet("fsys", FeslTransmissionType.SinglePacketRequest, 0, data);
-            await _conn.SendPacket(feslPing);
-
-            var theaterPing = new Packet("PING", TheaterTransmissionType.Request, 0);
-            await _plasma.TheaterConnection.SendPacket(theaterPing);
+            return;
         }
+
+        var feslPing = new Packet("fsys", FeslTransmissionType.SinglePacketRequest, 0, new() { { "TXN", "Ping" } });
+        await _conn.SendPacket(feslPing);
+
+        var theaterPing = new Packet("PING", TheaterTransmissionType.Request, 0);
+        await _plasma.TheaterConnection.SendPacket(theaterPing);
     }
 }
