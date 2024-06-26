@@ -151,7 +151,7 @@ public class TheaterHandler
         {
             ["TID"] = $"{request["TID"]}",
             ["LID"] = $"{game.LID}",
-            ["GID"] = $"{gid}",
+            ["GID"] = $"{game.GID}",
         };
 
         var clientPacket = new Packet("EGAM", TheaterTransmissionType.OkResponse, 0, response);
