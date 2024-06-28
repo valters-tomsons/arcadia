@@ -22,7 +22,6 @@ var host = Host.CreateDefaultBuilder()
         
         services
             .Configure<ArcadiaSettings>(config.GetSection(nameof(ArcadiaSettings)))
-            .Configure<DnsSettings>(config.GetSection(nameof(DnsSettings)))
             .Configure<FileServerSettings>(config.GetSection(nameof(FileServerSettings)))
             .Configure<DebugSettings>(config.GetSection(nameof(DebugSettings)));
 
@@ -38,7 +37,6 @@ var host = Host.CreateDefaultBuilder()
             .AddScoped<TheaterHandler>();
 
         services
-            .AddHostedService<DnsHostedService>()
             .AddHostedService<PlasmaHostedService>()
             .AddHostedService<ShellInterfaceService>()
             .AddHostedService<StaticFileHostedService>();
