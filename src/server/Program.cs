@@ -14,7 +14,8 @@ using Arcadia.EA.Handlers;
 var host = Host.CreateDefaultBuilder()
     .ConfigureAppConfiguration((_, config) => config
         .SetBasePath(Directory.GetCurrentDirectory())
-        .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
+        .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
+        .AddJsonFile("dev.appsettings.json", optional: true, reloadOnChange: false)
     )
     .ConfigureServices((context, services) =>
     {
@@ -23,6 +24,7 @@ var host = Host.CreateDefaultBuilder()
         services
             .Configure<ArcadiaSettings>(config.GetSection(nameof(ArcadiaSettings)))
             .Configure<FileServerSettings>(config.GetSection(nameof(FileServerSettings)))
+            .Configure<DiscordSettings>(config.GetSection(nameof(DiscordSettings)))
             .Configure<DebugSettings>(config.GetSection(nameof(DebugSettings)));
 
         services
@@ -39,7 +41,8 @@ var host = Host.CreateDefaultBuilder()
         services
             .AddHostedService<PlasmaHostedService>()
             .AddHostedService<ShellInterfaceService>()
-            .AddHostedService<StaticFileHostedService>();
+            .AddHostedService<StaticFileHostedService>()
+            .AddHostedService<DiscordHostedService>();
 
         services.AddLogging(log =>
         {

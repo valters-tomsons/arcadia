@@ -11,3 +11,7 @@
 **/logs/
 **.log
 **/dumps/priv/*
+**/messageId
+
+# dev settings
+**/dev.appsettings.json
