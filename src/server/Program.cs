@@ -1,4 +1,4 @@
-﻿using Arcadia;
+using Arcadia;
 using Arcadia.Tls.Crypto;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
@@ -14,7 +14,8 @@ using Arcadia.EA.Handlers;
 var host = Host.CreateDefaultBuilder()
     .ConfigureAppConfiguration((_, config) => config
         .SetBasePath(Directory.GetCurrentDirectory())
-        .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
+        .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
+        .AddJsonFile("dev.appsettings.json", optional: true, reloadOnChange: false)
     )
     .ConfigureServices((context, services) =>
     {

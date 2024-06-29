@@ -11,3 +11,6 @@
 **/logs/
 **.log
 **/dumps/priv/*
+
+# dev settings
+**/dev.appsettings.json
