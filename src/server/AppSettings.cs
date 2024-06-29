@@ -13,6 +13,12 @@ public record FileServerSettings
     public string UrlPrefix { get; init; } = "http://0.0.0.0:8080/";
 }
 
+public record DiscordSettings
+{
+    public string BotToken { get; init; } = string.Empty;
+    public ulong ChannelId { get; init; } = 0;
+}
+
 public record DebugSettings
 {
     public bool WriteSslDebugKeys { get; init; }

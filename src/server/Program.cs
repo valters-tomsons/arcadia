@@ -24,6 +24,7 @@ var host = Host.CreateDefaultBuilder()
         services
             .Configure<ArcadiaSettings>(config.GetSection(nameof(ArcadiaSettings)))
             .Configure<FileServerSettings>(config.GetSection(nameof(FileServerSettings)))
+            .Configure<DiscordSettings>(config.GetSection(nameof(DiscordSettings)))
             .Configure<DebugSettings>(config.GetSection(nameof(DebugSettings)));
 
         services
