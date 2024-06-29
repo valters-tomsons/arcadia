@@ -16,9 +16,9 @@ public class DiscordHostedService(ILogger<DiscordHostedService> logger, SharedCa
 
     private readonly ILogger<DiscordHostedService> _logger = logger;
     private readonly SharedCache _sharedCache = sharedCache;
-
     private readonly IOptions<DiscordSettings> _config = config;
-    private IMessage? statusMessage;
+
+    private readonly List<IMessage> _statusMessages = [];
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -49,7 +49,7 @@ public class DiscordHostedService(ILogger<DiscordHostedService> logger, SharedCa
 
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
-        await GracefulShutdown(statusMessage);
+        await GracefulShutdown();
 
         await _client.StopAsync();
         await _client.LogoutAsync();
@@ -58,14 +58,9 @@ public class DiscordHostedService(ILogger<DiscordHostedService> logger, SharedCa
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        while (_client.ConnectionState != ConnectionState.Connected && statusMessage is null)
-        {
-            _logger.LogInformation("Initializing discord status...");
-            await Task.Delay(2000, stoppingToken);
-            statusMessage ??= await InitStatusMessage();
-        }
+        await InitMessages();
 
-        while (!stoppingToken.IsCancellationRequested && statusMessage is not null)
+        while (!stoppingToken.IsCancellationRequested)
         {
             if (_client.ConnectionState != ConnectionState.Connected)
             {
@@ -74,107 +69,137 @@ public class DiscordHostedService(ILogger<DiscordHostedService> logger, SharedCa
                 continue;
             }
 
-            await UpdateRunningStatus(statusMessage);
+            await UpdateRunningStatus();
             await Task.Delay(PeriodicUpdateInterval, stoppingToken);
         }
     }
 
-    private async Task<IMessage?> InitStatusMessage()
+    private async Task InitMessages()
     {
-        if (_client.GetChannel(_config.Value.ChannelId) is not IMessageChannel channel)
+        var channels = _config.Value.Channels;
+        var cachedIds = await GetCachedMessageIds();
+        var updateCache = false;
+
+        foreach (var channelId in channels)
         {
-            return null;
-        }
-
-        var cachedId = await GetCachedMessageId();
-        if(cachedId != 0)
-        {
-            return await channel.GetMessageAsync(cachedId);
-        }
-
-        var newMessage = await channel.SendMessageAsync("Backend starting...");
-        await CacheMessageId(newMessage.Id);
-        return newMessage;
-    }
-
-    private async Task GracefulShutdown(IMessage? message)
-    {
-        if (message is not null && _client.GetChannel(_config.Value.ChannelId) is IMessageChannel channel)
-        {
-            await channel.ModifyMessageAsync(message.Id, x => {
-                x.Content = "Server offline!";
-                x.Embeds = null;
-            });
-        }
-    }
-
-    private async Task UpdateRunningStatus(IMessage message)
-    {
-        var hosts = _sharedCache.GetGameServers();
-        var connected = _sharedCache.GetConnectedClients().Length;
-        var playing = hosts.Select(x => x.ConnectedPlayers.Count + x.JoiningPlayers.Count).Sum();
-
-        if (_client.GetChannel(_config.Value.ChannelId) is IMessageChannel channel)
-        {
-            var serverContent = new List<EmbedBuilder>(hosts.Length);
-            foreach (var server in hosts)
+            if (await _client.GetChannelAsync(channelId) is not IMessageChannel channel)
             {
-                if (server.TheaterConnection?.NetworkStream?.CanWrite != true || !server.CanJoin) continue;
-
-                try
-                {
-                    var serverName = $"**{server.NAME}**";
-
-                    var level = server.Data["B-U-level"];
-                    var levelName = LevelDisplayName(level);
-                    var levelImageUrl = LevelImageUrl(level);
-
-                    var difficulty = server.Data["B-U-difficulty"];
-                    var online = $"{server.ConnectedPlayers.Count}/{server.Data["MAX-PLAYERS"]}";
-
-                    var eb = new EmbedBuilder()
-                        .WithTitle(serverName)
-                        .WithDescription("Bad Company 2 Onslaught (PS3)")
-                        .WithImageUrl(levelImageUrl)
-                        .AddField("Level", levelName)
-                        .AddField("Difficulty", difficulty)
-                        .AddField("Online", online);
-
-                    serverContent.Add(eb);
-                }
-                catch (Exception e)
-                {
-                    _logger.LogError(e, "Failed to prepare server status!");
-                }
+                _logger.LogWarning("Failed to open channel: {channelId}", channelId);
+                continue;
             }
 
-            var embeds = serverContent.Select(x => x.Build()).ToArray();
-            await channel.ModifyMessageAsync(message.Id, x =>
+            if (cachedIds.TryGetValue(channel.Id, out var messageId))
             {
-                x.Content = embeds.Length > 0 ? "Ongoing Games:\n" : "No ongoing games :(\nFeel free to host a match!";
-                x.Embeds = embeds;
-            });
+                var msg = await channel.GetMessageAsync(messageId);
+                _statusMessages.Add(msg);
+            }
+            else
+            {
+                updateCache = true;
+                var msg = await channel.SendMessageAsync("Backend starting...");
+                _logger.LogInformation("New status created: {messageId}", msg.Id);
+                _statusMessages.Add(msg);
+                cachedIds.Add(channelId, msg.Id);
+            }
+        }
+
+        if (updateCache)
+        {
+            await CacheMessageIds(cachedIds);
         }
     }
 
-    private async Task<ulong> GetCachedMessageId()
+    private async Task GracefulShutdown()
     {
+        foreach(var message in _statusMessages)
+        {
+            if (_client.GetChannel(message.Channel.Id) is IMessageChannel channel)
+            {
+                await channel.ModifyMessageAsync(message.Id, x =>
+                {
+                    x.Content = "Server offline!";
+                    x.Embeds = null;
+                });
+            }
+        }
+
+    }
+
+    private async Task UpdateRunningStatus()
+    {
+        var hosts = _sharedCache.GetGameServers();
+        var infoEmbeds = new List<Embed>(hosts.Length);
+
+        foreach (var server in hosts)
+        {
+            if (server.TheaterConnection?.NetworkStream?.CanWrite != true || !server.CanJoin) continue;
+            try
+            {
+                var serverName = $"**{server.NAME}**";
+
+                var level = server.Data["B-U-level"];
+                var levelName = LevelDisplayName(level);
+                var levelImageUrl = LevelImageUrl(level);
+
+                var difficulty = server.Data["B-U-difficulty"];
+                var online = $"{server.ConnectedPlayers.Count}/{server.Data["MAX-PLAYERS"]}";
+
+                var eb = new EmbedBuilder()
+                    .WithTitle(serverName)
+                    .WithDescription("Bad Company 2 Onslaught (PS3)")
+                    .WithImageUrl(levelImageUrl)
+                    .AddField("Level", levelName)
+                    .AddField("Difficulty", difficulty)
+                    .AddField("Online", online);
+
+                infoEmbeds.Add(eb.Build());
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to prepare server status!");
+            }
+        }
+
+        foreach (var message in _statusMessages)
+        {
+            if (_client.GetChannel(message.Channel.Id) is IMessageChannel channel)
+            {
+                var serverContent = new List<EmbedBuilder>(hosts.Length);
+                await channel.ModifyMessageAsync(message.Id, x =>
+                {
+                    x.Content = infoEmbeds.Count > 0 ? "Ongoing Games:\n" : "Server online, no ongoing games. :(";
+                    x.Embeds = infoEmbeds.ToArray();
+                });
+            }
+        }
+    }
+
+    private async Task<Dictionary<ulong, ulong>> GetCachedMessageIds()
+    {
+        var dict = new Dictionary<ulong, ulong>();
+
         try
         {
-            var text = await File.ReadAllTextAsync(messageIdFile);
-            return ulong.Parse(text);
+            var text = await File.ReadAllLinesAsync(messageIdFile);
+            foreach (var line in text)
+            {
+                var parts = line.Split(':');
+                dict.Add(ulong.Parse(parts[0]), ulong.Parse(parts[1]));
+            }
+
+            return dict;
         }
         catch (Exception e)
         {
             _logger.LogError(e, "Failed to read messageId cache file.");
         }
 
-        return 0;
+        return dict;
     }
 
-    private static Task CacheMessageId(ulong messageId)
+    private static Task CacheMessageIds(IDictionary<ulong, ulong> channelMessages)
     {
-        return File.WriteAllTextAsync(messageIdFile, $"{messageId}");
+        return File.WriteAllLinesAsync(messageIdFile, channelMessages.Select(x => $"{x.Key}:{x.Value}"));
     }
 
     private static string LevelDisplayName(string levelName)
