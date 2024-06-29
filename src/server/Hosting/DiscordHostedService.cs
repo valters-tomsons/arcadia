@@ -58,6 +58,11 @@ public class DiscordHostedService(ILogger<DiscordHostedService> logger, SharedCa
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        while (_client.ConnectionState != ConnectionState.Connected)
+        {
+            await Task.Delay(1000, stoppingToken);
+        }
+
         await InitMessages();
 
         while (!stoppingToken.IsCancellationRequested)
@@ -151,7 +156,7 @@ public class DiscordHostedService(ILogger<DiscordHostedService> logger, SharedCa
                     .AddField("Level", levelName)
                     .AddField("Difficulty", difficulty)
                     .AddField("Online", online);
-
+                
                 infoEmbeds.Add(eb.Build());
             }
             catch (Exception e)
