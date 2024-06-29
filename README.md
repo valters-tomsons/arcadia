@@ -5,6 +5,10 @@ It's currently in early development and currently only supports player-hosted co
 
 Not affiliated with EA or DICE.
 
+## Community
+
+Discord: https://discord.gg/9WbQFYEt8B
+
 ## Game Compatibility
 
 Both PSN and RPCN clients are supported and can play in the same server.
