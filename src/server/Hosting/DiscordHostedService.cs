@@ -49,6 +49,8 @@ public class DiscordHostedService(ILogger<DiscordHostedService> logger, SharedCa
 
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
+        await GracefulShutdown(statusMessage);
+
         await _client.StopAsync();
         await _client.LogoutAsync();
         await base.StopAsync(cancellationToken);
@@ -93,6 +95,17 @@ public class DiscordHostedService(ILogger<DiscordHostedService> logger, SharedCa
         var newMessage = await channel.SendMessageAsync("Backend starting...");
         await CacheMessageId(newMessage.Id);
         return newMessage;
+    }
+
+    private async Task GracefulShutdown(IMessage? message)
+    {
+        if (message is not null && _client.GetChannel(_config.Value.ChannelId) is IMessageChannel channel)
+        {
+            await channel.ModifyMessageAsync(message.Id, x => {
+                x.Content = "Server offline!";
+                x.Embeds = null;
+            });
+        }
     }
 
     private async Task UpdateRunningStatus(IMessage message)
