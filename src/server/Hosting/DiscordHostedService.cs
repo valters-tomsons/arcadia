@@ -11,14 +11,14 @@ namespace Arcadia.Hosting;
 
 public class DiscordHostedService(ILogger<DiscordHostedService> logger, SharedCache sharedCache, IOptions<DiscordSettings> config) : BackgroundService
 {
-    private static readonly DiscordSocketClient _client = new();
     private static readonly TimeSpan PeriodicUpdateInterval = TimeSpan.FromSeconds(10);
+    private static readonly DiscordSocketClient _client = new();
 
     private readonly ILogger<DiscordHostedService> _logger = logger;
     private readonly SharedCache _sharedCache = sharedCache;
 
     private readonly IOptions<DiscordSettings> _config = config;
-    private IUserMessage? statusMessage;
+    private IMessage? statusMessage;
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -77,17 +77,25 @@ public class DiscordHostedService(ILogger<DiscordHostedService> logger, SharedCa
         }
     }
 
-    private async Task<IUserMessage?> InitStatusMessage()
+    private async Task<IMessage?> InitStatusMessage()
     {
         if (_client.GetChannel(_config.Value.ChannelId) is not IMessageChannel channel)
         {
             return null;
         }
 
-        return await channel.SendMessageAsync("Backend starting...");
+        var cachedId = await GetCachedMessageId();
+        if(cachedId != 0)
+        {
+            return await channel.GetMessageAsync(cachedId);
+        }
+
+        var newMessage = await channel.SendMessageAsync("Backend starting...");
+        await CacheMessageId(newMessage.Id);
+        return newMessage;
     }
 
-    private async Task UpdateRunningStatus(IUserMessage message)
+    private async Task UpdateRunningStatus(IMessage message)
     {
         var hosts = _sharedCache.GetGameServers();
         var connected = _sharedCache.GetConnectedClients().Length;
@@ -124,6 +132,26 @@ public class DiscordHostedService(ILogger<DiscordHostedService> logger, SharedCa
 
             await channel.ModifyMessageAsync(message.Id, x => x.Content = statusBuilder.ToString());
         }
+    }
+
+    private async Task<ulong> GetCachedMessageId()
+    {
+        try
+        {
+            var text = await File.ReadAllTextAsync("./messageId");
+            return ulong.Parse(text);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Failed to read messageId cache file.");
+        }
+
+        return 0;
+    }
+
+    private static Task CacheMessageId(ulong messageId)
+    {
+        return File.WriteAllTextAsync("./messageId", $"{messageId}");
     }
 
     private static string LevelDisplayName(string levelName)
