@@ -143,7 +143,7 @@ public class FeslHandler
         var packet1 = new Packet("pnow", FeslTransmissionType.SinglePacketResponse, request.Id, data1);
         await _conn.SendPacket(packet1);
 
-        var servers = _sharedCache.GetGameServers();
+        var servers = _sharedCache.GetGameServers().Where(x => x.CanJoin).ToArray();
         var data2 = new Dictionary<string, string>
         {
             { "TXN", "Status" },

@@ -352,42 +352,41 @@ public class TheaterHandler
 
     public async Task HandleGLST(Packet request)
     {
+        var games = _sharedCache.GetGameServers().Where(x => x.CanJoin).ToList();
+
         var gameList = new Dictionary<string,string>
         {
-            ["TID"] = $"{request["TID"]}",
-            ["LID"] = $"{request["LID"]}",
-            ["LOBBY-NUM-GAMES"] = $"{1}",
-            ["LOBBY-MAX-GAMES"] = $"{1000}",
-            ["FAVORITE-GAMES"] = $"{0}",
-            ["FAVORITE-PLAYERS"] = $"{0}",
-            ["NUM-GAMES"] = $"{1}"
+            ["TID"] = request["TID"],
+            ["LID"] = request["LID"],
+            ["LOBBY-NUM-GAMES"] = $"{games.Count}",
+            ["LOBBY-MAX-GAMES"] = "100",
+            ["FAVORITE-GAMES"] = "0",
+            ["FAVORITE-PLAYERS"] = "0",
+            ["NUM-GAMES"] = $"{games.Count}"
         };
         await _conn.SendPacket(new Packet("GLST", TheaterTransmissionType.OkResponse, 0, gameList));
 
-        var gameServers = _sharedCache.ListGameGids();
-        
-        foreach(var serverGid in gameServers)
+        foreach (var game in games)
         {
-            var game = _sharedCache.GetGameByGid(serverGid) ?? throw new NotImplementedException();
             var gameData = new Dictionary<string, string>
             {
-                ["TID"] = $"{request["TID"]}",
-                ["LID"] = $"{request["LID"]}",
-                ["GID"] = $"{serverGid}",
-                ["HN"] = $"{game.NAME}",
+                ["TID"] = request["TID"],
+                ["LID"] = request["LID"],
+                ["GID"] = $"{game.GID}",
+                ["HN"] = game.NAME,
                 ["HU"] = $"{game.UID}",
-                ["N"] = $"{game.NAME}",
-                ["I"] = $"{game.TheaterConnection.NetworkAddress}",
-                ["P"] = $"{game.Data["PORT"]}",
-                ["MP"] = $"{game.Data["MAX-PLAYERS"]}",
-                ["F"] = $"{0}",
-                ["NF"] = $"{0}",
-                ["J"] = $"{game.Data["JOIN"]}",
-                ["TYPE"] = $"{game.Data["TYPE"]}",
-                ["PW"] = $"{0}",
-                ["B-version"] = $"{game.Data["B-version"]}",
-                ["B-numObservers"] = $"{game.Data["B-numObservers"]}",
-                ["B-maxObservers"] = $"{game.Data["B-maxObservers"]}"
+                ["N"] = game.NAME,
+                ["I"] = game.TheaterConnection?.NetworkAddress ?? throw new NotImplementedException(),
+                ["P"] = game.Data["PORT"],
+                ["MP"] = game.Data["MAX-PLAYERS"],
+                ["F"] = "0",
+                ["NF"] = "0",
+                ["J"] = game.Data["JOIN"],
+                ["TYPE"] = game.Data["TYPE"],
+                ["PW"] = "0",
+                ["B-version"] = game.Data["B-version"],
+                ["B-numObservers"] = game.Data["B-numObservers"],
+                ["B-maxObservers"] = game.Data["B-maxObservers"]
             };
 
             await _conn.SendPacket(new Packet("GDAT", TheaterTransmissionType.OkResponse, 0, gameData));
