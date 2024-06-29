@@ -1,5 +1,3 @@
-using System.Globalization;
-using System.Text;
 using Arcadia.Storage;
 using Discord;
 using Discord.WebSocket;
@@ -105,7 +103,7 @@ public class DiscordHostedService(ILogger<DiscordHostedService> logger, SharedCa
 
         if (_client.GetChannel(_config.Value.ChannelId) is IMessageChannel channel)
         {
-            var statusBuilder = new StringBuilder($"Players Online: `{connected}`\nPlayers In-Game: `{playing}`");
+            var serverEmbeds = new List<Embed>(hosts.Length);
 
             foreach (var server in hosts)
             {
@@ -114,25 +112,36 @@ public class DiscordHostedService(ILogger<DiscordHostedService> logger, SharedCa
                 try
                 {
                     var serverName = $"**{server.NAME}**";
-                    var levelName = LevelDisplayName(server.Data["B-U-level"]);
+
+                    var level = server.Data["B-U-level"];
+                    var levelName = LevelDisplayName(level);
+                    var levelImageUrl = LevelImageUrl(level);
+
                     var difficulty = server.Data["B-U-difficulty"];
                     var online = $"{server.ConnectedPlayers.Count}/{server.Data["MAX-PLAYERS"]}";
 
-                    statusBuilder
-                        .AppendLine()
-                        .AppendLine()
-                        .AppendLine(serverName)
-                        .Append("Level: ").AppendLine(levelName)
-                        .Append("Difficulty: ").AppendLine(difficulty)
-                        .Append("Online: ").AppendLine(online);
+                    var eb = new EmbedBuilder()
+                        .WithTitle(serverName)
+                        .WithDescription("Bad Company 2 Onslaught (PS3)")
+                        .WithImageUrl(levelImageUrl)
+                        .AddField("Level", levelName)
+                        .AddField("Difficulty", difficulty)
+                        .AddField("Online", online);
+
+                    serverEmbeds.Add(eb.Build());
                 }
                 catch (Exception e)
                 {
-                    _logger.LogError(e, "Failed to write server status!");
+                    _logger.LogError(e, "Failed to prepare server status!");
                 }
             }
 
-            await channel.ModifyMessageAsync(message.Id, x => x.Content = statusBuilder.ToString());
+            var status = $"Players Online: `{connected}`\nPlayers In-Game: `{playing}\n`";
+            await channel.ModifyMessageAsync(message.Id, x =>
+            {
+                x.Content = status;
+                x.Embeds = serverEmbeds.ToArray();
+            });
         }
     }
 
@@ -165,6 +174,18 @@ public class DiscordHostedService(ILogger<DiscordHostedService> logger, SharedCa
             "Levels/ONS_MP_005" => "Atacama Desert",
             "Levels/ONS_MP_008" => "Nelson Bay",
             _ => levelName,
+        };
+    }
+
+    private static string LevelImageUrl(string levelName)
+    {
+        return levelName switch
+        {
+            "Levels/ONS_MP_002" => "https://tomsonscloudstorage01.blob.core.windows.net/arcadia/BC2_Valparaiso.jpg",
+            "Levels/ONS_MP_004" => "https://tomsonscloudstorage01.blob.core.windows.net/arcadia/BC2_Isla_Inocentes.jpg",
+            "Levels/ONS_MP_005" => "https://tomsonscloudstorage01.blob.core.windows.net/arcadia/BC2_Atacama_Desert.jpg",
+            "Levels/ONS_MP_008" => "https://tomsonscloudstorage01.blob.core.windows.net/arcadia/BC2_Nelson_Bay.jpg",
+            _ => string.Empty,
         };
     }
 }
