@@ -115,7 +115,7 @@ public class DiscordHostedService(ILogger<DiscordHostedService> logger, SharedCa
                 {
                     var serverName = $"**{server.NAME}**";
                     var levelName = LevelDisplayName(server.Data["B-U-level"]);
-                    var difficulty = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(server.Data["B-U-difficulty"]);
+                    var difficulty = server.Data["B-U-difficulty"];
                     var online = $"{server.ConnectedPlayers.Count}/{server.Data["MAX-PLAYERS"]}";
 
                     statusBuilder
