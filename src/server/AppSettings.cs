@@ -15,6 +15,7 @@ public record FileServerSettings
 
 public record DiscordSettings
 {
+    public bool EnableBot { get; init; } = false;
     public string BotToken { get; init; } = string.Empty;
     public ulong ChannelId { get; init; } = 0;
 }

@@ -22,6 +22,11 @@ public class DiscordHostedService(ILogger<DiscordHostedService> logger, SharedCa
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
+        if (!_config.Value.EnableBot)
+        {
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(_config.Value.BotToken))
         {
             _logger.LogWarning("Discord bot not configured!");
@@ -33,6 +38,8 @@ public class DiscordHostedService(ILogger<DiscordHostedService> logger, SharedCa
             _logger.LogInformation("Discord.NET: {msg}", x.ToString());
             return Task.CompletedTask;
         };
+
+        _logger.LogInformation("Starting Discord status bot...");
 
         await _client.LoginAsync(TokenType.Bot, _config.Value.BotToken);
         await _client.StartAsync();
