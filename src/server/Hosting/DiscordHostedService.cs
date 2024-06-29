@@ -11,6 +11,8 @@ namespace Arcadia.Hosting;
 
 public class DiscordHostedService(ILogger<DiscordHostedService> logger, SharedCache sharedCache, IOptions<DiscordSettings> config) : BackgroundService
 {
+    private const string messageIdFile = "./messageId";
+
     private static readonly TimeSpan PeriodicUpdateInterval = TimeSpan.FromSeconds(10);
     private static readonly DiscordSocketClient _client = new();
 
@@ -138,7 +140,7 @@ public class DiscordHostedService(ILogger<DiscordHostedService> logger, SharedCa
     {
         try
         {
-            var text = await File.ReadAllTextAsync("./messageId");
+            var text = await File.ReadAllTextAsync(messageIdFile);
             return ulong.Parse(text);
         }
         catch (Exception e)
@@ -151,7 +153,7 @@ public class DiscordHostedService(ILogger<DiscordHostedService> logger, SharedCa
 
     private static Task CacheMessageId(ulong messageId)
     {
-        return File.WriteAllTextAsync("./messageId", $"{messageId}");
+        return File.WriteAllTextAsync(messageIdFile, $"{messageId}");
     }
 
     private static string LevelDisplayName(string levelName)
