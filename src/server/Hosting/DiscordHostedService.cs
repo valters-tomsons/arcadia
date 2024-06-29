@@ -136,12 +136,8 @@ public class DiscordHostedService(ILogger<DiscordHostedService> logger, SharedCa
                 }
             }
 
-            var status = $"Players Online: `{connected}`\nPlayers In-Game: `{playing}\n`";
-            await channel.ModifyMessageAsync(message.Id, x =>
-            {
-                x.Content = status;
-                x.Embeds = serverEmbeds.ToArray();
-            });
+            var content = serverEmbeds.ToArray();
+            await channel.ModifyMessageAsync(message.Id, x => x.Embeds = content);
         }
     }
 
