@@ -103,8 +103,7 @@ public class DiscordHostedService(ILogger<DiscordHostedService> logger, SharedCa
 
         if (_client.GetChannel(_config.Value.ChannelId) is IMessageChannel channel)
         {
-            var serverEmbeds = new List<Embed>(hosts.Length);
-
+            var serverContent = new List<EmbedBuilder>(hosts.Length);
             foreach (var server in hosts)
             {
                 if (server.TheaterConnection?.NetworkStream?.CanWrite != true || !server.CanJoin) continue;
@@ -128,7 +127,7 @@ public class DiscordHostedService(ILogger<DiscordHostedService> logger, SharedCa
                         .AddField("Difficulty", difficulty)
                         .AddField("Online", online);
 
-                    serverEmbeds.Add(eb.Build());
+                    serverContent.Add(eb);
                 }
                 catch (Exception e)
                 {
@@ -136,8 +135,12 @@ public class DiscordHostedService(ILogger<DiscordHostedService> logger, SharedCa
                 }
             }
 
-            var content = serverEmbeds.ToArray();
-            await channel.ModifyMessageAsync(message.Id, x => x.Embeds = content);
+            var embeds = serverContent.Select(x => x.Build()).ToArray();
+            await channel.ModifyMessageAsync(message.Id, x =>
+            {
+                x.Content = embeds.Length > 0 ? "Ongoing Games:\n" : "No ongoing games :(\nFeel free to host a match!";
+                x.Embeds = embeds;
+            });
         }
     }
 
