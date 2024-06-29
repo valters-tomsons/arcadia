@@ -17,7 +17,6 @@ public class StaticFileHostedService(IOptions<FileServerSettings> settings, ILog
     {
         if (!_settings.EnableCdn)
         {
-            _logger.LogInformation("CDN host is disabled, content will not be served.");
             return Task.CompletedTask;
         }
 
