@@ -112,6 +112,14 @@ public class TheaterHandler
             ["GID"] = request["GID"],
         };
 
+        var isGid = long.TryParse(request["GID"], out var gid);
+        var game = _sharedCache.GetGameByGid(gid);
+
+        if (game is not null && isGid && _plasma?.UID == game.UID)
+        {
+            _sharedCache.RemoveGame(game);
+        }
+
         var packet = new Packet("ECNL", TheaterTransmissionType.OkResponse, 0, response);
         await _conn.SendPacket(packet);
     }
