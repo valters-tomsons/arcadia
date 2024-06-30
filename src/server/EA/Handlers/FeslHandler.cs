@@ -393,25 +393,18 @@ public class FeslHandler
         await _conn.SendPacket(packet);
     }
     
-    private Task HandleNuLoginPersona(Packet request)
+    private async Task HandleNuLoginPersona(Packet request)
     {
-        throw new NotImplementedException();
-        // _sessionCache["LKEY"] = SharedCounters.GenerateLKey();
+        var loginResponseData = new Dictionary<string, string>
+        {
+            { "TXN", request.TXN },
+            { "lkey", _plasma!.LKEY },
+            { "profileId", _plasma.UID.ToString() },
+            { "userId", _plasma.UID.ToString() }
+        };
 
-        // var uid = _sharedCounters.GetNextUserId().ToString();
-        // _sessionCache["UID"] = uid;
-
-        // _sharedCache.AddUserWithLKey(_sessionCache["LKEY"], _sessionCache["personaName"]);
-        // var loginResponseData = new Dictionary<string, string>
-        // {
-        //     { "TXN", request.TXN },
-        //     { "lkey", _sessionCache["LKEY"] },
-        //     { "profileId", uid },
-        //     { "userId", uid },
-        // };
-
-        // var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
-        // await _conn.SendPacket(packet);
+        var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
+        await _conn.SendPacket(packet);
     }
 
     private async Task HandleNuGetEntitlements(Packet request)
