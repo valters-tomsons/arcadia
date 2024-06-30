@@ -146,15 +146,16 @@ public class DiscordHostedService(ILogger<DiscordHostedService> logger, SharedCa
                 var levelName = LevelDisplayName(level);
                 var levelImageUrl = LevelImageUrl(level);
 
-                var difficulty = server.Data["B-U-difficulty"];
+                var difficulty = server.Data.GetValueOrDefault("B-U-difficulty") ?? "`N/A`";
+                var gamemode = server.Data["B-U-gamemode"];
                 var online = $"{server.ConnectedPlayers.Count}/{server.Data["MAX-PLAYERS"]}";
 
                 var eb = new EmbedBuilder()
                     .WithTitle(serverName)
-                    .WithDescription("Bad Company 2 Onslaught (PS3)")
                     .WithImageUrl(levelImageUrl)
                     .AddField("Level", levelName)
                     .AddField("Difficulty", difficulty)
+                    .AddField("Gamemode", gamemode)
                     .AddField("Online", online);
                 
                 infoEmbeds.Add(eb.Build());
