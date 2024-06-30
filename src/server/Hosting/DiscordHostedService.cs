@@ -137,7 +137,7 @@ public class DiscordHostedService(ILogger<DiscordHostedService> logger, SharedCa
 
         foreach (var server in hosts)
         {
-            if (server.TheaterConnection?.NetworkStream?.CanWrite != true || !server.CanJoin) continue;
+            if (server.TheaterConnection?.NetworkStream?.CanWrite != true || server.TheaterConnection?.NetworkStream?.CanRead != true) continue;
             try
             {
                 var serverName = $"**{server.NAME}**";
