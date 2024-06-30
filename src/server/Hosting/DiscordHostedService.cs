@@ -168,13 +168,30 @@ public class DiscordHostedService(ILogger<DiscordHostedService> logger, SharedCa
 
         foreach (var message in _statusMessages)
         {
-            if (_client.GetChannel(message.Channel.Id) is IMessageChannel channel)
+            if (_client.GetChannel(message.Channel.Id) is not IMessageChannel channel)
             {
-                var serverContent = new List<EmbedBuilder>(hosts.Length);
+                _logger.LogWarning("Skipping message in channel: {channelId}", message.Channel.Id);
+                continue;
+            }
+
+            if (infoEmbeds.Count > 0)
+            {
                 await channel.ModifyMessageAsync(message.Id, x =>
                 {
-                    x.Content = infoEmbeds.Count > 0 ? "Ongoing Games:\n" : "Server online, no ongoing games. :(";
+                    x.Content = "Ongoing Games:\n";
                     x.Embeds = infoEmbeds.ToArray();
+                });
+            }
+            else
+            {
+                await channel.ModifyMessageAsync(message.Id, x =>
+                {
+                    x.Content = "\n";
+                    x.Embed = new EmbedBuilder()
+                            .WithTitle("Arcadia")
+                            .WithDescription("There are no ongoing games. 😞")
+                            .WithCurrentTimestamp()
+                            .Build();
                 });
             }
         }
