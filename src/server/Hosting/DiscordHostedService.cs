@@ -142,12 +142,12 @@ public class DiscordHostedService(ILogger<DiscordHostedService> logger, SharedCa
             {
                 var serverName = $"**{server.NAME}**";
 
-                var level = server.Data["B-U-level"];
+                var level = server.Data.GetValueOrDefault("B-U-level");
                 var levelName = LevelDisplayName(level);
                 var levelImageUrl = LevelImageUrl(level);
 
                 var difficulty = server.Data.GetValueOrDefault("B-U-difficulty") ?? "`N/A`";
-                var gamemode = server.Data["B-U-gamemode"];
+                var gamemode = server.Data.GetValueOrDefault("B-U-gamemode") ?? "`N/A`";
                 var online = $"{server.ConnectedPlayers.Count}/{server.Data["MAX-PLAYERS"]}";
 
                 var eb = new EmbedBuilder()
@@ -208,7 +208,7 @@ public class DiscordHostedService(ILogger<DiscordHostedService> logger, SharedCa
         return File.WriteAllLinesAsync(messageIdFile, channelMessages.Select(x => $"{x.Key}:{x.Value}"));
     }
 
-    private static string LevelDisplayName(string levelName)
+    private static string LevelDisplayName(string? levelName)
     {
         return levelName switch
         {
@@ -216,11 +216,12 @@ public class DiscordHostedService(ILogger<DiscordHostedService> logger, SharedCa
             "Levels/ONS_MP_004" => "Isla Inocentes",
             "Levels/ONS_MP_005" => "Atacama Desert",
             "Levels/ONS_MP_008" => "Nelson Bay",
+            null => "`N/A`",
             _ => levelName,
         };
     }
 
-    private static string LevelImageUrl(string levelName)
+    private static string LevelImageUrl(string? levelName)
     {
         return levelName switch
         {
