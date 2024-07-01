@@ -233,6 +233,7 @@ public class DiscordHostedService(ILogger<DiscordHostedService> logger, SharedCa
             "Levels/ONS_MP_004" => "Isla Inocentes",
             "Levels/ONS_MP_005" => "Atacama Desert",
             "Levels/ONS_MP_008" => "Nelson Bay",
+            "levels/wake_island_s" => "Wake Island",
             null => "`N/A`",
             _ => levelName,
         };
@@ -246,6 +247,7 @@ public class DiscordHostedService(ILogger<DiscordHostedService> logger, SharedCa
             "Levels/ONS_MP_004" => "https://tomsonscloudstorage01.blob.core.windows.net/arcadia/BC2_Isla_Inocentes.jpg",
             "Levels/ONS_MP_005" => "https://tomsonscloudstorage01.blob.core.windows.net/arcadia/BC2_Atacama_Desert.jpg",
             "Levels/ONS_MP_008" => "https://tomsonscloudstorage01.blob.core.windows.net/arcadia/BC2_Nelson_Bay.jpg",
+            "levels/wake_island_s" => "https://tomsonscloudstorage01.blob.core.windows.net/arcadia/1943_Wake_Island.jpg",
             _ => string.Empty,
         };
     }
