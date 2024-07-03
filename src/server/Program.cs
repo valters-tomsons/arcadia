@@ -20,12 +20,13 @@ var host = Host.CreateDefaultBuilder()
     .ConfigureServices((context, services) =>
     {
         var config = context.Configuration;
-        
+
         services
             .Configure<ArcadiaSettings>(config.GetSection(nameof(ArcadiaSettings)))
             .Configure<FileServerSettings>(config.GetSection(nameof(FileServerSettings)))
             .Configure<DiscordSettings>(config.GetSection(nameof(DiscordSettings)))
-            .Configure<DebugSettings>(config.GetSection(nameof(DebugSettings)));
+            .Configure<DebugSettings>(config.GetSection(nameof(DebugSettings)))
+            .Configure<HostOptions>(x => x.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore);
 
         services
             .AddSingleton<ProtoSSL>()
