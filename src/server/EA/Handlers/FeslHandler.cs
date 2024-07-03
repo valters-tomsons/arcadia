@@ -158,8 +158,8 @@ public class FeslHandler
 
         for (var i = 0; i < servers.Length; i++)
         {
-            data2.Add($"props.{{games}}.{i}.gid", servers[i].Data["GID"]);
-            data2.Add($"props.{{games}}.{i}.lid", servers[i].Data["LID"]);
+            data2.Add($"props.{{games}}.{i}.gid", $"{servers[i].GID}");
+            data2.Add($"props.{{games}}.{i}.lid", $"{servers[i].LID}");
         }
 
         var packet2 = new Packet("pnow", FeslTransmissionType.SinglePacketResponse, request.Id, data2);
