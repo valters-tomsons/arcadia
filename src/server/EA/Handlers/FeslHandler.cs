@@ -20,6 +20,8 @@ public class FeslHandler
 
     private PlasmaConnection? _plasma;
     private string clientString = string.Empty;
+    private string partitionId = string.Empty;
+    private string subDomain = string.Empty;
 
     private readonly static TimeSpan PingPeriod = TimeSpan.FromSeconds(60);
     private readonly static TimeSpan MemCheckPeriod = TimeSpan.FromSeconds(120);
@@ -101,13 +103,17 @@ public class FeslHandler
 
     private async Task HandleHello(Packet request)
     {
+        clientString = request["clientString"];
+        subDomain = clientString.Split('-').First().ToUpperInvariant();
+        partitionId = $"{request["sku"]}/{subDomain}";
+
         var currentTime = DateTime.UtcNow.ToString("MMM-dd-yyyy HH:mm:ss 'UTC'", CultureInfo.InvariantCulture);
         var serverHelloData = new Dictionary<string, string>
                 {
                     { "domainPartition.domain", "ps3" },
                     { "messengerIp", "127.0.0.1" },
                     { "messengerPort", "0" },
-                    { "domainPartition.subDomain", "BFBC2" },
+                    { "domainPartition.subDomain", subDomain },
                     { "TXN", "Hello" },
                     { "activityTimeoutSecs", "0" },
                     { "curTime", currentTime },
@@ -115,7 +121,6 @@ public class FeslHandler
                     { "theaterPort", "18126" }
                 };
 
-        clientString = request["clientString"];
         var helloPacket = new Packet("fsys", FeslTransmissionType.SinglePacketResponse, request.Id, serverHelloData);
         await _conn.SendPacket(helloPacket);
         await SendMemCheck();
@@ -139,7 +144,7 @@ public class FeslHandler
         {
             { "TXN", "Start" },
             { "id.id", $"{pnowId}" },
-            { "id.partition", "/ps3/BFBC2" },
+            { "id.partition", partitionId },
         };
 
         var packet1 = new Packet("pnow", FeslTransmissionType.SinglePacketResponse, request.Id, data1);
@@ -150,7 +155,7 @@ public class FeslHandler
         {
             { "TXN", "Status" },
             { "id.id", $"{pnowId}" },
-            { "id.partition", "/ps3/BFBC2" },
+            { "id.partition", partitionId },
             { "sessionState", "COMPLETE" },
             { "props.{}", "3" },
             { "props.{resultType}", "JOIN" },
