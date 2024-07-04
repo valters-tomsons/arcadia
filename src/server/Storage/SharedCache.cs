@@ -12,14 +12,15 @@ public class SharedCache(ILogger<SharedCache> logger, SharedCounters counters)
     private readonly ConcurrentBag<GameServerListing> _gameServers = [];
     private readonly ConcurrentBag<PlasmaConnection> _connections = [];
 
-    public PlasmaConnection CreatePlasmaConnection(IEAConnection fesl, string onlineId)
+    public PlasmaConnection CreatePlasmaConnection(IEAConnection fesl, string onlineId, string clientString)
     {
         PlasmaConnection result = new()
         {
             FeslConnection = fesl,
             UID = _counters.GetNextUserId(),
             LKEY = SharedCounters.GenerateLKey(),
-            NAME = onlineId
+            NAME = onlineId,
+            ClientString = clientString
         };
 
         _connections.Add(result);
@@ -139,6 +140,7 @@ public class PlasmaConnection
     public IEAConnection? FeslConnection { get; set; }
     public IEAConnection? TheaterConnection { get; set; }
 
+    public string ClientString { get; init; } = string.Empty;
     public long UID { get; init; }
     public string NAME { get; init; } = string.Empty;
     public string LKEY { get; init; } = string.Empty;

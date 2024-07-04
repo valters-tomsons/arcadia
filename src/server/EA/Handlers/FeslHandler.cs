@@ -19,6 +19,7 @@ public class FeslHandler
     private readonly IEAConnection _conn;
 
     private PlasmaConnection? _plasma;
+    private string clientString = string.Empty;
 
     private readonly static TimeSpan PingPeriod = TimeSpan.FromSeconds(60);
     private readonly static TimeSpan MemCheckPeriod = TimeSpan.FromSeconds(120);
@@ -114,6 +115,7 @@ public class FeslHandler
                     { "theaterPort", "18126" }
                 };
 
+        clientString = request["clientString"];
         var helloPacket = new Packet("fsys", FeslTransmissionType.SinglePacketResponse, request.Id, serverHelloData);
         await _conn.SendPacket(helloPacket);
         await SendMemCheck();
@@ -366,7 +368,7 @@ public class FeslHandler
             nuid = nuid.Split('@')[0];
         }
 
-        _plasma = _sharedCache.CreatePlasmaConnection(_conn, nuid);
+        _plasma = _sharedCache.CreatePlasmaConnection(_conn, nuid, clientString);
 
         var loginResponseData = new Dictionary<string, string>
         {
@@ -440,7 +442,7 @@ public class FeslHandler
 
         if (string.IsNullOrWhiteSpace(onlineId)) throw new NotImplementedException();
 
-        _plasma = _sharedCache.CreatePlasmaConnection(_conn, onlineId);
+        _plasma = _sharedCache.CreatePlasmaConnection(_conn, onlineId, clientString);
         var loginResponseData = new Dictionary<string, string>
         {
             { "TXN", request.TXN },
@@ -478,7 +480,7 @@ public class FeslHandler
         var ticketData = TicketDecoder.DecodeFromASCIIString(loginTicket, _logger);
         var onlineId = (ticketData[5] as BStringData)?.Value?.TrimEnd('\0') ?? throw new NotImplementedException();
 
-        _plasma = _sharedCache.CreatePlasmaConnection(_conn, onlineId);
+        _plasma = _sharedCache.CreatePlasmaConnection(_conn, onlineId, clientString);
         var loginResponseData = new Dictionary<string, string>
         {
             { "TXN", "NuPS3Login" },
