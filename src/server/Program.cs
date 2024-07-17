@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging.Console;
 using Arcadia.Storage;
 using NReco.Logging.File;
 using Arcadia.EA.Handlers;
+using Discord.WebSocket;
 
 var host = Host.CreateDefaultBuilder()
     .ConfigureAppConfiguration((_, config) => config
@@ -29,6 +30,7 @@ var host = Host.CreateDefaultBuilder()
             .Configure<HostOptions>(x => x.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore);
 
         services
+            .AddSingleton<DiscordSocketClient>()
             .AddSingleton<ProtoSSL>()
             .AddSingleton<SharedCounters>()
             .AddSingleton<SharedCache>();
