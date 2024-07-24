@@ -30,10 +30,17 @@ var host = Host.CreateDefaultBuilder()
             .Configure<HostOptions>(x => x.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore);
 
         services
-            .AddSingleton<DiscordSocketClient>()
             .AddSingleton<ProtoSSL>()
             .AddSingleton<SharedCounters>()
             .AddSingleton<SharedCache>();
+
+        services
+            .AddSingleton<DiscordSocketConfig>(x => new()
+            {
+                GatewayIntents = Discord.GatewayIntents.Guilds | Discord.GatewayIntents.GuildMessages,
+
+            })
+            .AddSingleton<DiscordSocketClient>();
 
         services
             .AddScoped<Rc4TlsCrypto>()
