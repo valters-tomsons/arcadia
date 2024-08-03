@@ -416,9 +416,9 @@ public class FeslHandler
 
     private async Task HandleNuGetEntitlements(Packet request)
     {
-        Dictionary<string, string> resp = request["groupName"] switch
+        Dictionary<string, string> response = request["groupName"] switch
         {
-            "BFBC2PS3" => new(){
+            "BFBC2PS3" => new() {
                     { "TXN", request.TXN },
                     { "entitlements.[]", "1" },
                     { "entitlements.0.entitlementId", "1111000001" },
@@ -431,7 +431,8 @@ public class FeslHandler
                     { "entitlements.0.terminationDate", ""},
                     { "entitlements.0.version", "0"},
                     { "entitlements.0.userId", $"{_plasma!.UID}" },
-            "BattlefieldBadCompany2" => new(){
+                },
+            "BattlefieldBadCompany2" => new() {
                     { "TXN", request.TXN },
                     { "entitlements.[]", "1" },
                     { "entitlements.0.entitlementId", "1101010101" },
@@ -445,12 +446,13 @@ public class FeslHandler
                     { "entitlements.0.version", "0"},
                     { "entitlements.0.userId", $"{_plasma!.UID}" },
                 },
-            _ => new(){
-            { "TXN", request.TXN },
-            { "entitlements.[]", "0" }
-                },
+            _ => new() {
+                    { "TXN", request.TXN },
+                    { "entitlements.[]", "0" }
+                }
         };
-        var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, resp);
+
+        var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, response);
         await _conn.SendPacket(packet);
     }
 
