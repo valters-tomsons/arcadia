@@ -425,13 +425,13 @@ public class FeslHandler
         switch(groupName)
         {
             case "BFBC2PS3":
-                response.AddEntitlements(_plasma!.UID, new(string, string, long)[]{
-                    (groupName, "BFBC2:PS3:ONSLAUGHT_PDLC", 1111100001)
+                response.AddEntitlements(_plasma!.UID, new(string, long, string)[]{
+                    (groupName, 1111100001, "BFBC2:PS3:ONSLAUGHT_PDLC")
                 });
                 break;
             case "BattlefieldBadCompany2":
-                response.AddEntitlements(_plasma!.UID, new(string, string, long)[]{
-                    (groupName, "BFBC2:COMMON:GAMESTOP", 1100000001)
+                response.AddEntitlements(_plasma!.UID, new(string, long, string)[]{
+                    (groupName, 1100000001, "BFBC2:COMMON:GAMESTOP")
                 });
                 break;
             default:

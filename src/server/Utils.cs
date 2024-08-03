@@ -130,7 +130,7 @@ public static class Utils
         }
     }
 
-    public static void AddEntitlements(this Dictionary<string, string> response, long userId, (string Group, string Tag, long Id)[] entitlements)
+    public static void AddEntitlements(this Dictionary<string, string> response, long userId, (string Group, long Id, string Tag)[] entitlements)
     {
         for (var i = 0; i < entitlements.Length; i++)
         {
