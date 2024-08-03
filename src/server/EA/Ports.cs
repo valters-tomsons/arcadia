@@ -4,7 +4,7 @@ public enum FeslGamePort : int
 {
     BadCompanyPS3 = 18800,
     RomePS3 = 18121,
-    RomeDebugPS3 = 18171,
+    RomeDemoPS3 = 18171,
     BeachPS3 = 18231,
     RomePC = 18390,
     ArmyOfTwoPS3 = 18340
