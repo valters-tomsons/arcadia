@@ -129,4 +129,25 @@ public static class Utils
             bag.Add(result);
         }
     }
+
+    public static void AddEntitlements(this Dictionary<string, string> response, long userId, (string Group, string Tag, long Id)[] entitlements)
+    {
+        for (var i = 0; i < entitlements.Length; i++)
+        {
+            var (Group, Tag, Id) = entitlements[i];
+
+            response.Add($"entitlements.{i}.entitlementId", $"{Id}");
+            response.Add($"entitlements.{i}.entitlementTag", Tag);
+            response.Add($"entitlements.{i}.groupName", Group);
+            response.Add($"entitlements.{i}.grantDate", "2023-12-08T23:59Z");
+            response.Add($"entitlements.{i}.status", "ACTIVE");
+            response.Add($"entitlements.{i}.userId", $"{userId}");
+            response.Add($"entitlements.{i}.version", "0");
+            response.Add($"entitlements.{i}.productId", string.Empty);
+            response.Add($"entitlements.{i}.statusReasonCode", string.Empty);
+            response.Add($"entitlements.{i}.terminationDate", string.Empty);
+        }
+
+        response.Add("entitlements.[]", $"{entitlements.Length}");
+    }
 }
