@@ -416,41 +416,28 @@ public class FeslHandler
 
     private async Task HandleNuGetEntitlements(Packet request)
     {
-        Dictionary<string, string> response = request["groupName"] switch
+        var response = new Dictionary<string, string>()
         {
-            "BFBC2PS3" => new() {
-                    { "TXN", request.TXN },
-                    { "entitlements.[]", "1" },
-                    { "entitlements.0.entitlementId", "1111000001" },
-                    { "entitlements.0.entitlementTag", "BFBC2:PS3:ONSLAUGHT_PDLC" },
-                    { "entitlements.0.grantDate", "2023-12-08T23:59Z"},
-                    { "entitlements.0.groupName", "BFBC2PS3"},
-                    { "entitlements.0.productId", ""},
-                    { "entitlements.0.status", "ACTIVE"},
-                    { "entitlements.0.statusReasonCode", ""},
-                    { "entitlements.0.terminationDate", ""},
-                    { "entitlements.0.version", "0"},
-                    { "entitlements.0.userId", $"{_plasma!.UID}" },
-                },
-            "BattlefieldBadCompany2" => new() {
-                    { "TXN", request.TXN },
-                    { "entitlements.[]", "1" },
-                    { "entitlements.0.entitlementId", "1101010101" },
-                    { "entitlements.0.entitlementTag", "BFBC2:COMMON:GAMESTOP" },
-                    { "entitlements.0.grantDate", "2023-12-08T23:59Z"},
-                    { "entitlements.0.groupName", "BattlefieldBadCompany2"},
-                    { "entitlements.0.productId", ""},
-                    { "entitlements.0.status", "ACTIVE"},
-                    { "entitlements.0.statusReasonCode", ""},
-                    { "entitlements.0.terminationDate", ""},
-                    { "entitlements.0.version", "0"},
-                    { "entitlements.0.userId", $"{_plasma!.UID}" },
-                },
-            _ => new() {
-                    { "TXN", request.TXN },
-                    { "entitlements.[]", "0" }
-                }
+            { "TXN", request.TXN },
         };
+
+        var groupName = request["groupName"];
+        switch(groupName)
+        {
+            case "BFBC2PS3":
+                response.AddEntitlements(_plasma!.UID, new(string, string, long)[]{
+                    (groupName, "BFBC2:PS3:ONSLAUGHT_PDLC", 1111100001)
+                });
+                break;
+            case "BattlefieldBadCompany2":
+                response.AddEntitlements(_plasma!.UID, new(string, string, long)[]{
+                    (groupName, "BFBC2:COMMON:GAMESTOP", 1100000001)
+                });
+                break;
+            default:
+                response.Add("entitlements.[]", "0");
+                break;
+        }
 
         var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, response);
         await _conn.SendPacket(packet);
