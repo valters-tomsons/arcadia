@@ -416,13 +416,41 @@ public class FeslHandler
 
     private async Task HandleNuGetEntitlements(Packet request)
     {
-        var loginResponseData = new Dictionary<string, string>
+        Dictionary<string, string> resp = request["groupName"] switch
         {
+            "BFBC2PS3" => new(){
+                    { "TXN", request.TXN },
+                    { "entitlements.[]", "1" },
+                    { "entitlements.0.entitlementId", "1111000001" },
+                    { "entitlements.0.entitlementTag", "BFBC2:PS3:ONSLAUGHT_PDLC" },
+                    { "entitlements.0.grantDate", "2023-12-08T23:59Z"},
+                    { "entitlements.0.groupName", "BFBC2PS3"},
+                    { "entitlements.0.productId", ""},
+                    { "entitlements.0.status", "ACTIVE"},
+                    { "entitlements.0.statusReasonCode", ""},
+                    { "entitlements.0.terminationDate", ""},
+                    { "entitlements.0.version", "0"},
+                    { "entitlements.0.userId", $"{_plasma!.UID}" },
+            "BattlefieldBadCompany2" => new(){
+                    { "TXN", request.TXN },
+                    { "entitlements.[]", "1" },
+                    { "entitlements.0.entitlementId", "1101010101" },
+                    { "entitlements.0.entitlementTag", "BFBC2:COMMON:GAMESTOP" },
+                    { "entitlements.0.grantDate", "2023-12-08T23:59Z"},
+                    { "entitlements.0.groupName", "BattlefieldBadCompany2"},
+                    { "entitlements.0.productId", ""},
+                    { "entitlements.0.status", "ACTIVE"},
+                    { "entitlements.0.statusReasonCode", ""},
+                    { "entitlements.0.terminationDate", ""},
+                    { "entitlements.0.version", "0"},
+                    { "entitlements.0.userId", $"{_plasma!.UID}" },
+                },
+            _ => new(){
             { "TXN", request.TXN },
             { "entitlements.[]", "0" }
+                },
         };
-
-        var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
+        var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, resp);
         await _conn.SendPacket(packet);
     }
 
