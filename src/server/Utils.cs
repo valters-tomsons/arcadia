@@ -134,7 +134,7 @@ public static class Utils
     {
         for (var i = 0; i < entitlements.Length; i++)
         {
-            var (Group, Tag, Id) = entitlements[i];
+            var (Group, Id, Tag) = entitlements[i];
 
             response.Add($"entitlements.{i}.entitlementId", $"{Id}");
             response.Add($"entitlements.{i}.entitlementTag", Tag);
