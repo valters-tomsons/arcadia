@@ -50,12 +50,13 @@ Battlefield 1943 | Not Playable    | Only access to tutorial works. Playgroups/l
 
 ## Domain Name Reference Table
 
-Game             | FESL Domain
------------------| ------   
-Bad Company 2    | bfbc2-ps3.fesl.ea.com
-Battlefield 1943 | beach-ps3.fesl.ea.com
-Bad Company 1    | bfbc-ps3.fesl.ea.com
-Army of Two      | ao2-ps3.fesl.ea.com
-General "CDN"    | easo.ea.com
+Game             | FESL Domain | Vulnerable SSL
+---------------- | ----------- | --------------
+Bad Company 2    | bfbc2-ps3.fesl.ea.com | yes
+Battlefield 1943 | beach-ps3.fesl.ea.com | yes
+Bad Company 1    | bfbc-ps3.fesl.ea.com  | no
+Army of Two      | ao2-ps3.fesl.ea.com   | no
+The Simpsons     | simpsons-ps3.fesl.ea.com | no
+General "CDN"    | easo.ea.com | n/a
 
 Theater address is generally controlled via Fesl's Server Hello, so Arcadia always sends `theater.ps3.arcadia`. Only `Win32` game has a hardcoded theater address. 
