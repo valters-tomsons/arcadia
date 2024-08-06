@@ -7,7 +7,8 @@ public enum FeslGamePort : int
     RomeDemoPS3 = 18171,
     BeachPS3 = 18231,
     RomePC = 18390,
-    ArmyOfTwoPS3 = 18340
+    ArmyOfTwoPS3 = 18340,
+    ArmyOfTwo2PS3 = 18141
 }
 
 public enum TheaterGamePort : int
