@@ -426,7 +426,9 @@ public class FeslHandler
         {
             case "BFBC2PS3":
                 response.AddEntitlements(_plasma!.UID, new(string, long, string)[]{
-                    (groupName, 1111100001, "BFBC2:PS3:ONSLAUGHT_PDLC")
+                    (groupName, 1111100001, "BFBC2:PS3:ONSLAUGHT_PDLC"),
+                    (groupName, 1111100002, "BFBC2:PS3:CIAB"),
+                    (groupName, 1111100003, "BFBC2:PS3:VIP_PDLC")
                 });
                 break;
             case "BattlefieldBadCompany2":
