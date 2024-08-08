@@ -1,5 +1,6 @@
 using System.Globalization;
 using Arcadia.EA.Constants;
+using Arcadia.EA.Ports;
 using Arcadia.PSN;
 using Arcadia.Storage;
 using Microsoft.Extensions.Logging;
@@ -25,6 +26,7 @@ public class FeslHandler
 
     private readonly static TimeSpan PingPeriod = TimeSpan.FromSeconds(60);
     private readonly static TimeSpan MemCheckPeriod = TimeSpan.FromSeconds(120);
+    private static int? DefaultTheaterPort;
 
     private readonly Timer _pingTimer;
     private readonly Timer _memchTimer;
@@ -39,6 +41,7 @@ public class FeslHandler
 
         _pingTimer = new(async _ => await SendPing(), null, Timeout.Infinite, Timeout.Infinite);
         _memchTimer = new(async _ => await SendMemCheck(), null, Timeout.Infinite, Timeout.Infinite);
+        DefaultTheaterPort ??= settings.Value.ListenPorts.First(PortExtensions.IsTheater);
 
         _handlers = new Dictionary<string, Func<Packet, Task>>()
         {
@@ -118,7 +121,7 @@ public class FeslHandler
                     { "activityTimeoutSecs", "0" },
                     { "curTime", currentTime },
                     { "theaterIp", _settings.Value.TheaterAddress },
-                    { "theaterPort", "18126" }
+                    { "theaterPort", $"{DefaultTheaterPort}" }
                 };
 
         var helloPacket = new Packet("fsys", FeslTransmissionType.SinglePacketResponse, request.Id, serverHelloData);
