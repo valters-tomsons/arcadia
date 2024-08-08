@@ -28,3 +28,9 @@ public enum TheaterServerPort : int
 {
     RomePC = 19026
 }
+
+public static class PortExtensions
+{
+    public static bool IsFeslPort(int port) => Enum.IsDefined(typeof(FeslGamePort), port) || Enum.IsDefined(typeof(FeslServerPort), port);
+    public static bool IsTheater(int port) => Enum.IsDefined(typeof(TheaterGamePort), port) || Enum.IsDefined(typeof(TheaterServerPort), port);
+}

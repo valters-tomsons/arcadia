@@ -28,13 +28,6 @@ public class PlasmaHostedService : IHostedService
     private readonly List<TcpListener> _tcpListeners = [];
     private readonly List<UdpClient> _udpListeners = [];
 
-    private readonly static int[] _listeningPorts = [
-            (int)FeslGamePort.RomePS3,
-            (int)TheaterGamePort.RomePS3,
-            (int)FeslServerPort.RomePC,
-            (int)TheaterServerPort.RomePC
-    ];
-
     public PlasmaHostedService(ILogger<PlasmaHostedService> logger, IOptions<ArcadiaSettings> arcadiaSettings, ProtoSSL certGenerator, IServiceScopeFactory scopeFactory, SharedCache sharedCache)
     {
         _logger = logger;
@@ -46,37 +39,22 @@ public class PlasmaHostedService : IHostedService
 
     public Task StartAsync(CancellationToken processCt)
     {
-        foreach (var port in _listeningPorts)
+        if (_arcadiaSettings.ListenAddress.Length == 0)
         {
-            {
-                _logger.LogInformation("Listening on {address}:{port}", _arcadiaSettings.ListenAddress, port);
-                var listener = new TcpListener(IPAddress.Parse(_arcadiaSettings.ListenAddress), port);
-                _tcpListeners.Add(listener);
+            throw new ApplicationException("Arcadia must listen on Plasma ports!");
+        }
 
-                ThreadPool.QueueUserWorkItem(async callback =>
-                {
-                    listener.Start();
-                    while (!processCt.IsCancellationRequested)
-                    {
-                        try
-                        {
-                            var tcpClient = await listener.AcceptTcpClientAsync(processCt);
-                            _ = HandleTcpConnection(tcpClient, port);
-                        }
-                        catch (TlsNoCloseNotifyException)
-                        {
-                            _logger.LogWarning("Client terminated the connection without warning on port {port}", port);
-                        }
-                        catch (Exception e)
-                        {
-                            _logger.LogError(e, "Error accepting client on port {port}", port);
-                        }
-                    }
-                });
-            }
+        foreach (var port in _arcadiaSettings.ListenPorts.Distinct())
+        {
+            _logger.LogInformation("Initializing listener on {address}:{port}", _arcadiaSettings.ListenAddress, port);
+
+            StartTcpListenerTask(port, processCt);
+
+            var isTheater = PortExtensions.IsTheater(port);
+            if (isTheater)
             {
-                var listener = new UdpClient(port);
-                _udpListeners.Add(listener);
+                var udpListener = new UdpClient(port);
+                _udpListeners.Add(udpListener);
 
                 ThreadPool.QueueUserWorkItem(async callback =>
                 {
@@ -84,7 +62,7 @@ public class PlasmaHostedService : IHostedService
                     {
                         try
                         {
-                            var udpResult = await listener.ReceiveAsync();
+                            var udpResult = await udpListener.ReceiveAsync();
                             var request = new Packet(udpResult.Buffer);
                             if (request.Type == "ECHO")
                             {
@@ -99,7 +77,7 @@ public class PlasmaHostedService : IHostedService
                                 };
 
                                 var response = await new Packet(request.Type, TheaterTransmissionType.OkResponse, 0, data).Serialize();
-                                await listener.SendAsync(response, udpResult.RemoteEndPoint, processCt);
+                                await udpListener.SendAsync(response, udpResult.RemoteEndPoint, processCt);
                             }
                             else
                             {
@@ -118,6 +96,33 @@ public class PlasmaHostedService : IHostedService
         return Task.CompletedTask;
     }
 
+    private void StartTcpListenerTask(int port, CancellationToken processCt)
+    {
+        var listener = new TcpListener(IPAddress.Parse(_arcadiaSettings.ListenAddress), port);
+        _tcpListeners.Add(listener);
+
+        ThreadPool.QueueUserWorkItem(async callback =>
+        {
+            listener.Start();
+            while (!processCt.IsCancellationRequested)
+            {
+                try
+                {
+                    var tcpClient = await listener.AcceptTcpClientAsync(processCt);
+                    _ = HandleTcpConnection(tcpClient, port);
+                }
+                catch (TlsNoCloseNotifyException)
+                {
+                    _logger.LogWarning("Client terminated the connection without warning on port {port}", port);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, "Error accepting client on port {port}", port);
+                }
+            }
+        });
+    }
+
     private async Task HandleTcpConnection(TcpClient tcpClient, int connectionPort)
     {
         var clientEndpoint = tcpClient.Client.RemoteEndPoint?.ToString()! ?? throw new NullReferenceException("ClientEndpoint cannot be null!");
@@ -130,8 +135,8 @@ public class PlasmaHostedService : IHostedService
 
         try
         {
-            var isFesl = Enum.IsDefined(typeof(FeslGamePort), connectionPort) || Enum.IsDefined(typeof(FeslServerPort), connectionPort);
-            var isTheater = Enum.IsDefined(typeof(TheaterGamePort), connectionPort) || Enum.IsDefined(typeof(TheaterServerPort), connectionPort);
+            var isFesl = PortExtensions.IsFeslPort(connectionPort);
+            var isTheater = PortExtensions.IsTheater(connectionPort);
 
             if (isFesl)
             {

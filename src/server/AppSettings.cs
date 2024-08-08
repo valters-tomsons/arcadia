@@ -1,9 +1,12 @@
+using Arcadia.EA.Ports;
+
 namespace Arcadia;
 
 public record ArcadiaSettings
 {
     public string ListenAddress { get; init; } = System.Net.IPAddress.Loopback.ToString();
     public string TheaterAddress { get; init; } = "theater.ps3.arcadia";
+    public int[] ListenPorts { get; init; } = [(int)FeslGamePort.RomePS3, (int)TheaterGamePort.RomePS3];
 }
 
 public record FileServerSettings
