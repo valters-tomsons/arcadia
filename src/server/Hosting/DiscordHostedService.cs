@@ -1,5 +1,6 @@
 using Arcadia.Storage;
 using Discord;
+using Discord.Net;
 using Discord.WebSocket;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -50,7 +51,6 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
         await GracefulShutdown();
-
         await _client.StopAsync();
         await _client.LogoutAsync();
         await base.StopAsync(cancellationToken);
@@ -166,34 +166,41 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
             }
         }
 
-        foreach (var message in _statusMessages)
+        try
         {
-            if (_client.GetChannel(message.Channel.Id) is not IMessageChannel channel)
+            foreach (var message in _statusMessages)
             {
-                _logger.LogWarning("Skipping message in channel: {channelId}", message.Channel.Id);
-                continue;
-            }
+                if (_client.GetChannel(message.Channel.Id) is not IMessageChannel channel)
+                {
+                    _logger.LogWarning("Skipping message in channel: {channelId}", message.Channel.Id);
+                    continue;
+                }
 
-            if (infoEmbeds.Count > 0)
-            {
-                await channel.ModifyMessageAsync(message.Id, x =>
+                if (infoEmbeds.Count > 0)
                 {
-                    x.Content = "Ongoing Games:\n";
-                    x.Embeds = infoEmbeds.ToArray();
-                });
-            }
-            else
-            {
-                await channel.ModifyMessageAsync(message.Id, x =>
+                    await channel.ModifyMessageAsync(message.Id, x =>
+                    {
+                        x.Content = "Ongoing Games:\n";
+                        x.Embeds = infoEmbeds.ToArray();
+                    });
+                }
+                else
                 {
-                    x.Content = "\n";
-                    x.Embed = new EmbedBuilder()
-                            .WithTitle("Arcadia")
-                            .WithDescription("There are no ongoing games. 😞")
-                            .WithCurrentTimestamp()
-                            .Build();
-                });
+                    await channel.ModifyMessageAsync(message.Id, x =>
+                    {
+                        x.Content = "\n";
+                        x.Embed = new EmbedBuilder()
+                                .WithTitle("Arcadia")
+                                .WithDescription("There are no ongoing games. 😞")
+                                .WithCurrentTimestamp()
+                                .Build();
+                    });
+                }
             }
+        }
+        catch(HttpException e)
+        {
+            _logger.LogError(e, "Failed to update server status, reason: {message}", e.Message);
         }
     }
 
