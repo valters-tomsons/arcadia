@@ -34,10 +34,10 @@ Battlefield 1943 | Not Playable    | Only access to tutorial works. Playgroups/l
 ## Special Thanks
 
 * *[cetteup](https://github.com/cetteup)* - lot of proxy stuff, lots of knowledge of ea systems, lots of captures and for fixing my ea packet implementation! Thanks! 
-* [Aim4kill](https://github.com/Aim4kill) for the great ProtoSSL vulnerability write-up
-* *And799* for devmenu and general frostbite knowledge
-* [Battlefield Modding](https://duckduckgo.com/?t=ffab&q=battlefield+modding+discord)
-* 1UP, Dorian_N from [PSRewired](https://psrewired.com)
+* *[Aim4kill](https://github.com/Aim4kill)* for the great ProtoSSL vulnerability write-up
+* *[And799](https://www.youtube.com/@andersson799)* for devmenu and general frostbite knowledge
+* [PSRewired](https://psrewired.com): `1UP` for inclusion in DNS, `Dorian_D` for packet captures
+* [Battlefield Modding](https://duckduckgo.com/?t=ffab&q=battlefield+modding+discord) community
 
 ## Resources
 
