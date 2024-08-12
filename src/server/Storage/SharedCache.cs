@@ -92,18 +92,7 @@ public class SharedCache(ILogger<SharedCache> logger, SharedCounters counters)
 
     public GameServerListing? FindGameWithPlayer(string playerName)
     {
-        foreach (var game in _gameServers)
-        {
-            foreach (var player in game.ConnectedPlayers)
-            {
-                if (player.NAME == playerName)
-                {
-                    return game;
-                }
-            }
-        }
-
-        return null;
+        return _gameServers.FirstOrDefault(x => x.ConnectedPlayers.Any(y => y.NAME.Equals(playerName)));
     }
 
     public GameServerListing? GetGameByGid(long serverGid)
