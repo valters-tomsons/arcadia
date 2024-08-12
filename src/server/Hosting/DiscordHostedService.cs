@@ -20,6 +20,7 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
     private readonly IOptions<DiscordSettings> _config = config;
 
     private readonly List<IMessage> _statusMessages = [];
+    private readonly Dictionary<ulong, List<(long GID, IMessage Message)>> _channelsGameMessage = [];
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -63,7 +64,7 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
             await Task.Delay(1000, stoppingToken);
         }
 
-        await InitMessages();
+        await InitializeChannels();
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -79,65 +80,84 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
         }
     }
 
-    private async Task InitMessages()
+    private async Task InitializeChannels()
     {
         var channels = _config.Value.Channels;
-        var cachedIds = await GetCachedMessageIds();
+        var cachedIds = await GetCachedStatusMessageIds();
         var updateCache = false;
 
         foreach (var channelId in channels)
         {
             if (await _client.GetChannelAsync(channelId) is not IMessageChannel channel)
             {
-                _logger.LogWarning("Failed to open channel: {channelId}", channelId);
+                _logger.LogError("Failed to open channel: {channelId}", channelId);
                 continue;
             }
 
+            IMessage statusMsg;
             if (cachedIds.TryGetValue(channel.Id, out var messageId))
             {
-                var msg = await channel.GetMessageAsync(messageId);
-                _statusMessages.Add(msg);
+                statusMsg = await channel.GetMessageAsync(messageId);
+                _logger.LogInformation("Existing status found, msgId:{messageId}, chId:{channelId}", statusMsg.Id, channelId);
             }
             else
             {
                 updateCache = true;
-                var msg = await channel.SendMessageAsync("Backend starting...");
-                _logger.LogInformation("New status created: {messageId}", msg.Id);
-                _statusMessages.Add(msg);
-                cachedIds.Add(channelId, msg.Id);
+                statusMsg = await channel.SendMessageAsync("Backend starting...");
+                cachedIds.Add(channelId, statusMsg.Id);
+                _logger.LogInformation("New status created, msgId:{messageId}, chId:{channelId}", statusMsg.Id, channelId);
             }
+
+            await foreach (var batch in channel.GetMessagesAsync())
+            {
+                foreach(var message in batch)
+                {
+                    if (message.Id != statusMsg.Id) await message.DeleteAsync();
+                }
+            }
+
+            _statusMessages.Add(statusMsg);
         }
 
         if (updateCache)
         {
-            await CacheMessageIds(cachedIds);
+            await CacheStatusMessageIds(cachedIds);
         }
     }
 
     private async Task GracefulShutdown()
     {
-        foreach(var message in _statusMessages)
+        foreach (var message in _statusMessages)
         {
-            if (_client.GetChannel(message.Channel.Id) is IMessageChannel channel)
+            if (_client.GetChannel(message.Channel.Id) is not IMessageChannel channel)
             {
-                await channel.ModifyMessageAsync(message.Id, x =>
-                {
-                    x.Content = "Server offline!";
-                    x.Embeds = null;
-                });
+                _logger.LogWarning("Failed to open channel");
+                continue;
+            }
+
+            await channel.ModifyMessageAsync(message.Id, x =>
+            {
+                x.Content = "Server offline!";
+                x.Embeds = null;
+            });
+
+            var gameMessages = _channelsGameMessage.GetValueOrDefault(channel.Id);
+            if (gameMessages is null) continue;
+            foreach (var (_, gameMessage) in gameMessages)
+            {
+                await gameMessage.DeleteAsync();
             }
         }
-
     }
 
     private async Task UpdateRunningStatus()
     {
         var hosts = _sharedCache.GetGameServers();
-        var infoEmbeds = new List<Embed>(hosts.Length);
+        var gidEmbeds = new List<(long GID, Embed Embed)>(hosts.Length);
 
         foreach (var server in hosts)
         {
-            if (server.TheaterConnection?.NetworkStream?.CanWrite != true || server.TheaterConnection?.NetworkStream?.CanRead != true) continue;
+            if (!server.CanJoin) continue;
             try
             {
                 var serverName = $"**{server.NAME}**";
@@ -158,35 +178,41 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
                     .AddField("Gamemode", gamemode)
                     .AddField("Online", online);
                 
-                infoEmbeds.Add(eb.Build());
+                gidEmbeds.Add((server.GID, eb.Build()));
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "Failed to prepare server status!");
+                _logger.LogError(e, "Failed to build server status embedding, game skipped!");
             }
         }
 
-        try
+        foreach (var status in _statusMessages)
         {
-            foreach (var message in _statusMessages)
+            if (_client.GetChannel(status.Channel.Id) is not IMessageChannel channel)
             {
-                if (_client.GetChannel(message.Channel.Id) is not IMessageChannel channel)
-                {
-                    _logger.LogWarning("Skipping message in channel: {channelId}", message.Channel.Id);
-                    continue;
-                }
+                _logger.LogError("Skipping message in channel: {channelId}", status.Channel.Id);
+                continue;
+            }
 
-                if (infoEmbeds.Count > 0)
+            try
+            {
+
+                if (gidEmbeds.Count > 0)
                 {
-                    await channel.ModifyMessageAsync(message.Id, x =>
+                    var gamePlural = gidEmbeds.Count > 1 ? "games! 🤩" : "game! 🫡";
+                    await channel.ModifyMessageAsync(status.Id, x =>
                     {
-                        x.Content = "Ongoing Games:\n";
-                        x.Embeds = infoEmbeds.ToArray();
+                        x.Content = "\n";
+                        x.Embed = new EmbedBuilder()
+                                .WithTitle("Arcadia")
+                                .WithDescription($"**{gidEmbeds.Count}** ongoing {gamePlural}")
+                                .WithCurrentTimestamp()
+                                .Build();
                     });
                 }
                 else
                 {
-                    await channel.ModifyMessageAsync(message.Id, x =>
+                    await channel.ModifyMessageAsync(status.Id, x =>
                     {
                         x.Content = "\n";
                         x.Embed = new EmbedBuilder()
@@ -197,14 +223,68 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
                     });
                 }
             }
-        }
-        catch(HttpException e)
-        {
-            _logger.LogError(e, "Failed to update server status, reason: {message}", e.Message);
+            catch (HttpException e)
+            {
+                _logger.LogError(e, "Failed to update channel status message, reason: {message}", e.Message);
+            }
+
+            var channelMessages = _channelsGameMessage.GetValueOrDefault(channel.Id);
+            if (channelMessages is null)
+            {
+                channelMessages = new(gidEmbeds.Count);
+                _channelsGameMessage.Add(channel.Id, channelMessages);
+            }
+            else
+            {
+                var gidsToRemove = new List<long>(3);
+                foreach (var postedGame in channelMessages)
+                {
+                    try
+                    {
+                        if (gidEmbeds.Any(x => x.GID == postedGame.GID)) continue;
+                        await channel.DeleteMessageAsync(postedGame.Message.Id);
+                        gidsToRemove.Add(postedGame.GID);
+                        _logger.LogDebug("Server listing removed, GID:{GID}", postedGame.GID);
+                    }
+                    catch (HttpException e)
+                    {
+                        _logger.LogError(e, "Failed to delete game server message, reason: {message}", e.Message);
+                    }
+                }
+
+                channelMessages.RemoveAll(x => gidsToRemove.Contains(x.GID));
+            }
+
+            try
+            {
+                foreach (var game in gidEmbeds)
+                {
+                    var channelGameMsg = channelMessages.FirstOrDefault(x => x.GID == game.GID);
+                    if (channelGameMsg == default)
+                    {
+                        var message = await channel.SendMessageAsync("\n", embed: game.Embed);
+                        channelMessages.Add((game.GID, message));
+                        _logger.LogDebug("Server listing added, GID:{GID}", game.GID);
+                    }
+                    else
+                    {
+                        await channel.ModifyMessageAsync(channelGameMsg.Message.Id, x =>
+                        {
+                            x.Content = "\n";
+                            x.Embed = game.Embed;
+                        });
+                        _logger.LogDebug("Server listing updated, GID:{GID}", game.GID);
+                    }
+                }
+            }
+            catch (HttpException e)
+            {
+                _logger.LogError(e, "Failed to update game server messages, reason: {message}", e.Message);
+            }
         }
     }
 
-    private async Task<Dictionary<ulong, ulong>> GetCachedMessageIds()
+    private async Task<Dictionary<ulong, ulong>> GetCachedStatusMessageIds()
     {
         var dict = new Dictionary<ulong, ulong>();
 
@@ -227,7 +307,7 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
         return dict;
     }
 
-    private static Task CacheMessageIds(IDictionary<ulong, ulong> channelMessages)
+    private static Task CacheStatusMessageIds(IDictionary<ulong, ulong> channelMessages)
     {
         return File.WriteAllLinesAsync(messageIdFile, channelMessages.Select(x => $"{x.Key}:{x.Value}"));
     }
