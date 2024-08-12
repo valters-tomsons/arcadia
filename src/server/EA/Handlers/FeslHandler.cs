@@ -108,7 +108,7 @@ public class FeslHandler
     {
         clientString = request["clientString"];
         subDomain = clientString.Split('-').First().ToUpperInvariant();
-        partitionId = $"{request["sku"]}/{subDomain}";
+        partitionId = $"/{request["sku"]}/{subDomain}";
 
         var currentTime = DateTime.UtcNow.ToString("MMM-dd-yyyy HH:mm:ss 'UTC'", CultureInfo.InvariantCulture);
         var serverHelloData = new Dictionary<string, string>
