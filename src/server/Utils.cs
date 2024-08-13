@@ -115,21 +115,6 @@ public static class Utils
         return -1;
     }
 
-    public static void RemoveItemFromBag<T>(this ConcurrentBag<T> bag, T item)
-    {
-        while (!bag.IsEmpty)
-        {
-            bag.TryTake(out T? result);
-            if (result is null) continue;
-            if (result.Equals(item))
-            {
-                break;
-            }
-
-            bag.Add(result);
-        }
-    }
-
     public static void AddEntitlements(this Dictionary<string, string> response, long userId, (string Group, long Id, string Tag)[] entitlements)
     {
         for (var i = 0; i < entitlements.Length; i++)

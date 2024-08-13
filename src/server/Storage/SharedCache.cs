@@ -9,8 +9,8 @@ public class SharedCache(ILogger<SharedCache> logger, SharedCounters counters)
     private readonly ILogger<SharedCache> _logger = logger;
     private readonly SharedCounters _counters = counters;
 
-    private readonly ConcurrentBag<GameServerListing> _gameServers = [];
-    private readonly ConcurrentBag<PlasmaConnection> _connections = [];
+    private readonly List<GameServerListing> _gameServers = [];
+    private readonly List<PlasmaConnection> _connections = [];
 
     public PlasmaConnection CreatePlasmaConnection(IEAConnection fesl, string onlineId, string clientString)
     {
@@ -44,17 +44,15 @@ public class SharedCache(ILogger<SharedCache> logger, SharedCounters counters)
         var hostedGames = _gameServers.Where(x => x.UID == plasma.UID);
         foreach (var game in hostedGames)
         {
-            _gameServers.RemoveItemFromBag(game);
+            _gameServers.Remove(game);
         }
 
-        _connections.RemoveItemFromBag(plasma);
+        _connections.Remove(plasma);
     }
 
     public PlasmaConnection[] GetConnectedClients()
     {
-#pragma warning disable IDE0305 // Simplify collection initialization
-        return _connections.ToArray();
-#pragma warning restore IDE0305 // Simplify collection initialization
+        return [.. _connections];
     }
 
     private readonly string[] blacklist = [ "TID", "PID" ];
@@ -108,9 +106,7 @@ public class SharedCache(ILogger<SharedCache> logger, SharedCounters counters)
 
     public GameServerListing[] GetGameServers()
     {
-#pragma warning disable IDE0305 // Simplify collection initialization
-        return _gameServers.ToArray();
-#pragma warning restore IDE0305 // Simplify collection initialization
+        return [.. _gameServers];
     }
 
     public void AddGame(GameServerListing game)
@@ -120,7 +116,7 @@ public class SharedCache(ILogger<SharedCache> logger, SharedCounters counters)
 
     public void RemoveGame(GameServerListing game)
     {
-        _gameServers.RemoveItemFromBag(game);
+        _gameServers.Remove(game);
     }
 }
 
@@ -151,7 +147,7 @@ public class GameServerListing
     public string NAME { get; init; } = string.Empty;
 
     public ConcurrentQueue<PlasmaConnection> JoiningPlayers { get; init; } = [];
-    public ConcurrentBag<PlasmaConnection> ConnectedPlayers { get; init; } = [];
+    public List<PlasmaConnection> ConnectedPlayers { get; init; } = [];
 
     public bool CanJoin { get; set; }
 }

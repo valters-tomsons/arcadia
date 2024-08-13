@@ -580,7 +580,7 @@ public class TheaterHandler
         var packet = new Packet("PLVT", TheaterTransmissionType.OkResponse, 0, response);
         await _conn.SendPacket(packet);
 
-        game.ConnectedPlayers.RemoveItemFromBag(player);
+        game.ConnectedPlayers.Remove(player);
     }
 
     private Task HandlePING(Packet _)
