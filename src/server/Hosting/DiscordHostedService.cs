@@ -94,16 +94,21 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
                 continue;
             }
 
-            IMessage statusMsg;
-            if (cachedIds.TryGetValue(channel.Id, out var messageId))
+            var cacheHit = cachedIds.TryGetValue(channel.Id, out var messageId);
+            var statusMsg = cacheHit ? await channel.GetMessageAsync(messageId) : await channel.SendMessageAsync("Initializing status...");
+            if (statusMsg is null)
             {
-                statusMsg = await channel.GetMessageAsync(messageId);
-                _logger.LogInformation("Existing status found, msgId:{messageId}, chId:{channelId}", statusMsg.Id, channelId);
+                if (cacheHit)
+                {
+                    _logger.LogError("Cached message no longer exists, must manually remove cache line {channelId}:{messageId}", channelId, messageId);
+                }
+
+                _logger.LogError("Failed to acquire status message in channel:{channelId}. Messages will not be posted here.", channelId);
+                continue;
             }
-            else
+            else if (!cacheHit)
             {
                 updateCache = true;
-                statusMsg = await channel.SendMessageAsync("Backend starting...");
                 cachedIds.Add(channelId, statusMsg.Id);
                 _logger.LogInformation("New status created, msgId:{messageId}, chId:{channelId}", statusMsg.Id, channelId);
             }
