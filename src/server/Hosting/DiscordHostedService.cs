@@ -150,11 +150,13 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
         }
     }
 
+    // TODO
     private async Task UpdateRunningStatus()
     {
         var hosts = _sharedCache.GetGameServers();
         var gidEmbeds = new List<(long GID, Embed Embed)>(hosts.Length);
 
+        // build game server status embeddings
         foreach (var server in hosts)
         {
             if (!server.CanJoin) continue;
@@ -194,9 +196,9 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
                 continue;
             }
 
+            // update arcadia status message
             try
             {
-
                 if (gidEmbeds.Count > 0)
                 {
                     var gamePlural = gidEmbeds.Count > 1 ? "games! 🤩" : "game! 🫡";
@@ -228,23 +230,23 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
                 _logger.LogError(e, "Failed to update channel status message, reason: {message}", e.Message);
             }
 
-            var channelMessages = _channelsGameMessage.GetValueOrDefault(channel.Id);
-            if (channelMessages is null)
+            var gameMessagesInChannel = _channelsGameMessage.GetValueOrDefault(channel.Id);
+            if (gameMessagesInChannel is null)
             {
-                channelMessages = new(gidEmbeds.Count);
-                _channelsGameMessage.Add(channel.Id, channelMessages);
+                gameMessagesInChannel = new(gidEmbeds.Count);
+                _channelsGameMessage.Add(channel.Id, gameMessagesInChannel);
             }
             else
             {
                 var gidsToRemove = new List<long>(3);
-                foreach (var postedGame in channelMessages)
+                foreach (var postedGame in gameMessagesInChannel)
                 {
                     try
                     {
                         if (gidEmbeds.Any(x => x.GID == postedGame.GID)) continue;
-                        await channel.DeleteMessageAsync(postedGame.Message.Id);
+                        _logger.LogDebug("Removing game listing, GID:{GID}", postedGame.GID);
                         gidsToRemove.Add(postedGame.GID);
-                        _logger.LogDebug("Server listing removed, GID:{GID}", postedGame.GID);
+                        await postedGame.Message.DeleteAsync();
                     }
                     catch (HttpException e)
                     {
@@ -252,18 +254,18 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
                     }
                 }
 
-                channelMessages.RemoveAll(x => gidsToRemove.Contains(x.GID));
+                gameMessagesInChannel.RemoveAll(x => gidsToRemove.Contains(x.GID));
             }
 
             try
             {
                 foreach (var game in gidEmbeds)
                 {
-                    var channelGameMsg = channelMessages.FirstOrDefault(x => x.GID == game.GID);
+                    var channelGameMsg = gameMessagesInChannel.FirstOrDefault(x => x.GID == game.GID);
                     if (channelGameMsg == default)
                     {
                         var message = await channel.SendMessageAsync("\n", embed: game.Embed);
-                        channelMessages.Add((game.GID, message));
+                        gameMessagesInChannel.Add((game.GID, message));
                         _logger.LogDebug("Server listing added, GID:{GID}", game.GID);
                     }
                     else
