@@ -84,7 +84,7 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
     {
         var channels = _config.Value.Channels;
         var cachedIds = await GetCachedStatusMessageIds();
-        var updateCache = false;
+        var flushCache = false;
 
         foreach (var channelId in channels)
         {
@@ -100,7 +100,7 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
             {
                 if (cacheHit)
                 {
-                    _logger.LogError("Cached message no longer exists, must manually remove cache line {channelId}:{messageId}", channelId, messageId);
+                    _logger.LogWarning("Cached message no longer exists, must manually remove cache line {channelId}:{messageId}", channelId, messageId);
                 }
 
                 _logger.LogError("Failed to acquire status message in channel:{channelId}. Messages will not be posted here.", channelId);
@@ -108,7 +108,7 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
             }
             else if (!cacheHit)
             {
-                updateCache = true;
+                flushCache = true;
                 cachedIds.Add(channelId, statusMsg.Id);
                 _logger.LogInformation("New status created, msgId:{messageId}, chId:{channelId}", statusMsg.Id, channelId);
             }
@@ -124,7 +124,7 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
             _statusMessages.Add(statusMsg);
         }
 
-        if (updateCache)
+        if (flushCache)
         {
             await CacheStatusMessageIds(cachedIds);
         }
@@ -293,11 +293,10 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
 
     private async Task<Dictionary<ulong, ulong>> GetCachedStatusMessageIds()
     {
-        var dict = new Dictionary<ulong, ulong>();
-
         try
         {
             var text = await File.ReadAllLinesAsync(messageIdFile);
+            var dict = new Dictionary<ulong, ulong>(text.Length);
             foreach (var line in text)
             {
                 var parts = line.Split(':');
@@ -309,9 +308,8 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
         catch (Exception e)
         {
             _logger.LogError(e, "Failed to read messageId cache file.");
+            return [];
         }
-
-        return dict;
     }
 
     private static Task CacheStatusMessageIds(IDictionary<ulong, ulong> channelMessages)
