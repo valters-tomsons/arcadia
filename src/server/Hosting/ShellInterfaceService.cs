@@ -13,7 +13,7 @@ public class ShellInterfaceService(ILogger<ShellInterfaceService> logger, Shared
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using var inputStream = Console.OpenStandardInput();
-        _logger.LogInformation("Shell interface open");
+        _logger.LogWarning("Shell interface open!");
         while (!stoppingToken.IsCancellationRequested)
         {
             var command = await ReadInputLine();

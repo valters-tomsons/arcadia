@@ -50,9 +50,14 @@ var host = Host.CreateDefaultBuilder()
 
         services
             .AddHostedService<PlasmaHostedService>()
-            .AddHostedService<ShellInterfaceService>()
             .AddHostedService<StaticFileHostedService>()
             .AddHostedService<DiscordHostedService>();
+
+        var debugSettings = config.GetSection(nameof(DebugSettings)).Get<DebugSettings>()!;
+        if (debugSettings.EnableDebugConsole)
+        {
+            services.AddHostedService<ShellInterfaceService>();
+        }
 
         services.AddLogging(log =>
         {
@@ -66,7 +71,6 @@ var host = Host.CreateDefaultBuilder()
 
             services.Configure<LoggerFilterOptions>(x => x.AddFilter(nameof(Microsoft), LogLevel.Warning));
 
-            var debugSettings = config.GetSection(nameof(DebugSettings)).Get<DebugSettings>()!;
             if (debugSettings.EnableFileLogging)
             {
                 services.Configure<LoggerFilterOptions>(x =>
