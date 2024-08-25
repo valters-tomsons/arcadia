@@ -193,6 +193,11 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
             }
         }
 
+        const string statusFormat = "**{0}** ongoing game{1}";
+        var gameCount = gidEmbeds.Count;
+        var statusEnd = gameCount == 0 ? "s. 😞" : gameCount > 1 ? "s! 🔥" : "! ⭐";
+        var statusMsg = string.Format(statusFormat, gameCount, statusEnd);
+
         foreach (var status in _statusMessages)
         {
             if (_client.GetChannel(status.Channel.Id) is not IMessageChannel channel)
@@ -201,34 +206,17 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
                 continue;
             }
 
-            // update arcadia status message
             try
             {
-                if (gidEmbeds.Count > 0)
+                await channel.ModifyMessageAsync(status.Id, x =>
                 {
-                    var gamePlural = gidEmbeds.Count > 1 ? "games! 🤩" : "game! 🫡";
-                    await channel.ModifyMessageAsync(status.Id, x =>
-                    {
-                        x.Content = "\n";
-                        x.Embed = new EmbedBuilder()
-                                .WithTitle("Arcadia")
-                                .WithDescription($"**{gidEmbeds.Count}** ongoing {gamePlural}")
-                                .WithCurrentTimestamp()
-                                .Build();
-                    });
-                }
-                else
-                {
-                    await channel.ModifyMessageAsync(status.Id, x =>
-                    {
-                        x.Content = "\n";
-                        x.Embed = new EmbedBuilder()
-                                .WithTitle("Arcadia")
-                                .WithDescription("There are no ongoing games. 😞")
-                                .WithCurrentTimestamp()
-                                .Build();
-                    });
-                }
+                    x.Content = "\n";
+                    x.Embed = new EmbedBuilder()
+                            .WithTitle("Arcadia")
+                            .WithDescription(statusMsg)
+                            .WithCurrentTimestamp()
+                            .Build();
+                });
             }
             catch (HttpException e)
             {
