@@ -19,7 +19,7 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
     private readonly IOptions<DiscordSettings> _config = config;
 
     private readonly List<(IMessageChannel Channel, ulong StatusId)> _channelStatus = [];
-    private readonly Dictionary<ulong, List<(long GID, IMessage Message)>> _channelsGameMessage = [];
+    private readonly Dictionary<ulong, List<(long GID, ulong MessageId)>> _channelsGameMessage = [];
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -144,9 +144,9 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
                 var gameMessages = _channelsGameMessage.GetValueOrDefault(channel.Id);
                 if (gameMessages is null) continue;
 
-                foreach (var (_, gameMessage) in gameMessages)
+                foreach (var (_, gameMessageId) in gameMessages)
                 {
-                    await gameMessage.DeleteAsync();
+                    await channel.DeleteMessageAsync(gameMessageId);
                 }
             }
             catch (Exception e)
@@ -236,8 +236,9 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
                     {
                         if (gidEmbeds.Any(x => x.GID == postedGame.GID)) continue;
                         _logger.LogDebug("Removing game listing, GID:{GID}", postedGame.GID);
+
                         gidsToRemove.Add(postedGame.GID);
-                        await postedGame.Message.DeleteAsync();
+                        await channel.DeleteMessageAsync(postedGame.MessageId);
                     }
                     catch (HttpException e)
                     {
@@ -252,17 +253,16 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
             {
                 foreach (var game in gidEmbeds)
                 {
-                    var channelGameMsg = gameMessagesInChannel.FirstOrDefault(x => x.GID == game.GID);
-                    if (channelGameMsg == default)
+                    var gMessage = gameMessagesInChannel.FirstOrDefault(x => x.GID == game.GID);
+                    if (gMessage == default)
                     {
                         var gameMessage = await channel.SendMessageAsync("\n", embed: game.Embed);
-                        gameMessagesInChannel.Add((game.GID, gameMessage));
+                        gameMessagesInChannel.Add((game.GID, gameMessage.Id));
                         _logger.LogDebug("Server listing added, GID:{GID}", game.GID);
                     }
                     else
                     {
-
-                        await channel.ModifyMessageAsync(channelGameMsg.Message.Id, x =>
+                        await channel.ModifyMessageAsync(gMessage.MessageId, x =>
                         {
                             x.Content = "\n";
                             x.Embed = game.Embed;
