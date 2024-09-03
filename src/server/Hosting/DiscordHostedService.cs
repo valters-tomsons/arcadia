@@ -159,16 +159,101 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
         _channelsGameMessage.Clear();
     }
 
-    // TODO
     private async Task UpdateRunningStatus()
     {
-        var hosts = _sharedCache.GetGameServers();
-        var gidEmbeds = new List<(long GID, Embed Embed)>(hosts.Length);
+        var content = BuildMessageContent();
 
-        // build game server status embeddings
-        foreach (var server in hosts)
+        foreach (var (channel, statusId) in _channelStatus)
         {
-            if (!server.CanJoin) continue;
+            try
+            {
+                await channel.ModifyMessageAsync(statusId, x =>
+                {
+                    x.Content = "\n";
+                    x.Embed = new EmbedBuilder()
+                            .WithTitle("Arcadia")
+                            .WithDescription(content.StatusMessage)
+                            .WithCurrentTimestamp()
+                            .Build();
+                });
+            }
+            catch (HttpException e)
+            {
+                _logger.LogError(e, "Failed to update channel status message, reason: {message}", e.Message);
+            }
+
+            var gameMessagesInChannel = _channelsGameMessage.GetValueOrDefault(channel.Id);
+            if (gameMessagesInChannel is null)
+            {
+                gameMessagesInChannel = new(content.Games.Length);
+                _channelsGameMessage.Add(channel.Id, gameMessagesInChannel);
+            }
+            else
+            {
+                var gidsToRemove = new List<long>(3);
+                foreach (var postedGame in gameMessagesInChannel)
+                {
+                    try
+                    {
+                        if (content.Games.Any(x => x.GID == postedGame.GID)) continue;
+                        _logger.LogDebug("Removing game listing, GID:{GID}", postedGame.GID);
+
+                        gidsToRemove.Add(postedGame.GID);
+                        await channel.DeleteMessageAsync(postedGame.MessageId);
+                    }
+                    catch (HttpException e)
+                    {
+                        _logger.LogError(e, "Failed to delete game server message, reason: {message}", e.Message);
+                    }
+                }
+
+                gameMessagesInChannel.RemoveAll(x => gidsToRemove.Contains(x.GID));
+            }
+
+            try
+            {
+                for (var i = 0; i < content.Games.Length; i++)
+                {
+                    var game = content.Games[i];
+                    var postedMsg = gameMessagesInChannel.FirstOrDefault(x => game.GID == x.GID);
+                    if (postedMsg == default)
+                    {
+                        var gameMessage = await channel.SendMessageAsync("\n", embed: game.Embed);
+                        gameMessagesInChannel.Add((game.GID, gameMessage.Id));
+                        _logger.LogDebug("Server listing added, GID:{GID}", game.GID);
+                    }
+                    else
+                    {
+                        await channel.ModifyMessageAsync(postedMsg.MessageId, x =>
+                        {
+                            x.Content = "\n";
+                            x.Embed = game.Embed;
+                        });
+
+                        _logger.LogDebug("Server listing updated, GID:{GID}", game.GID);
+                    }
+                }
+            }
+            catch (HttpException e)
+            {
+                _logger.LogError(e, "Failed to update game server messages, reason: {message}", e.Message);
+            }
+        }
+    }
+
+    private (string StatusMessage, (long GID, Embed Embed)[] Games) BuildMessageContent()
+    {
+        var hosts = _sharedCache.GetGameServers();
+        var gidEmbeds = new (long GID, Embed Embed)[hosts.Length];
+        for (var i = 0; i < hosts.Length; i++)
+        {
+            var server = hosts[i];
+            if (!server.CanJoin)
+            {
+                gidEmbeds[i].GID = 0;
+                continue;
+            }
+
             try
             {
                 var serverName = $"**{server.NAME}**";
@@ -188,8 +273,8 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
                     .AddField("Difficulty", difficulty)
                     .AddField("Gamemode", gamemode)
                     .AddField("Online", online);
-                
-                gidEmbeds.Add((server.GID, eb.Build()));
+
+                gidEmbeds[i] = (server.GID, eb.Build());
             }
             catch (Exception e)
             {
@@ -197,86 +282,14 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
             }
         }
 
+        var embeds = gidEmbeds.Where(x => x.GID != 0).ToArray();
+
         const string statusFormat = "**{0}** ongoing game{1}";
-        var gameCount = gidEmbeds.Count;
+        var gameCount = embeds.Length;
         var statusEnd = gameCount == 0 ? "s. 😞" : gameCount > 1 ? "s! 🔥" : "! ⭐";
         var statusMsg = string.Format(statusFormat, gameCount, statusEnd);
 
-        foreach (var (channel, statusId) in _channelStatus)
-        {
-            try
-            {
-                await channel.ModifyMessageAsync(statusId, x =>
-                {
-                    x.Content = "\n";
-                    x.Embed = new EmbedBuilder()
-                            .WithTitle("Arcadia")
-                            .WithDescription(statusMsg)
-                            .WithCurrentTimestamp()
-                            .Build();
-                });
-            }
-            catch (HttpException e)
-            {
-                _logger.LogError(e, "Failed to update channel status message, reason: {message}", e.Message);
-            }
-
-            var gameMessagesInChannel = _channelsGameMessage.GetValueOrDefault(channel.Id);
-            if (gameMessagesInChannel is null)
-            {
-                gameMessagesInChannel = new(gidEmbeds.Count);
-                _channelsGameMessage.Add(channel.Id, gameMessagesInChannel);
-            }
-            else
-            {
-                var gidsToRemove = new List<long>(3);
-                foreach (var postedGame in gameMessagesInChannel)
-                {
-                    try
-                    {
-                        if (gidEmbeds.Any(x => x.GID == postedGame.GID)) continue;
-                        _logger.LogDebug("Removing game listing, GID:{GID}", postedGame.GID);
-
-                        gidsToRemove.Add(postedGame.GID);
-                        await channel.DeleteMessageAsync(postedGame.MessageId);
-                    }
-                    catch (HttpException e)
-                    {
-                        _logger.LogError(e, "Failed to delete game server message, reason: {message}", e.Message);
-                    }
-                }
-
-                gameMessagesInChannel.RemoveAll(x => gidsToRemove.Contains(x.GID));
-            }
-
-            try
-            {
-                foreach (var game in gidEmbeds)
-                {
-                    var gMessage = gameMessagesInChannel.FirstOrDefault(x => x.GID == game.GID);
-                    if (gMessage == default)
-                    {
-                        var gameMessage = await channel.SendMessageAsync("\n", embed: game.Embed);
-                        gameMessagesInChannel.Add((game.GID, gameMessage.Id));
-                        _logger.LogDebug("Server listing added, GID:{GID}", game.GID);
-                    }
-                    else
-                    {
-                        await channel.ModifyMessageAsync(gMessage.MessageId, x =>
-                        {
-                            x.Content = "\n";
-                            x.Embed = game.Embed;
-                        });
-
-                        _logger.LogDebug("Server listing updated, GID:{GID}", game.GID);
-                    }
-                }
-            }
-            catch (HttpException e)
-            {
-                _logger.LogError(e, "Failed to update game server messages, reason: {message}", e.Message);
-            }
-        }
+        return (statusMsg, embeds);
     }
 
     private async Task<Dictionary<ulong, ulong>> GetCachedStatusMessageIds()
