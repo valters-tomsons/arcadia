@@ -55,10 +55,14 @@ Game             | FESL Domain | Vulnerable SSL
 Bad Company 2    | bfbc2-ps3.fesl.ea.com    | yes
 Battlefield 1943 | beach-ps3.fesl.ea.com    | yes
 Army of Two 2010 | ao3-ps3.fesl.ea.com      | yes
+NFS Shift        | nfsps2-ps3.fesl.ea.com   | yes
 Bad Company 1    | bfbc-ps3.fesl.ea.com     | no
 Army of Two 2008 | ao2-ps3.fesl.ea.com      | no
 The Simpsons     | simpsons-ps3.fesl.ea.com | no
 MoH Airborne     | mohair-ps3.fesl.ea.com   | no
+NFS ProStreet    | nfsps-ps3.fesl.ea.com    | no
+NFS Carbon       | nfs-ps3.fesl.ea.com      | no
+NFS Undercover   | nfsmw2-ps3.fesl.ea.com   | no
 General "CDN"    | easo.ea.com              | `n/a`
 
 Theater address is generally controlled via Fesl's Server Hello, so Arcadia always sends `theater.ps3.arcadia`. Only `Win32` game has a hardcoded theater address. 
