@@ -131,7 +131,7 @@ public class PlasmaHostedService : IHostedService
         using var scope = _scopeFactory.CreateAsyncScope();
 
         var networkStream = tcpClient.GetStream();
-        PlasmaConnection? plasma = null;
+        PlasmaSession? plasma = null;
 
         try
         {

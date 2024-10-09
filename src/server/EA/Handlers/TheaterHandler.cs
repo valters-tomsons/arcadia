@@ -15,7 +15,7 @@ public class TheaterHandler
 
     private readonly Dictionary<string, Func<Packet, Task>> _handlers;
 
-    private PlasmaConnection? _plasma;
+    private PlasmaSession? _plasma;
 
     public TheaterHandler(IEAConnection conn, ILogger<TheaterHandler> logger, SharedCounters sharedCounters, SharedCache sharedCache)
     {
@@ -45,7 +45,7 @@ public class TheaterHandler
         };
     }
 
-    public async Task<PlasmaConnection> HandleClientConnection(NetworkStream network, string clientEndpoint, string serverEndpoint)
+    public async Task<PlasmaSession> HandleClientConnection(NetworkStream network, string clientEndpoint, string serverEndpoint)
     {
         _conn.InitializeInsecure(network, clientEndpoint, serverEndpoint);
         await foreach (var packet in _conn.StartConnection(_logger))
@@ -211,7 +211,7 @@ public class TheaterHandler
         return true;
     }
 
-    private static async Task SendEGRQ_ToGameHost(Packet request, PlasmaConnection session, GameServerListing server)
+    private static async Task SendEGRQ_ToGameHost(Packet request, PlasmaSession session, GameServerListing server)
     {
         var gameId = server.GID;
         var response = new Dictionary<string, string>

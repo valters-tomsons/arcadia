@@ -19,7 +19,7 @@ public class FeslHandler
     private readonly SharedCache _sharedCache;
     private readonly IEAConnection _conn;
 
-    private PlasmaConnection? _plasma;
+    private PlasmaSession? _plasma;
     private string clientString = string.Empty;
     private string partitionId = string.Empty;
     private string subDomain = string.Empty;
@@ -73,7 +73,7 @@ public class FeslHandler
         };
     }
 
-    public async Task<PlasmaConnection> HandleClientConnection(TlsServerProtocol tlsProtocol, string clientEndpoint, string serverEndpoint)
+    public async Task<PlasmaSession> HandleClientConnection(TlsServerProtocol tlsProtocol, string clientEndpoint, string serverEndpoint)
     {
         _conn.InitializeSecure(tlsProtocol, clientEndpoint, serverEndpoint);
         await foreach (var packet in _conn.StartConnection(_logger))

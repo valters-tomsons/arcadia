@@ -10,11 +10,11 @@ public class SharedCache(ILogger<SharedCache> logger, SharedCounters counters)
     private readonly SharedCounters _counters = counters;
 
     private readonly List<GameServerListing> _gameServers = [];
-    private readonly List<PlasmaConnection> _connections = [];
+    private readonly List<PlasmaSession> _connections = [];
 
-    public PlasmaConnection CreatePlasmaConnection(IEAConnection fesl, string onlineId, string clientString)
+    public PlasmaSession CreatePlasmaConnection(IEAConnection fesl, string onlineId, string clientString)
     {
-        PlasmaConnection result = new()
+        PlasmaSession result = new()
         {
             FeslConnection = fesl,
             UID = _counters.GetNextUserId(),
@@ -27,19 +27,19 @@ public class SharedCache(ILogger<SharedCache> logger, SharedCounters counters)
         return result;
     }
 
-    public PlasmaConnection AddTheaterConnection(IEAConnection _conn, string lkey)
+    public PlasmaSession AddTheaterConnection(IEAConnection _conn, string lkey)
     {
         var plasma = _connections.SingleOrDefault(x => x.LKEY == lkey) ?? throw new Exception();
         plasma.TheaterConnection = _conn;
         return plasma;
     }
 
-    public PlasmaConnection? FindPlayerByName(string playerName)
+    public PlasmaSession? FindPlayerByName(string playerName)
     {
         return _connections.SingleOrDefault(x => x.NAME == playerName);
     }
 
-    public void RemoveConnection(PlasmaConnection plasma)
+    public void RemoveConnection(PlasmaSession plasma)
     {
         var hostedGames = _gameServers.Where(x => x.UID == plasma.UID);
         foreach (var game in hostedGames)
@@ -50,7 +50,7 @@ public class SharedCache(ILogger<SharedCache> logger, SharedCounters counters)
         _connections.Remove(plasma);
     }
 
-    public PlasmaConnection[] GetConnectedClients()
+    public PlasmaSession[] GetConnectedClients()
     {
         return [.. _connections];
     }
@@ -120,7 +120,7 @@ public class SharedCache(ILogger<SharedCache> logger, SharedCounters counters)
     }
 }
 
-public class PlasmaConnection
+public class PlasmaSession
 {
     public IEAConnection? FeslConnection { get; set; }
     public IEAConnection? TheaterConnection { get; set; }
@@ -146,8 +146,8 @@ public class GameServerListing
     public string EKEY { get; init; } = string.Empty;
     public string NAME { get; init; } = string.Empty;
 
-    public ConcurrentQueue<PlasmaConnection> JoiningPlayers { get; init; } = [];
-    public List<PlasmaConnection> ConnectedPlayers { get; init; } = [];
+    public ConcurrentQueue<PlasmaSession> JoiningPlayers { get; init; } = [];
+    public List<PlasmaSession> ConnectedPlayers { get; init; } = [];
 
     public bool CanJoin { get; set; }
 }
