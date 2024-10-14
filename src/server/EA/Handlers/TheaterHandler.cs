@@ -211,6 +211,9 @@ public class TheaterHandler
 
     private static async Task SendEGRQ_ToGameHost(Packet request, PlasmaSession session, GameServerListing server)
     {
+        if (session.TheaterConnection is null) throw new NotImplementedException();
+        if (server.TheaterConnection is null) throw new NotImplementedException();
+
         var gameId = server.GID;
         var response = new Dictionary<string, string>
         {
@@ -238,7 +241,7 @@ public class TheaterHandler
         var serverGid = string.IsNullOrWhiteSpace(reqGid) ? 0 : int.Parse(reqGid);
         var game = _sharedCache.GetGameByGid(serverGid);
 
-        if (game is null)
+        if (game is null || game.TheaterConnection is null)
         {
             await SendError(request);
             return;
@@ -306,6 +309,9 @@ public class TheaterHandler
             _logger.LogWarning("Host disallowed player join!");
             return;
         }
+
+        if (game.TheaterConnection is null) throw new NotImplementedException();
+        if (player?.TheaterConnection is null) throw new NotImplementedException();
 
         var serverData = game.Data;
         var response = new Dictionary<string, string>
@@ -563,7 +569,7 @@ public class TheaterHandler
         var game = _sharedCache.GetGameByGid(gid) ?? throw new NotImplementedException();
 
         var pid = int.Parse(request["PID"]);
-        var player = game.ConnectedPlayers.SingleOrDefault(x => x.PID == pid);
+        var player = game.ConnectedPlayers.SingleOrDefault(x => x.PID == pid) ?? throw new NotImplementedException();
 
         var response = new Dictionary<string, string>
         {
