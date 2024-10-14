@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Net.Sockets;
 using Arcadia.EA.Constants;
@@ -13,7 +14,7 @@ public class TheaterHandler
     private readonly SharedCache _sharedCache;
     private readonly IEAConnection _conn;
 
-    private readonly Dictionary<string, Func<Packet, Task>> _handlers;
+    private readonly ImmutableDictionary<string, Func<Packet, Task>> _handlers;
 
     private PlasmaSession? _plasma;
 
@@ -42,7 +43,7 @@ public class TheaterHandler
             ["PLVT"] = HandlePLVT,
             ["UGDE"] = HandleUGDE,
             ["PING"] = HandlePING
-        };
+        }.ToImmutableDictionary();
     }
 
     public async Task<PlasmaSession> HandleClientConnection(NetworkStream network, string clientEndpoint, string serverEndpoint)

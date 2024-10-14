@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Globalization;
 using Arcadia.EA.Constants;
 using Arcadia.EA.Ports;
@@ -11,7 +12,7 @@ namespace Arcadia.EA.Handlers;
 
 public class FeslHandler
 {
-    private readonly Dictionary<string, Func<Packet, Task>> _handlers;
+    private readonly ImmutableDictionary<string, Func<Packet, Task>> _handlers;
 
     private readonly ILogger<FeslHandler> _logger;
     private readonly IOptions<ArcadiaSettings> _settings;
@@ -70,7 +71,7 @@ public class FeslHandler
             ["rank/GetStats"] = HandleGetStats,
             ["xmsg/GetMessages"] = HandleGetMessages,
             ["xmsg/ModifySettings"] = HandleModifySettings,
-        };
+        }.ToImmutableDictionary();
     }
 
     public async Task<PlasmaSession> HandleClientConnection(TlsServerProtocol tlsProtocol, string clientEndpoint, string serverEndpoint)
