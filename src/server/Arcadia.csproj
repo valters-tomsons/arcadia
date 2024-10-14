@@ -31,6 +31,7 @@
 
   <ItemGroup>
     <PackageReference Include="Discord.Net" Version="3.16.0" />
+    <PackageReference Include="NPTicket" Version="3.1.0" />
     <PackageReference Include="System.ComponentModel.TypeConverter" Version="4.3.0" />
     <PackageReference Include="BouncyCastle.Cryptography" Version="2.4.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />

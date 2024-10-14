@@ -1,10 +1,10 @@
 using System.Globalization;
 using Arcadia.EA.Constants;
 using Arcadia.EA.Ports;
-using Arcadia.PSN;
 using Arcadia.Storage;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using NPTicket;
 using Org.BouncyCastle.Tls;
 
 namespace Arcadia.EA.Handlers;
@@ -463,9 +463,10 @@ public class FeslHandler
     // BC1, AO2
     private async Task HandlePs3Login(Packet request)
     {
-        var loginTicket = request["ticket"];
-        var ticketData = TicketDecoder.DecodeFromASCIIString(loginTicket, _logger);
-        var onlineId = (ticketData[5] as BStringData)?.Value?.TrimEnd('\0');
+        var ticketPayload = request["ticket"];
+        var ticketBytes = Convert.FromHexString(ticketPayload[1..]);
+        var ticket = Ticket.ReadFromBytes(ticketBytes);
+        var onlineId = ticket.Username;
 
         if (string.IsNullOrWhiteSpace(onlineId)) throw new NotImplementedException();
 
@@ -503,9 +504,10 @@ public class FeslHandler
         // }
         // else
 
-        var loginTicket = request.DataDict["ticket"] ?? string.Empty;
-        var ticketData = TicketDecoder.DecodeFromASCIIString(loginTicket, _logger);
-        var onlineId = (ticketData[5] as BStringData)?.Value?.TrimEnd('\0') ?? throw new NotImplementedException();
+        var ticketPayload = request["ticket"];
+        var ticketBytes = Convert.FromHexString(ticketPayload[1..]);
+        var ticket = Ticket.ReadFromBytes(ticketBytes);
+        var onlineId = ticket.Username;
 
         _plasma = _sharedCache.CreatePlasmaConnection(_conn, onlineId, clientString);
         var loginResponseData = new Dictionary<string, string>

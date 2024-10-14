@@ -73,7 +73,6 @@ public class TheaterHandler
     private async Task HandleCONN(Packet request)
     {
         var tid = request["TID"];
-        _logger.LogInformation("CONN: {tid}", tid);
         var response = new Dictionary<string, string>
         {
             ["TIME"] = $"{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}",
@@ -91,7 +90,6 @@ public class TheaterHandler
         var lkey = request["LKEY"];
         _plasma = _sharedCache.AddTheaterConnection(_conn, lkey);
 
-        _logger.LogInformation("USER: {name} {lkey}", _plasma.NAME, lkey);
         var response = new Dictionary<string, string>
         {
             ["NAME"] = _plasma.NAME,
@@ -294,7 +292,6 @@ public class TheaterHandler
             response.Add(pdatId, pdat!);
         }
 
-        _logger.LogTrace("Sending GDET to client at {endpoint}", _conn.ClientEndpoint);
         var packet = new Packet("GDET", TheaterTransmissionType.OkResponse, 0, response);
         await _conn.SendPacket(packet);
     }
@@ -327,9 +324,7 @@ public class TheaterHandler
             ["GID"] = $"{game.GID}"
         };
 
-        _logger.LogTrace("Sending EGEG to client at {endpoint}", _conn.ClientEndpoint);
         var packet = new Packet("EGEG", TheaterTransmissionType.OkResponse, 0, response);
-
         game.ConnectedPlayers.Add(player);
         await player.TheaterConnection.SendPacket(packet);
     }
@@ -518,7 +513,6 @@ public class TheaterHandler
         var gid = long.Parse(request["GID"]);
         var game = _sharedCache.GetGameByGid(gid) ?? throw new NotImplementedException();
 
-        _logger.LogInformation("Updating game details");
         _sharedCache.UpsertGameServerDataByGid(gid, request.DataDict);
 
         if (!string.IsNullOrWhiteSpace(request["B-U-level"]))
@@ -536,7 +530,6 @@ public class TheaterHandler
 
         if (game.UID == _plasma?.UID)
         {
-            _logger.LogInformation("Updating server data");
             _sharedCache.UpsertGameServerDataByGid(gid, request.DataDict);
 
             if (!string.IsNullOrWhiteSpace(request["B-U-level"]))
