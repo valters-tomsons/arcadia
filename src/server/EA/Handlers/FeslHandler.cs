@@ -115,7 +115,7 @@ public class FeslHandler
         var currentTime = DateTime.UtcNow.ToString("MMM-dd-yyyy HH:mm:ss 'UTC'", CultureInfo.InvariantCulture);
         var serverHelloData = new Dictionary<string, string>
                 {
-                    { "domainPartition.domain", "ps3" },
+                    { "domainPartition.domain", request["sku"] },
                     { "messengerIp", "theater.ps3.arcadia" },
                     { "messengerPort", $"{_settings.Value.MessengerPort}" },
                     { "domainPartition.subDomain", subDomain },
