@@ -59,6 +59,7 @@ public class FeslHandler
             ["acct/NuGetTos"] = HandleGetTos,
             ["acct/GetTelemetryToken"] = HandleTelemetryToken,
             ["acct/NuPS3AddAccount"] = HandleAddAccount,
+            ["acct/LookupUserInfo"] = HandleLookupUserInfo,
             ["acct/NuLookupUserInfo"] = HandleNuLookupUserInfo,
             ["acct/NuGetEntitlements"] = HandleNuGetEntitlements,
             ["acct/NuGrantEntitlement"] = HandleNuGrantEntitlement,
@@ -116,7 +117,7 @@ public class FeslHandler
                 {
                     { "domainPartition.domain", "ps3" },
                     { "messengerIp", "theater.ps3.arcadia" },
-                    { "messengerPort", _settings.Value.MessengerPort.ToString() ?? "0" },
+                    { "messengerPort", $"{_settings.Value.MessengerPort}" },
                     { "domainPartition.subDomain", subDomain },
                     { "TXN", "Hello" },
                     { "activityTimeoutSecs", "0" },
@@ -274,6 +275,35 @@ public class FeslHandler
         };
 
         var packet = new Packet("pres", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
+        await _conn.SendPacket(packet);
+    }
+
+    private async Task HandleLookupUserInfo(Packet request)
+    {
+        var queryCount = int.Parse(request["userInfo.[]"]);
+        var users = Enumerable.Range(0, queryCount)
+            .Select(i => request[$"userInfo.{i}.userName"])
+            .Select(query => new
+            {
+                query,
+                user = _sharedCache.FindPlayerByName(query)
+            })
+            .Where(x => x.user is not null)
+            .ToArray();
+
+        var responseData = new Dictionary<string, string>
+        {
+            { "TXN", "LookupUserInfo" },
+            { "userInfo.[]", users.Length.ToString() }
+        };
+
+        for (var i = 0; i < users.Length; i++)
+        {
+            var result = users[i];
+            responseData.Add($"userInfo.{i}.userName", result.user!.NAME);
+        }
+
+        var packet = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
         await _conn.SendPacket(packet);
     }
 
