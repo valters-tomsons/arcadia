@@ -164,6 +164,7 @@ public class FeslHandler
             { "sessionState", "COMPLETE" },
             { "props.{}", "3" },
             { "props.{resultType}", "JOIN" },
+            // { "props.{resultType}", "CREATE" }, // Nfs
             { "props.{avgFit}", "1.0" },
             { "props.{games}.[]", $"{servers.Length}" },
         };
