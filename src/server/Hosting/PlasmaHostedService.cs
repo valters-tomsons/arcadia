@@ -44,6 +44,12 @@ public class PlasmaHostedService : IHostedService
             throw new ApplicationException("Arcadia must listen on Plasma ports!");
         }
 
+        if (_arcadiaSettings.MessengerPort > 0)
+        {
+            _logger.LogInformation("Messenger starting on port: {port}", _arcadiaSettings.MessengerPort);
+            StartTcpListenerTask(_arcadiaSettings.MessengerPort, processCt);
+        }
+
         foreach (var port in _arcadiaSettings.ListenPorts.Distinct())
         {
             _logger.LogInformation("Initializing listener on {address}:{port}", _arcadiaSettings.ListenAddress, port);
@@ -135,10 +141,7 @@ public class PlasmaHostedService : IHostedService
 
         try
         {
-            var isFesl = PortExtensions.IsFeslPort(connectionPort);
-            var isTheater = PortExtensions.IsTheater(connectionPort);
-
-            if (isFesl)
+            if (PortExtensions.IsFeslPort(connectionPort))
             {
                 var crypto = scope.ServiceProvider.GetRequiredService<Rc4TlsCrypto>();
                 var connTls = new Ssl3TlsServer(crypto, _feslPubCert, _feslCertKey);
@@ -148,10 +151,15 @@ public class PlasmaHostedService : IHostedService
                 var clientHandler = scope.ServiceProvider.GetRequiredService<FeslHandler>();
                 plasma = await clientHandler.HandleClientConnection(serverProtocol, clientEndpoint, tcpClient.Client.LocalEndPoint!.ToString()!);
             }
-            else if (isTheater)
+            else if (PortExtensions.IsTheater(connectionPort))
             {
                 var clientHandler = scope.ServiceProvider.GetRequiredService<TheaterHandler>();
                 plasma = await clientHandler.HandleClientConnection(networkStream, clientEndpoint, tcpClient.Client.LocalEndPoint!.ToString()!);
+            }
+            else if (_arcadiaSettings.MessengerPort == connectionPort)
+            {
+                var clientHandler = scope.ServiceProvider.GetRequiredService<MessengerHandler>();
+                await clientHandler.HandleClientConnection(networkStream, clientEndpoint, tcpClient.Client.LocalEndPoint!.ToString()!);
             }
             else
             {

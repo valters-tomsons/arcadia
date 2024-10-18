@@ -115,8 +115,8 @@ public class FeslHandler
         var serverHelloData = new Dictionary<string, string>
                 {
                     { "domainPartition.domain", "ps3" },
-                    { "messengerIp", "127.0.0.1" },
-                    { "messengerPort", "0" },
+                    { "messengerIp", "theater.ps3.arcadia" },
+                    { "messengerPort", _settings.Value.MessengerPort.ToString() ?? "0" },
                     { "domainPartition.subDomain", subDomain },
                     { "TXN", "Hello" },
                     { "activityTimeoutSecs", "0" },

@@ -46,7 +46,8 @@ var host = Host.CreateDefaultBuilder()
             .AddScoped<Rc4TlsCrypto>()
             .AddScoped<IEAConnection, EAConnection>()
             .AddScoped<FeslHandler>()
-            .AddScoped<TheaterHandler>();
+            .AddScoped<TheaterHandler>()
+            .AddScoped<MessengerHandler>();
 
         services
             .AddHostedService<PlasmaHostedService>()
