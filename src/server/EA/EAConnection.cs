@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using System.Text;
+using Arcadia.EA.Constants;
 using Microsoft.Extensions.Logging;
 using Org.BouncyCastle.Tls;
 
@@ -63,6 +64,8 @@ public class EAConnection : IEAConnection
         if (NetworkStream is null) throw new InvalidOperationException("Connection must be initialized before starting");
 
         var readBuffer = new byte[8096];
+        var multiPacketBuffer = new Dictionary<uint, (MemoryStream stream, int currentSize, uint totalSize)>();
+
         while (NetworkStream.CanRead == true || !ct.IsCancellationRequested)
         {
             int read;
@@ -94,6 +97,7 @@ public class EAConnection : IEAConnection
                 }
 
                 var packet = new Packet(buffer);
+                dataProcessed += (int)packet.Length;
 
                 if (packet.Length == 0)
                 {
@@ -101,8 +105,45 @@ public class EAConnection : IEAConnection
                     throw new NotImplementedException();
                 }
 
-                logger.LogTrace("'{type}' incoming:{data}", packet.Type, Encoding.ASCII.GetString(packet.Data ?? []));
-                dataProcessed += (int)packet.Length;
+                if (packet.TransmissionType == FeslTransmissionType.MultiPacketResponse)
+                {
+                    var encodedPart = packet["data"].Replace("%3d", "=");
+                    var partPayload = Convert.FromBase64String(encodedPart);
+                    var size = uint.Parse(packet["size"]);
+
+                    if(!multiPacketBuffer.TryGetValue(packet.Id, out var bufferInfo))
+                    {
+                        bufferInfo = (new MemoryStream((int)size), 0, size);
+                        multiPacketBuffer[packet.Id] = bufferInfo;
+                    }
+
+                    await bufferInfo.stream.WriteAsync(partPayload, ct);
+                    bufferInfo.currentSize += encodedPart.Length;
+                    multiPacketBuffer[packet.Id] = bufferInfo;
+
+                    if (bufferInfo.currentSize == bufferInfo.totalSize)
+                    {
+                        var bufferData = bufferInfo.stream.ToArray();
+
+                        multiPacketBuffer.Remove(packet.Id);
+                        await bufferInfo.stream.DisposeAsync();
+
+                        var combinedData = Utils.ParseFeslPacketToDict(bufferData);
+                        var combinedPacket = new Packet(packet.Type, packet.TransmissionType, packet.Id, combinedData, size);
+
+                        logger.LogTrace("'{type}' incoming multi-packet combined:{data}", combinedPacket.Type, Encoding.ASCII.GetString(bufferData));
+
+                        yield return combinedPacket;
+                    }
+                    
+                    continue;
+                }
+                else
+                {
+                    logger.LogTrace("'{type}' incoming:{data}", packet.Type, Encoding.ASCII.GetString(packet.Data ?? []));
+                }
+
+
                 yield return packet;
             }
         }
