@@ -39,12 +39,13 @@ public readonly struct Packet
     /// <summary>
     /// Initializes a new packet from the given parameters, used for outgoing data before it is Serialize()'d for wire.
     /// </summary>
-    public Packet(string type, uint transmissionType, uint packetId, Dictionary<string, string>? dataDict = null)
+    public Packet(string type, uint transmissionType, uint packetId, Dictionary<string, string>? dataDict = null, uint length = 0)
     {
         Type = type.Trim();
         TransmissionType = transmissionType;
         Id = packetId;
         DataDict = dataDict ?? [];
+        Length = length;
     }
 
     /// <summary>
