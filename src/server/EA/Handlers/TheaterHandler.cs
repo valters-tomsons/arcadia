@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using Arcadia.EA.Constants;
 using Arcadia.Storage;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Arcadia.EA.Handlers;
 
@@ -13,17 +14,19 @@ public class TheaterHandler
     private readonly SharedCounters _sharedCounters;
     private readonly SharedCache _sharedCache;
     private readonly IEAConnection _conn;
+    private readonly DebugSettings _dbgSettings;
 
     private readonly ImmutableDictionary<string, Func<Packet, Task>> _handlers;
 
     private PlasmaSession? _plasma;
 
-    public TheaterHandler(IEAConnection conn, ILogger<TheaterHandler> logger, SharedCounters sharedCounters, SharedCache sharedCache)
+    public TheaterHandler(IEAConnection conn, ILogger<TheaterHandler> logger, SharedCounters sharedCounters, SharedCache sharedCache, IOptions<DebugSettings> dbgOptions)
     {
         _logger = logger;
         _sharedCounters = sharedCounters;
         _sharedCache = sharedCache;
         _conn = conn;
+        _dbgSettings = dbgOptions.Value;
 
         _handlers = new Dictionary<string, Func<Packet, Task>>
         {
@@ -186,6 +189,8 @@ public class TheaterHandler
 
     private async Task<bool> AwaitOpenGame(GameServerListing game)
     {
+        if (_dbgSettings.DisableTheaterJoinTimeout) return true;
+
         int retries = 0;
         while (!game.CanJoin)
         {

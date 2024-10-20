@@ -29,4 +29,5 @@ public record DebugSettings
     public bool WriteSslDebugKeys { get; init; }
     public bool EnableFileLogging { get; init; }
     public bool EnableDebugConsole { get; init; }
+    public bool DisableTheaterJoinTimeout { get; init; }
 }
