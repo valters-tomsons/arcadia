@@ -21,6 +21,10 @@ public class StaticFileHostedService(IOptions<FileServerSettings> settings, ILog
         }
 
         _absoluteRootPath = Path.GetFullPath(_settings.ContentRoot);
+        if(!_absoluteRootPath.EndsWith('/'))
+        {
+            _absoluteRootPath += '/';
+        }
 
         try
         {

@@ -6,6 +6,7 @@ public record ArcadiaSettings
 {
     public string ListenAddress { get; init; } = System.Net.IPAddress.Loopback.ToString();
     public string TheaterAddress { get; init; } = "theater.ps3.arcadia";
+
     public int[] ListenPorts { get; init; } = [
         (int)TheaterGamePort.RomePS3, 
         (int)FeslGamePort.RomePS3, 
@@ -18,7 +19,7 @@ public record ArcadiaSettings
 public record FileServerSettings
 {
     public bool EnableCdn { get; init; } = false;
-    public string ContentRoot { get; init; } = "static/";
+    public string ContentRoot { get; init; } = "static";
     public string UrlPrefix { get; init; } = "http://0.0.0.0:8080/";
 }
 
