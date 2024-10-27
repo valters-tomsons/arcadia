@@ -22,9 +22,9 @@ Battlefield 1943 | Not Playable    | Only access to tutorial works. Playgroups/l
 
 1. Enable network connection and RPCN
 1. Enable UPNP
-1. Set IP/Hosts switches as listed in table above:
+1. Set `IP/Hosts switches` to the following:
 
-- BFBC2: `bfbc2-ps3.fesl.ea.com=152.53.15.83&&theater.ps3.arcadia=152.53.15.83`
+> `bfbc2-ps3.fesl.ea.com=152.53.15.83&&theater.ps3.arcadia=152.53.15.83`
 
 ## PS3 Configuration
 
