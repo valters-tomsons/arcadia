@@ -1,3 +1,4 @@
+using Arcadia.EA;
 using Arcadia.Storage;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
