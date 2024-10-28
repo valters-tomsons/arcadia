@@ -407,7 +407,7 @@ public class FeslHandler
             nuid = nuid.Split('@')[0];
         }
 
-        _plasma = _sharedCache.CreatePlasmaConnection(_conn, nuid, clientString);
+        _plasma = _sharedCache.CreatePlasmaConnection(_conn, nuid, clientString, partitionId);
 
         var loginResponseData = new Dictionary<string, string>
         {
@@ -501,7 +501,7 @@ public class FeslHandler
 
         if (string.IsNullOrWhiteSpace(onlineId)) throw new NotImplementedException();
 
-        _plasma = _sharedCache.CreatePlasmaConnection(_conn, onlineId, clientString);
+        _plasma = _sharedCache.CreatePlasmaConnection(_conn, onlineId, clientString, partitionId);
         var loginResponseData = new Dictionary<string, string>
         {
             { "TXN", request.TXN },
@@ -540,7 +540,7 @@ public class FeslHandler
         var ticket = Ticket.ReadFromBytes(ticketBytes);
         var onlineId = ticket.Username;
 
-        _plasma = _sharedCache.CreatePlasmaConnection(_conn, onlineId, clientString);
+        _plasma = _sharedCache.CreatePlasmaConnection(_conn, onlineId, clientString, partitionId);
         var loginResponseData = new Dictionary<string, string>
         {
             { "TXN", "NuPS3Login" },

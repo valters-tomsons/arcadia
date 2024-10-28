@@ -12,7 +12,7 @@ public class SharedCache(ILogger<SharedCache> logger, SharedCounters counters)
     private readonly List<GameServerListing> _gameServers = [];
     private readonly List<PlasmaSession> _connections = [];
 
-    public PlasmaSession CreatePlasmaConnection(IEAConnection fesl, string onlineId, string clientString)
+    public PlasmaSession CreatePlasmaConnection(IEAConnection fesl, string onlineId, string clientString, string partitionId)
     {
         PlasmaSession result = new()
         {
@@ -20,7 +20,8 @@ public class SharedCache(ILogger<SharedCache> logger, SharedCounters counters)
             UID = _counters.GetNextUserId(),
             LKEY = SharedCounters.GenerateLKey(),
             NAME = onlineId,
-            ClientString = clientString
+            ClientString = clientString,
+            PartitionId = partitionId
         };
 
         _connections.Add(result);

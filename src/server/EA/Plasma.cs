@@ -7,11 +7,14 @@ public class PlasmaSession
     public IEAConnection? FeslConnection { get; set; }
     public IEAConnection? TheaterConnection { get; set; }
 
-    public string ClientString { get; init; } = string.Empty;
-    public long UID { get; init; }
-    public string NAME { get; init; } = string.Empty;
-    public string LKEY { get; init; } = string.Empty;
     public int PID { get; set; }
+
+    public required long UID { get; init; }
+    public required string NAME { get; init; }
+    public required string LKEY { get; init; }
+
+    public required string ClientString { get; init; }
+    public required string PartitionId { get; init; }
 }
 
 public class GameServerListing
