@@ -100,11 +100,6 @@ public class SharedCache(ILogger<SharedCache> logger, SharedCounters counters)
         return _gameServers.SingleOrDefault(x => x.GID == serverGid);
     }
 
-    public long[] ListGameGids()
-    {
-        return _gameServers.Select(x => x.GID).ToArray();
-    }
-
     public GameServerListing[] GetGameServers()
     {
         return [.. _gameServers];
