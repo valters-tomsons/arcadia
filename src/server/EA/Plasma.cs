@@ -22,6 +22,8 @@ public class GameServerListing
     public IEAConnection? TheaterConnection { get; init; }
     public ConcurrentDictionary<string, string> Data { get; init; } = new();
 
+    public required string PartitionId { get; init; }
+
     public long UID { get; init; }
     public long GID { get; init; }
     public int LID { get; init; }

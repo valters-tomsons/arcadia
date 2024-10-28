@@ -176,7 +176,7 @@ public class PlasmaHostedService : IHostedService
 
                 plasma.FeslConnection?.NetworkStream?.Close();
                 plasma.TheaterConnection?.NetworkStream?.Close();
-                _sharedCache.RemoveConnection(plasma);
+                _sharedCache.RemovePlasmaSession(plasma);
             }
 
             await networkStream.DisposeAsync();
