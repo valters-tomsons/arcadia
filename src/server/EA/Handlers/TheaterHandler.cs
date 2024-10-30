@@ -367,7 +367,7 @@ public class TheaterHandler
 
     public async Task HandleGLST(Packet request)
     {
-        var games = _sharedCache.GetGameServers(_plasma!.PartitionId).Where(x => x.CanJoin).ToList();
+        var games = _sharedCache.GetPartitionServers(_plasma!.PartitionId).Where(x => x.CanJoin).ToList();
 
         var gameList = new Dictionary<string,string>
         {

@@ -59,9 +59,14 @@ public class SharedCache(ILogger<SharedCache> logger, SharedCounters counters)
         _gameServers.Remove(game);
     }
 
-    public PlasmaSession? FindPlasmaSession(string partitionId, string playerName)
+    public PlasmaSession? FindPartitionSessionByUser(string partitionId, string playerName)
     {
         return _connections.SingleOrDefault(x => x.PartitionId == partitionId && x.NAME == playerName);
+    }
+
+    public PlasmaSession? FindSessionByLkey(string lkey)
+    {
+        return _connections.SingleOrDefault(x => x.LKEY == lkey);
     }
 
     public void UpsertGameServerDataByGid(string partitionId, long serverGid, IDictionary<string, string> data)
@@ -108,8 +113,13 @@ public class SharedCache(ILogger<SharedCache> logger, SharedCounters counters)
         return _gameServers.SingleOrDefault(x => x.PartitionId == partitionId && x.GID == serverGid);
     }
 
-    public ImmutableArray<GameServerListing> GetGameServers(string partitionId)
+    public ImmutableArray<GameServerListing> GetPartitionServers(string partitionId)
     {
         return _gameServers.Where(x => x.PartitionId == partitionId).ToImmutableArray();
+    }
+
+    public ImmutableArray<GameServerListing> GetAllServers()
+    {
+        return [.. _gameServers];
     }
 }

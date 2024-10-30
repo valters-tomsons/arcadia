@@ -155,7 +155,7 @@ public class FeslHandler
         var packet1 = new Packet("pnow", FeslTransmissionType.SinglePacketResponse, request.Id, data1);
         await _conn.SendPacket(packet1);
 
-        var servers = _sharedCache.GetGameServers(partitionId).Where(x => x.CanJoin).ToArray();
+        var servers = _sharedCache.GetPartitionServers(partitionId).Where(x => x.CanJoin).ToArray();
         var data2 = new Dictionary<string, string>
         {
             { "TXN", "Status" },
@@ -286,7 +286,7 @@ public class FeslHandler
             .Select(query => new
             {
                 query,
-                user = _sharedCache.FindPlasmaSession(partitionId, query)
+                user = _sharedCache.FindPartitionSessionByUser(partitionId, query)
             })
             .Where(x => x.user is not null)
             .ToArray();
@@ -315,7 +315,7 @@ public class FeslHandler
             .Select(query => new
             {
                 query,
-                user = _sharedCache.FindPlasmaSession(partitionId, query)
+                user = _sharedCache.FindPartitionSessionByUser(partitionId, query)
             })
             .Where(x => x.user is not null)
             .ToArray();
