@@ -9,7 +9,8 @@ public enum FeslGamePort : int
     RomePC = 18390,
     ArmyOfTwoPS3 = 18340,
     ArmyOfTwo2PS3 = 18141,
-    NfsShift = 18221
+    NfsShift = 18221,
+    NfsCarbon = 18230
 }
 
 public enum TheaterGamePort : int
