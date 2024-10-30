@@ -243,7 +243,8 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
 
     private (string StatusMessage, (long GID, Embed Embed)[] Games) BuildMessageContent()
     {
-        var hosts = _sharedCache.GetGameServers();
+        var hosts = _sharedCache.GetAllServers(); 
+
         var gidEmbeds = new (long GID, Embed Embed)[hosts.Length];
         for (var i = 0; i < hosts.Length; i++)
         {

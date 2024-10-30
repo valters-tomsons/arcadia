@@ -115,11 +115,11 @@ public class TheaterHandler
         };
 
         var isGid = long.TryParse(request["GID"], out var gid);
-        var game = _sharedCache.GetGameByGid(gid);
+        var game = _sharedCache.GetGameByGid(_plasma!.PartitionId, gid);
 
         if (game is not null && isGid && _plasma?.UID == game.UID)
         {
-            _sharedCache.RemoveGame(game);
+            _sharedCache.RemoveGameListing(game);
         }
 
         var packet = new Packet("ECNL", TheaterTransmissionType.OkResponse, 0, response);
@@ -134,11 +134,11 @@ public class TheaterHandler
         var reqGid = request["GID"];
         var gid = string.IsNullOrWhiteSpace(reqGid) ? 0 : long.Parse(reqGid);
 
-        var game = _sharedCache.GetGameByGid(gid);
+        var game = _sharedCache.GetGameByGid(_plasma!.PartitionId, gid);
         if (game is null)
         {
             var joinPlayerName = request["USER"];
-            game = _sharedCache.FindGameWithPlayer(joinPlayerName);
+            game = _sharedCache.FindGameWithPlayer(_plasma!.PartitionId, joinPlayerName);
 
             if (game is null)
             {
@@ -245,7 +245,7 @@ public class TheaterHandler
     {
         var reqGid = request["GID"];
         var serverGid = string.IsNullOrWhiteSpace(reqGid) ? 0 : int.Parse(reqGid);
-        var game = _sharedCache.GetGameByGid(serverGid);
+        var game = _sharedCache.GetGameByGid(_plasma!.PartitionId, serverGid);
 
         if (game is null || game.TheaterConnection is null)
         {
@@ -307,7 +307,7 @@ public class TheaterHandler
 
     private async Task SendEGEG_ToPlayerInQueue(Packet request, int gid)
     {
-        var game = _sharedCache.GetGameByGid(gid) ?? throw new NotImplementedException();
+        var game = _sharedCache.GetGameByGid(_plasma!.PartitionId, gid) ?? throw new NotImplementedException();
         var joining = game.JoiningPlayers.TryDequeue(out var player);
 
         if (request["ALLOWED"] != "1" || joining != true)
@@ -367,7 +367,7 @@ public class TheaterHandler
 
     public async Task HandleGLST(Packet request)
     {
-        var games = _sharedCache.GetGameServers().Where(x => x.CanJoin).ToList();
+        var games = _sharedCache.GetPartitionServers(_plasma!.PartitionId).Where(x => x.CanJoin).ToList();
 
         var gameList = new Dictionary<string,string>
         {
@@ -415,6 +415,7 @@ public class TheaterHandler
 
         var game = new GameServerListing()
         {
+            PartitionId = _plasma.PartitionId,
             TheaterConnection = _conn,
             UID = _plasma.UID,
             GID = _sharedCounters.GetNextGameId(),
@@ -451,7 +452,7 @@ public class TheaterHandler
             return;
         }
 
-        _sharedCache.AddGame(game);
+        _sharedCache.AddGameListing(game);
 
         var response = new Dictionary<string, string>
         {
@@ -523,9 +524,9 @@ public class TheaterHandler
     private Task HandleUGDE(Packet request)
     {
         var gid = long.Parse(request["GID"]);
-        var game = _sharedCache.GetGameByGid(gid) ?? throw new NotImplementedException();
+        var game = _sharedCache.GetGameByGid(_plasma!.PartitionId, gid) ?? throw new NotImplementedException();
 
-        _sharedCache.UpsertGameServerDataByGid(gid, request.DataDict);
+        _sharedCache.UpsertGameServerDataByGid(_plasma.PartitionId, gid, request.DataDict);
 
         if (!string.IsNullOrWhiteSpace(request["B-U-level"]))
         {
@@ -538,11 +539,11 @@ public class TheaterHandler
     private Task HandleUGAM(Packet request)
     {
         var gid = long.Parse(request["GID"]);
-        var game = _sharedCache.GetGameByGid(gid) ?? throw new NotImplementedException();
+        var game = _sharedCache.GetGameByGid(_plasma!.PartitionId, gid) ?? throw new NotImplementedException();
 
         if (game.UID == _plasma?.UID)
         {
-            _sharedCache.UpsertGameServerDataByGid(gid, request.DataDict);
+            _sharedCache.UpsertGameServerDataByGid(_plasma.PartitionId, gid, request.DataDict);
 
             if (!string.IsNullOrWhiteSpace(request["B-U-level"]))
             {
@@ -556,7 +557,7 @@ public class TheaterHandler
     private async Task HandleRGAM(Packet request)
     {
         var gid = long.Parse(request["GID"]);
-        var game = _sharedCache.GetGameByGid(gid) ?? throw new NotImplementedException();
+        var game = _sharedCache.GetGameByGid(_plasma!.PartitionId, gid) ?? throw new NotImplementedException();
 
         var response = new Dictionary<string, string>
         {
@@ -566,13 +567,13 @@ public class TheaterHandler
         var packet = new Packet("RGAM", TheaterTransmissionType.OkResponse, 0, response);
         await _conn.SendPacket(packet);
 
-        _sharedCache.RemoveGame(game);
+        _sharedCache.RemoveGameListing(game);
     }
 
     private async Task HandlePLVT(Packet request)
     {
         var gid = long.Parse(request["GID"]);
-        var game = _sharedCache.GetGameByGid(gid) ?? throw new NotImplementedException();
+        var game = _sharedCache.GetGameByGid(_plasma!.PartitionId, gid) ?? throw new NotImplementedException();
 
         var pid = int.Parse(request["PID"]);
         var player = game.ConnectedPlayers.SingleOrDefault(x => x.PID == pid) ?? throw new NotImplementedException();
