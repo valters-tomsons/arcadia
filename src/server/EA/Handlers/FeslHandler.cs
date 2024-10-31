@@ -57,21 +57,27 @@ public class FeslHandler
             ["acct/NuGetPersonas"] = HandleNuGetPersonas,
             ["acct/NuLoginPersona"] = HandleNuLoginPersona,
             ["acct/NuGetTos"] = HandleGetTos,
-            ["acct/GetTelemetryToken"] = HandleTelemetryToken,
             ["acct/NuPS3AddAccount"] = HandleAddAccount,
             ["acct/LookupUserInfo"] = HandleLookupUserInfo,
             ["acct/NuLookupUserInfo"] = HandleNuLookupUserInfo,
             ["acct/NuGetEntitlements"] = HandleNuGetEntitlements,
-            ["acct/NuGrantEntitlement"] = HandleNuGrantEntitlement,
             ["acct/GetLockerURL"] = HandleGetLockerUrl,
             ["recp/GetRecord"] = HandleGetRecord,
             ["recp/GetRecordAsMap"] = HandleGetRecordAsMap,
             ["asso/GetAssociations"] = HandleGetAssociations,
             ["pres/PresenceSubscribe"] = HandlePresenceSubscribe,
-            ["pres/SetPresenceStatus"] = HandleSetPresenceStatus,
             ["rank/GetStats"] = HandleGetStats,
             ["xmsg/GetMessages"] = HandleGetMessages,
-            ["xmsg/ModifySettings"] = HandleModifySettings,
+
+            ["pres/SetPresenceStatus"] = AcknowledgeRequest,
+            ["acct/NuGrantEntitlement"] = AcknowledgeRequest,
+            ["acct/GetTelemetryToken"] = AcknowledgeRequest,
+            ["xmsg/ModifySettings"] = AcknowledgeRequest,
+            ["mtrx/ReportMetrics"] = AcknowledgeRequest,
+            ["rank/ReportMetrics"] = AcknowledgeRequest,
+            ["pnow/ReportMetrics"] = AcknowledgeRequest,
+            ["pnow/Cancel"] = AcknowledgeRequest,
+            ["rank/UpdateStats"] = AcknowledgeRequest
         }.ToImmutableDictionary();
     }
 
@@ -129,17 +135,6 @@ public class FeslHandler
         var helloPacket = new Packet("fsys", FeslTransmissionType.SinglePacketResponse, request.Id, serverHelloData);
         await _conn.SendPacket(helloPacket);
         await SendMemCheck();
-    }
-
-    private async Task HandleTelemetryToken(Packet request)
-    {
-        var responseData = new Dictionary<string, string>
-        {
-            { "TXN", "GetTelemetryToken" },
-        };
-
-        var packet = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
-        await _conn.SendPacket(packet);
     }
 
     private async Task HandlePlayNow(Packet request)
@@ -205,17 +200,6 @@ public class FeslHandler
         await _conn.SendPacket(new Packet("recp", FeslTransmissionType.SinglePacketResponse, request.Id, responseData));
     }
 
-    private async Task HandleNuGrantEntitlement(Packet request)
-    {
-        var responseData = new Dictionary<string, string>
-        {
-            { "TXN", request.TXN }
-        };
-
-        await _conn.SendPacket(new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, responseData));
-    }
-
-
     private async Task HandleGetStats(Packet request)
     {
         // TODO: Implement multi-packet responses 
@@ -262,17 +246,6 @@ public class FeslHandler
             { "responses.[]", "1" },
             { "responses.0.owner.type", "1" },
             { "responses.0.owner.id", _plasma.UID.ToString() },
-        };
-
-        var packet = new Packet("pres", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
-        await _conn.SendPacket(packet);
-    }
-
-    private async Task HandleSetPresenceStatus(Packet request)
-    {
-        var responseData = new Dictionary<string, string>
-        {
-            { "TXN", "SetPresenceStatus" },
         };
 
         var packet = new Packet("pres", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
@@ -605,7 +578,7 @@ public class FeslHandler
         await _conn.SendPacket(packet);
     }
 
-    private async Task HandleModifySettings(Packet request)
+    private async Task AcknowledgeRequest(Packet request)
     {
         var response = new Dictionary<string, string>
         {
