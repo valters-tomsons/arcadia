@@ -273,7 +273,8 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
                     .AddField("Level", levelName)
                     .AddField("Difficulty", difficulty)
                     .AddField("Gamemode", gamemode)
-                    .AddField("Online", online);
+                    .AddField("Players", online)
+                    .AddField("Domain", server.PartitionId);
 
                 gidEmbeds[i] = (server.GID, eb.Build());
             }
