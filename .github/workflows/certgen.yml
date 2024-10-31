@@ -1,0 +1,39 @@
+name: certgen
+
+on:
+  push:
+    branches: [ "*" ]
+    paths:
+      - 'tools/certgen/**'
+      - '.github/workflows/certgen.yml'
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        os: [linux-x64, linux-arm64, win-x64]
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Publish certgen
+      run: dotnet publish ./tools/certgen -c Release -r ${{ matrix.os }} -o ./certgen-${{ matrix.os }}
+
+    - name: Upload certgen artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.os }}
+        path: ./certgen-${{ matrix.os }}

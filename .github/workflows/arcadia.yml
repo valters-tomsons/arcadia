@@ -1,11 +1,11 @@
-name: .NET
+name: arcadia
 
 on:
   push:
     branches: [ "*" ]
     paths:
       - 'src/**'
-      - '.github/workflows/**'
+      - '.github/workflows/arcadia.yml'
   pull_request:
     branches: [ "main" ]
 
@@ -32,20 +32,11 @@ jobs:
     - name: Publish arcadia
       run: dotnet publish ./src/server -c Release -r ${{ matrix.os }} -o ./arcadia-${{ matrix.os }}
 
-    - name: Publish certgen
-      run: dotnet publish ./tools/certgen -c Release -r ${{ matrix.os }} -o ./certgen-${{ matrix.os }}
-
     - name: Upload arcadia artifact
       uses: actions/upload-artifact@v4
       with:
-        name: arcadia-${{ matrix.os }}
+        name: ${{ matrix.os }}
         path: ./arcadia-${{ matrix.os }}
-
-    - name: Upload certgen artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: certgen-${{ matrix.os }}
-        path: ./certgen-${{ matrix.os }}
 
   deploy:
     runs-on: ubuntu-latest
