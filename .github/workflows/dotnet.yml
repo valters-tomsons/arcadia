@@ -38,13 +38,13 @@ jobs:
     - name: Upload arcadia artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ matrix.os }}
+        name: arcadia-${{ matrix.os }}
         path: ./arcadia-${{ matrix.os }}
 
     - name: Upload certgen artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ matrix.os }}
+        name: certgen-${{ matrix.os }}
         path: ./certgen-${{ matrix.os }}
 
   deploy:
