@@ -29,14 +29,23 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
 
-    - name: Build and Publish
-      run: dotnet publish ./src/server -c Release -r ${{ matrix.os }} -o ./release-${{ matrix.os }}
+    - name: Publish arcadia
+      run: dotnet publish ./src/server -c Release -r ${{ matrix.os }} -o ./arcadia-${{ matrix.os }}
 
-    - name: Upload Release
+    - name: Publish certgen
+      run: dotnet publish ./tools/certgen -c Release -r ${{ matrix.os }} -o ./certgen-${{ matrix.os }}
+
+    - name: Upload arcadia artifact
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.os }}
-        path: ./release-${{ matrix.os }}
+        path: ./arcadia-${{ matrix.os }}
+
+    - name: Upload certgen artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.os }}
+        path: ./certgen-${{ matrix.os }}
 
   deploy:
     runs-on: ubuntu-latest

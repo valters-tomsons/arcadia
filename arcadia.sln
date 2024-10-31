@@ -9,6 +9,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "server", "src\server\Arcadi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "tests", "src\tests\tests.csproj", "{D017F833-9824-41A0-A835-792C9BA2A3F7}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tools", "tools", "{00AA8CBD-B8AD-4CEC-891D-3468DD435113}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "certgen", "tools\certgen\certgen.csproj", "{EE39B93F-4AFB-4216-920B-292BAB5655A7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -26,9 +30,14 @@ Global
 		{D017F833-9824-41A0-A835-792C9BA2A3F7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D017F833-9824-41A0-A835-792C9BA2A3F7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D017F833-9824-41A0-A835-792C9BA2A3F7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EE39B93F-4AFB-4216-920B-292BAB5655A7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EE39B93F-4AFB-4216-920B-292BAB5655A7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EE39B93F-4AFB-4216-920B-292BAB5655A7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EE39B93F-4AFB-4216-920B-292BAB5655A7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{FEA07937-18A9-486F-B5FD-8410BFD632B2} = {96843D57-965D-43FF-A342-C00054BADB09}
 		{D017F833-9824-41A0-A835-792C9BA2A3F7} = {96843D57-965D-43FF-A342-C00054BADB09}
+		{EE39B93F-4AFB-4216-920B-292BAB5655A7} = {00AA8CBD-B8AD-4CEC-891D-3468DD435113}
 	EndGlobalSection
 EndGlobal

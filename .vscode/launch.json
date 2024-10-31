@@ -11,6 +11,17 @@
             "cwd": "${workspaceFolder}/src/server",
             "console": "internalConsole",
             "stopAtEntry": false
+        },
+        {
+            "name": "run certgen",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/tools/certgen/bin/Debug/net8.0/certgen.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/tools/certgen",
+            "console": "integratedTerminal",
+            "stopAtEntry": false
         }
     ]
 }
