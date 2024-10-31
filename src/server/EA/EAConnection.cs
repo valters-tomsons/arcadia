@@ -63,8 +63,12 @@ public class EAConnection : IEAConnection
 
         if (NetworkStream is null) throw new InvalidOperationException("Connection must be initialized before starting");
 
-        var readBuffer = new byte[8096];
-        var multiPacketBuffer = new Dictionary<uint, (MemoryStream stream, int currentSize, uint totalSize)>();
+        var readBuffer = new byte[8192];
+
+        using var multiPacketBuffer = new MemoryStream();
+        uint? currentMultiPacketId = null;
+        uint currentMultiPacketSize = 0;
+        int currentMultiPacketReceivedSize = 0;
 
         while (NetworkStream.CanRead == true || !ct.IsCancellationRequested)
         {
@@ -111,35 +115,39 @@ public class EAConnection : IEAConnection
                     var partPayload = Convert.FromBase64String(encodedPart);
                     var size = uint.Parse(packet["size"]);
 
-                    if(!multiPacketBuffer.TryGetValue(packet.Id, out var bufferInfo))
+                    if (currentMultiPacketId != packet.Id)
                     {
-                        bufferInfo = (new MemoryStream((int)size), 0, size);
-                        multiPacketBuffer[packet.Id] = bufferInfo;
+                        currentMultiPacketId = packet.Id;
+                        currentMultiPacketSize = size;
+                        currentMultiPacketReceivedSize = 0;
+
+                        if (size > 24000) throw new Exception($"Requested multi-packet buffer-size too large: {size}");
                     }
 
-                    await bufferInfo.stream.WriteAsync(partPayload, ct);
-                    bufferInfo.currentSize += encodedPart.Length;
-                    multiPacketBuffer[packet.Id] = bufferInfo;
+                    if (currentMultiPacketSize != size) throw new Exception($"Requested packet-size changed between requests! Initial size: {currentMultiPacketSize }, newSize: {size}");
 
-                    if (bufferInfo.currentSize == bufferInfo.totalSize)
+                    await multiPacketBuffer.WriteAsync(partPayload, ct);
+                    currentMultiPacketReceivedSize += encodedPart.Length;
+
+                    if (currentMultiPacketReceivedSize == currentMultiPacketSize)
                     {
-                        var bufferData = bufferInfo.stream.ToArray();
-
-                        multiPacketBuffer.Remove(packet.Id);
-                        await bufferInfo.stream.DisposeAsync();
+                        var bufferData = multiPacketBuffer.ToArray();
+                        currentMultiPacketId = null;
 
                         var combinedData = Utils.ParseFeslPacketToDict(bufferData);
                         var combinedPacket = new Packet(packet.Type, packet.TransmissionType, packet.Id, combinedData, size);
 
-                        logger.LogTrace("'{type}' incoming multi-packet combined:{data}", combinedPacket.Type, Encoding.ASCII.GetString(bufferData));
+                        logger.LogTrace("'{type}' incoming multi-packet, combined:{data}", combinedPacket.Type, Encoding.ASCII.GetString(bufferData));
 
                         yield return combinedPacket;
                     }
-                    
+                    else if (currentMultiPacketReceivedSize > currentMultiPacketSize) throw new Exception($"Requested packet-size changed between requests! Initial size: {currentMultiPacketSize}, tried to write: {currentMultiPacketSize}");
+
                     continue;
                 }
                 else
                 {
+                    currentMultiPacketId = null;
                     logger.LogTrace("'{type}' incoming:{data}", packet.Type, Encoding.ASCII.GetString(packet.Data ?? []));
                 }
 
