@@ -69,6 +69,11 @@ public class SharedCache(ILogger<SharedCache> logger, SharedCounters counters)
         return _connections.SingleOrDefault(x => x.LKEY == lkey);
     }
 
+    public PlasmaSession? FindSessionByUID(long uid)
+    {
+        return _connections.SingleOrDefault(x => x.UID == uid);
+    }
+
     public void UpsertGameServerDataByGid(string partitionId, long serverGid, IDictionary<string, string> data)
     {
         if (serverGid < 1)
@@ -105,6 +110,11 @@ public class SharedCache(ILogger<SharedCache> logger, SharedCounters counters)
     public GameServerListing? FindGameWithPlayer(string partitionId, string playerName)
     {
         return _gameServers.FirstOrDefault(x => x.ConnectedPlayers.Any(y => y.PartitionId == partitionId && y.NAME.Equals(playerName)));
+    }
+
+    public GameServerListing? FindGameWithPlayerByUid(string partitionId, long uid)
+    {
+        return _gameServers.FirstOrDefault(x => x.ConnectedPlayers.Any(y => y.PartitionId == partitionId && y.UID == uid));
     }
 
     public GameServerListing? GetGameByGid(string partitionId, long serverGid)

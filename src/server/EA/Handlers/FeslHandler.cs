@@ -6,6 +6,7 @@ using Arcadia.Storage;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NPTicket;
+using Org.BouncyCastle.Pqc.Crypto.Ntru;
 using Org.BouncyCastle.Tls;
 
 namespace Arcadia.EA.Handlers;
@@ -19,6 +20,7 @@ public class FeslHandler
     private readonly SharedCounters _sharedCounters;
     private readonly SharedCache _sharedCache;
     private readonly IEAConnection _conn;
+    private readonly StatsStorage _stats;
 
     private PlasmaSession? _plasma;
     private string clientString = string.Empty;
@@ -32,13 +34,14 @@ public class FeslHandler
     private readonly Timer _pingTimer;
     private readonly Timer _memchTimer;
 
-    public FeslHandler(IEAConnection conn, ILogger<FeslHandler> logger, IOptions<ArcadiaSettings> settings, SharedCounters sharedCounters, SharedCache sharedCache)
+    public FeslHandler(IEAConnection conn, ILogger<FeslHandler> logger, IOptions<ArcadiaSettings> settings, SharedCounters sharedCounters, SharedCache sharedCache, StatsStorage stats)
     {
         _logger = logger;
         _settings = settings;
         _sharedCounters = sharedCounters;
         _sharedCache = sharedCache;
         _conn = conn;
+        _stats = stats;
 
         _pingTimer = new(async _ => await SendPing(), null, Timeout.Infinite, Timeout.Infinite);
         _memchTimer = new(async _ => await SendMemCheck(), null, Timeout.Infinite, Timeout.Infinite);
@@ -67,6 +70,7 @@ public class FeslHandler
             ["asso/GetAssociations"] = HandleGetAssociations,
             ["pres/PresenceSubscribe"] = HandlePresenceSubscribe,
             ["rank/GetStats"] = HandleGetStats,
+            ["rank/UpdateStats"] = HandleUpdateStats,
             ["xmsg/GetMessages"] = HandleGetMessages,
 
             ["pres/SetPresenceStatus"] = AcknowledgeRequest,
@@ -77,7 +81,6 @@ public class FeslHandler
             ["rank/ReportMetrics"] = AcknowledgeRequest,
             ["pnow/ReportMetrics"] = AcknowledgeRequest,
             ["pnow/Cancel"] = AcknowledgeRequest,
-            ["rank/UpdateStats"] = AcknowledgeRequest
         }.ToImmutableDictionary();
     }
 
@@ -576,6 +579,42 @@ public class FeslHandler
 
         var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, response);
         await _conn.SendPacket(packet);
+    }
+
+    private async Task HandleUpdateStats(Packet request)
+    {
+        var statKey = request["u.0.s.0.k"];
+        if (statKey.StartsWith("time_mp") && statKey.EndsWith("_c") && clientString == "PS3/BFBC2")
+        {
+            try
+            {
+                var uid = long.Parse(request["u.0.o"]);
+                var player = _sharedCache.FindSessionByUID(uid) ?? throw new Exception("Player not online?");
+                var server = _sharedCache.FindGameWithPlayerByUid(partitionId, uid) ?? throw new Exception("Player not in server?");
+
+                if (_plasma is null || server.UID != _plasma.UID)
+                {
+                    throw new Exception("Denying update from client!");
+                }
+
+                var playtime = Math.Abs(double.Parse(request["u.0.s.0.v"]));
+                var onslaughtMessage = new OnslaughtLevelCompleteMessage
+                {
+                    PlayerName = player.NAME,
+                    MapKey = statKey.Replace("time_mp", string.Empty).Replace("_c", string.Empty),
+                    Difficulty = server.Data["B-U-difficulty"],
+                    GameTime = TimeSpan.FromSeconds(playtime)
+                };
+
+                _stats.PostLevelComplete(onslaughtMessage);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to process onslaught stats update!");
+            }
+        }
+
+        await AcknowledgeRequest(request);
     }
 
     private async Task AcknowledgeRequest(Packet request)

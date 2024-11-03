@@ -8,7 +8,7 @@ using Microsoft.Extensions.Options;
 
 namespace Arcadia.Hosting;
 
-public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHostedService> logger, SharedCache sharedCache, IOptions<DiscordSettings> config) : BackgroundService
+public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHostedService> logger, SharedCache sharedCache, IOptions<DiscordSettings> config, StatsStorage stats) : BackgroundService
 {
     private const string messageIdFile = "./messageId";
     private static readonly TimeSpan PeriodicUpdateInterval = TimeSpan.FromSeconds(10);
@@ -17,6 +17,7 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
     private readonly ILogger<DiscordHostedService> _logger = logger;
     private readonly SharedCache _sharedCache = sharedCache;
     private readonly IOptions<DiscordSettings> _config = config;
+    private readonly StatsStorage _stats = stats;
 
     private readonly List<(IMessageChannel Channel, ulong StatusId)> _channelStatus = [];
     private readonly Dictionary<ulong, List<(long GID, ulong MessageId)>> _channelsGameMessage = [];
@@ -74,9 +75,41 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
                 continue;
             }
 
-            await UpdateRunningStatus();
+            await ProcessNewStats();
+
+            await UpdateGameStatus();
             await Task.Delay(PeriodicUpdateInterval, stoppingToken);
         }
+    }
+
+    private async Task GracefulShutdown()
+    {
+        foreach (var (channel, statusId) in _channelStatus)
+        {
+            try
+            {
+                await channel.ModifyMessageAsync(statusId, x =>
+                {
+                    x.Content = "Server offline!";
+                    x.Embeds = null;
+                });
+
+                var gameMessages = _channelsGameMessage.GetValueOrDefault(channel.Id);
+                if (gameMessages is null) continue;
+
+                foreach (var (_, gameMessageId) in gameMessages)
+                {
+                    await channel.DeleteMessageAsync(gameMessageId);
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to notify channel about shutdown!");
+            }
+        }
+
+        _channelStatus.Clear();
+        _channelsGameMessage.Clear();
     }
 
     private async Task InitializeChannels()
@@ -114,7 +147,7 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
 
             await foreach (var batch in channel.GetMessagesAsync())
             {
-                foreach(var message in batch)
+                foreach (var message in batch)
                 {
                     if (message.Id != statusMsg.Id) await message.DeleteAsync();
                 }
@@ -129,39 +162,41 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
         }
     }
 
-    private async Task GracefulShutdown()
+    private async Task ProcessNewStats()
     {
-        foreach (var (channel, statusId) in _channelStatus)
+        var eb = new EmbedBuilder().WithTitle("Onslaught finished!");
+
+        const int batchSize = 8;
+        for (var i = 0; i < batchSize; i++)
         {
-            try
+            var msg = _stats.GetLevelComplete();
+            if (msg is null)
             {
-                await channel.ModifyMessageAsync(statusId, x =>
-                {
-                    x.Content = "Server offline!";
-                    x.Embeds = null;
-                });
-
-                var gameMessages = _channelsGameMessage.GetValueOrDefault(channel.Id);
-                if (gameMessages is null) continue;
-
-                foreach (var (_, gameMessageId) in gameMessages)
-                {
-                    await channel.DeleteMessageAsync(gameMessageId);
-                }
+                if (i == 0) return;
+                break;
             }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "Failed to notify channel about shutdown!");
-            }
+
+            var level = $"Levels/ONS_MP_{msg.MapKey}";
+            var levelName = LevelDisplayName(level);
+            var gt = msg.GameTime;
+            var message = $"Finished {levelName} on {msg.Difficulty} in {gt.Hours} hours, {gt.Minutes} minutes and {gt.Seconds} seconds".Replace("0 hours, ", string.Empty);
+
+            eb.AddField(msg.PlayerName, message);
         }
 
-        _channelStatus.Clear();
-        _channelsGameMessage.Clear();
+        if (await _client.GetChannelAsync(_config.Value.OnslaughtStatsChannel) is not IMessageChannel channel)
+        {
+            _logger.LogError("Failed to open status channel: {channelId}", _config.Value.OnslaughtStatsChannel);
+            return;
+        }
+
+        await channel.SendMessageAsync("\n", embed: eb.Build());
+        _logger.LogInformation("New stats batch posted");
     }
 
-    private async Task UpdateRunningStatus()
+    private async Task UpdateGameStatus()
     {
-        var content = BuildMessageContent();
+        var content = BuildGameStatusContent();
 
         foreach (var (channel, statusId) in _channelStatus)
         {
@@ -241,9 +276,9 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
         }
     }
 
-    private (string StatusMessage, (long GID, Embed Embed)[] Games) BuildMessageContent()
+    private (string StatusMessage, (long GID, Embed Embed)[] Games) BuildGameStatusContent()
     {
-        var hosts = _sharedCache.GetAllServers(); 
+        var hosts = _sharedCache.GetAllServers();
 
         var gidEmbeds = new (long GID, Embed Embed)[hosts.Length];
         for (var i = 0; i < hosts.Length; i++)
