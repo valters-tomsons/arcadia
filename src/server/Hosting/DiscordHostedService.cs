@@ -57,29 +57,38 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
         await base.StopAsync(cancellationToken);
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        while (_client.ConnectionState != ConnectionState.Connected)
-        {
-            await Task.Delay(1000, stoppingToken);
-        }
-
-        await InitializeChannels();
-
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            if (_client.ConnectionState != ConnectionState.Connected)
+        return Task.Run(async () => {
+            while (_client.ConnectionState != ConnectionState.Connected)
             {
-                _logger.LogWarning("Discord connection lost!");
-                await Task.Delay(5000, stoppingToken);
-                continue;
+                await Task.Delay(1000, stoppingToken);
             }
 
-            await ProcessNewStats();
+            await InitializeChannels();
 
-            await UpdateGameStatus();
-            await Task.Delay(PeriodicUpdateInterval, stoppingToken);
-        }
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                try 
+                {
+                    if (_client.ConnectionState != ConnectionState.Connected)
+                    {
+                        _logger.LogWarning("Discord connection lost!");
+                        await Task.Delay(5000, stoppingToken);
+                        continue;
+                    }
+
+                    await ProcessNewStats();
+
+                    await UpdateGameStatus();
+                    await Task.Delay(PeriodicUpdateInterval, stoppingToken);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, "Failed to update status!");
+                }
+            }
+        }, stoppingToken);
     }
 
     private async Task GracefulShutdown()
