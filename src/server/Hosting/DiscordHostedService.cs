@@ -35,11 +35,14 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
             return;
         }
 
-        _client.Log += x =>
+        if (_logger.IsEnabled(LogLevel.Debug))
         {
-            _logger.LogInformation("Discord.NET: {msg}", x.ToString());
-            return Task.CompletedTask;
-        };
+            _client.Log += x =>
+            {
+                _logger.LogDebug("Discord.NET: {msg}", x.ToString());
+                return Task.CompletedTask;
+            };
+        }
 
         _logger.LogInformation("Starting Discord status bot...");
 
