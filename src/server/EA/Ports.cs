@@ -10,7 +10,8 @@ public enum FeslGamePort : int
     ArmyOfTwoPS3 = 18340,
     ArmyOfTwo2PS3 = 18141,
     NfsShift = 18221,
-    NfsCarbon = 18230
+    NfsCarbon = 18230,
+    TeamFortress2 = 18450
 }
 
 public enum TheaterGamePort : int
