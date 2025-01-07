@@ -141,26 +141,7 @@ public class PlasmaHostedService : IHostedService
 
         try
         {
-            if (PortExtensions.IsFeslPort(connectionPort))
-            {
-                var crypto = scope.ServiceProvider.GetRequiredService<Rc4TlsCrypto>();
-                var connTls = new Ssl3TlsServer(crypto, _feslPubCert, _feslCertKey);
-                var serverProtocol = new TlsServerProtocol(networkStream);
-
-                try
-                {
-                    serverProtocol.Accept(connTls);
-                }
-                catch(TlsFatalAlert e)
-                {
-                    _logger.LogError(e, "SSL handshake failed!");
-                    return;
-                }
-
-                var clientHandler = scope.ServiceProvider.GetRequiredService<FeslHandler>();
-                plasma = await clientHandler.HandleClientConnection(serverProtocol, clientEndpoint, tcpClient.Client.LocalEndPoint!.ToString()!);
-            }
-            else if (PortExtensions.IsTheater(connectionPort))
+            if (PortExtensions.IsTheater(connectionPort))
             {
                 var clientHandler = scope.ServiceProvider.GetRequiredService<TheaterHandler>();
                 plasma = await clientHandler.HandleClientConnection(networkStream, clientEndpoint, tcpClient.Client.LocalEndPoint!.ToString()!);
@@ -172,7 +153,27 @@ public class PlasmaHostedService : IHostedService
             }
             else
             {
-                throw new NotSupportedException($"No handler defined for port {connectionPort}");
+                if (!PortExtensions.IsFeslPort(connectionPort))
+                {
+                    _logger.LogError("Unknown port game: {port}, defaulting to FeslHandler...", connectionPort);
+                }
+
+                var crypto = scope.ServiceProvider.GetRequiredService<Rc4TlsCrypto>();
+                var connTls = new Ssl3TlsServer(crypto, _feslPubCert, _feslCertKey);
+                var serverProtocol = new TlsServerProtocol(networkStream);
+
+                try
+                {
+                    serverProtocol.Accept(connTls);
+                }
+                catch (TlsFatalAlert e)
+                {
+                    _logger.LogError(e, "SSL handshake failed!");
+                    return;
+                }
+
+                var clientHandler = scope.ServiceProvider.GetRequiredService<FeslHandler>();
+                plasma = await clientHandler.HandleClientConnection(serverProtocol, clientEndpoint, tcpClient.Client.LocalEndPoint!.ToString()!);
             }
         }
         finally
