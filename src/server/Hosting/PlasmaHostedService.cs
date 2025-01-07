@@ -146,7 +146,16 @@ public class PlasmaHostedService : IHostedService
                 var crypto = scope.ServiceProvider.GetRequiredService<Rc4TlsCrypto>();
                 var connTls = new Ssl3TlsServer(crypto, _feslPubCert, _feslCertKey);
                 var serverProtocol = new TlsServerProtocol(networkStream);
-                serverProtocol.Accept(connTls);
+
+                try
+                {
+                    serverProtocol.Accept(connTls);
+                }
+                catch(TlsFatalAlert e)
+                {
+                    _logger.LogError(e, "SSL handshake failed!");
+                    return;
+                }
 
                 var clientHandler = scope.ServiceProvider.GetRequiredService<FeslHandler>();
                 plasma = await clientHandler.HandleClientConnection(serverProtocol, clientEndpoint, tcpClient.Client.LocalEndPoint!.ToString()!);
