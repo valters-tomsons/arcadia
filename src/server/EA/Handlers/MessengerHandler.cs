@@ -23,7 +23,8 @@ public class MessengerHandler
         _handlers = new Dictionary<string, Func<Packet, Task>>
         {
             ["AUTH"] = HandleAUTH,
-            ["RGET"] = HandleRGET
+            ["RGET"] = HandleRGET,
+            ["PSET"] = HandlePSET
         }.ToImmutableDictionary();
     }
 
@@ -78,6 +79,17 @@ public class MessengerHandler
         {
             ["ID"] = request["ID"],
             ["SIZE"] = "0",
+        };
+
+        var packet = new Packet(request.Type, TheaterTransmissionType.OkResponse, 0, response);
+        await _conn.SendPacket(packet);
+    }
+
+    private async Task HandlePSET(Packet request)
+    {
+        var response = new Dictionary<string, string>
+        {
+            ["ID"] = request["ID"]
         };
 
         var packet = new Packet(request.Type, TheaterTransmissionType.OkResponse, 0, response);
