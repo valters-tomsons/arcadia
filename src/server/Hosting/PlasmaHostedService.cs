@@ -20,6 +20,7 @@ public class PlasmaHostedService : IHostedService
 {
     private readonly ILogger<PlasmaHostedService> _logger;
     private readonly ArcadiaSettings _arcadiaSettings;
+    private readonly DebugSettings _debugSettings;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly SharedCache _sharedCache;
     private readonly AsymmetricKeyParameter _feslCertKey;
@@ -28,13 +29,14 @@ public class PlasmaHostedService : IHostedService
     private readonly List<TcpListener> _tcpListeners = [];
     private readonly List<UdpClient> _udpListeners = [];
 
-    public PlasmaHostedService(ILogger<PlasmaHostedService> logger, IOptions<ArcadiaSettings> arcadiaSettings, ProtoSSL certGenerator, IServiceScopeFactory scopeFactory, SharedCache sharedCache)
+    public PlasmaHostedService(ILogger<PlasmaHostedService> logger, IOptions<ArcadiaSettings> arcadiaSettings, ProtoSSL certGenerator, IServiceScopeFactory scopeFactory, SharedCache sharedCache, IOptions<DebugSettings> debugSettings)
     {
         _logger = logger;
         _scopeFactory = scopeFactory;
         _sharedCache = sharedCache;
         _arcadiaSettings = arcadiaSettings.Value;
         (_feslCertKey, _feslPubCert) = certGenerator.GetFeslEaCert();
+        _debugSettings = debugSettings.Value;
     }
 
     public Task StartAsync(CancellationToken processCt)
@@ -48,6 +50,13 @@ public class PlasmaHostedService : IHostedService
         {
             _logger.LogInformation("Messenger starting on port: {port}", _arcadiaSettings.MessengerPort);
             StartTcpListenerTask(_arcadiaSettings.MessengerPort, processCt);
+        }
+
+        if (_debugSettings.ForcePlaintext)
+        {
+            _logger.LogWarning("!!!!!! HERE BE DRAGONS !!!!!!!!");
+            _logger.LogWarning("ForcePlaintext=true;");
+            _logger.LogWarning("Plasma connections will not use SSL. Regular clients will not connect.");
         }
 
         foreach (var port in _arcadiaSettings.ListenPorts.Distinct())
@@ -150,6 +159,16 @@ public class PlasmaHostedService : IHostedService
             {
                 var clientHandler = scope.ServiceProvider.GetRequiredService<MessengerHandler>();
                 await clientHandler.HandleClientConnection(networkStream, clientEndpoint, tcpClient.Client.LocalEndPoint!.ToString()!);
+            }
+            else if (_debugSettings.ForcePlaintext)
+            {
+                if (!PortExtensions.IsFeslPort(connectionPort))
+                {
+                    _logger.LogError("Unknown port game: {port}, defaulting to FeslHandler...", connectionPort);
+                }
+
+                var clientHandler = scope.ServiceProvider.GetRequiredService<FeslHandler>();
+                plasma = await clientHandler.HandleClientConnectionInsecure(networkStream, clientEndpoint, tcpClient.Client.LocalEndPoint!.ToString()!);
             }
             else
             {

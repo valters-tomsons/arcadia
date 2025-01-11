@@ -37,4 +37,5 @@ public record DebugSettings
     public bool EnableFileLogging { get; init; }
     public bool EnableDebugConsole { get; init; }
     public bool DisableTheaterJoinTimeout { get; init; }
+    public bool ForcePlaintext { get; init; }
 }

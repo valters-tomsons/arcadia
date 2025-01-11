@@ -1,12 +1,12 @@
 using System.Collections.Immutable;
 using System.Globalization;
+using System.Net.Sockets;
 using Arcadia.EA.Constants;
 using Arcadia.EA.Ports;
 using Arcadia.Storage;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NPTicket;
-using Org.BouncyCastle.Pqc.Crypto.Ntru;
 using Org.BouncyCastle.Tls;
 
 namespace Arcadia.EA.Handlers;
@@ -87,6 +87,22 @@ public class FeslHandler
     public async Task<PlasmaSession> HandleClientConnection(TlsServerProtocol tlsProtocol, string clientEndpoint, string serverEndpoint)
     {
         _conn.InitializeSecure(tlsProtocol, clientEndpoint, serverEndpoint);
+        await foreach (var packet in _conn.StartConnection(_logger))
+        {
+            await HandlePacket(packet);
+        }
+
+        _pingTimer.Change(Timeout.Infinite, Timeout.Infinite);
+        _memchTimer.Change(Timeout.Infinite, Timeout.Infinite);
+        await _pingTimer.DisposeAsync();
+        await _memchTimer.DisposeAsync();
+
+        return _plasma ?? throw new NotImplementedException();
+    }
+
+    public async Task<PlasmaSession> HandleClientConnectionInsecure(NetworkStream network, string clientEndpoint, string serverEndpoint)
+    {
+        _conn.InitializeInsecure(network, clientEndpoint, serverEndpoint);
         await foreach (var packet in _conn.StartConnection(_logger))
         {
             await HandlePacket(packet);
