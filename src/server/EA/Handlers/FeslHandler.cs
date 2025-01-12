@@ -405,6 +405,8 @@ public class FeslHandler
         var loginResponseData = new Dictionary<string, string>
         {
             { "TXN", request.TXN },
+            
+            // ! TODO: This is not good!
             { "encryptedLoginInfo", "Ciyvab0tregdVsBtboIpeChe4G6uzC1v5_-SIxmvSL" + "bjbfvmobxvmnawsthtgggjqtoqiatgilpigaqqzhejglhbaokhzltnstufrfouwrvzyphyrspmnzprxcocyodg" }
         };
 
