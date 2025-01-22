@@ -185,6 +185,7 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
             if (msg is null)
             {
                 if (i == 0) return;
+                _logger.LogInformation("Finished processing {i} stats messages.", i + 1);
                 break;
             }
 

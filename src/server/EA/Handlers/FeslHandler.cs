@@ -604,6 +604,8 @@ public class FeslHandler
         var statKey = request["u.0.s.0.k"];
         if (statKey.StartsWith("time_mp") && statKey.EndsWith("_c") && clientString == "PS3/BFBC2")
         {
+            _logger.LogInformation("Trying to update Onslaught stats...");
+
             try
             {
                 var uid = long.Parse(request["u.0.o"]);
@@ -624,6 +626,7 @@ public class FeslHandler
                     GameTime = TimeSpan.FromSeconds(playtime)
                 };
 
+                _logger.LogInformation("Posting Onslaught stats message: {Message}", onslaughtMessage);
                 _stats.PostLevelComplete(onslaughtMessage);
             }
             catch (Exception e)
