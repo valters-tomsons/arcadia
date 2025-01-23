@@ -601,37 +601,60 @@ public class FeslHandler
 
     private async Task HandleUpdateStats(Packet request)
     {
-        var statKey = request["u.0.s.0.k"];
-        if (statKey.StartsWith("time_mp") && statKey.EndsWith("_c") && clientString == "PS3/BFBC2")
+        if (!int.TryParse(request["u.0.s.[]"], out var statsCount) || statsCount < 1)
         {
-            _logger.LogInformation("Trying to update Onslaught stats...");
+            await AcknowledgeRequest(request);
+            return;
+        }
 
-            try
+        _logger.LogTrace("Client submitted {statsCount} stats!", statsCount);
+
+        for (var i = 0; i < statsCount; i++)
+        {
+            var statKey = request[$"u.0.s.{i}.k"];
+            _logger.LogTrace("Processing stat {index}: {statKey}", i, statKey);
+
+            if (statKey.StartsWith("time_mp") && statKey.EndsWith("_c") && clientString.Equals("BFBC2-PS3", StringComparison.InvariantCultureIgnoreCase))
             {
-                var uid = long.Parse(request["u.0.o"]);
-                var player = _sharedCache.FindSessionByUID(uid) ?? throw new Exception("Player not online?");
-                var server = _sharedCache.FindGameWithPlayerByUid(partitionId, uid) ?? throw new Exception("Player not in server?");
+                _logger.LogInformation("Trying to update Onslaught map stats...");
 
-                if (_plasma is null || server.UID != _plasma.UID)
+                try
                 {
-                    throw new Exception("Denying update from client!");
+                    var uid = long.Parse(request["u.0.o"]);
+                    var player = _sharedCache.FindSessionByUID(uid) ?? throw new Exception("Player not online?");
+                    var server = _sharedCache.FindGameWithPlayerByUid(partitionId, uid) ?? throw new Exception("Player not in server?");
+
+                    if (_plasma is null)
+                    {
+                        throw new Exception("Denying update from client!");
+                    }
+
+                    if (server.UID != _plasma.UID)
+                    {
+                        _logger.LogWarning("Non-server request stats update");
+                    }
+
+                    if (uid != _plasma.UID)
+                    {
+                        _logger.LogWarning("Non-self stats update");
+                    }
+
+                    var playtime = Math.Abs(double.Parse(request[$"u.0.s.{i}.v"]));
+                    var onslaughtMessage = new OnslaughtLevelCompleteMessage
+                    {
+                        PlayerName = player.NAME,
+                        MapKey = statKey.Replace("time_mp", string.Empty).Replace("_c", string.Empty),
+                        Difficulty = server.Data["B-U-difficulty"],
+                        GameTime = TimeSpan.FromSeconds(playtime)
+                    };
+
+                    _logger.LogTrace("Posting Onslaught stats message: {Message}", onslaughtMessage);
+                    _stats.PostLevelComplete(onslaughtMessage);
                 }
-
-                var playtime = Math.Abs(double.Parse(request["u.0.s.0.v"]));
-                var onslaughtMessage = new OnslaughtLevelCompleteMessage
+                catch (Exception e)
                 {
-                    PlayerName = player.NAME,
-                    MapKey = statKey.Replace("time_mp", string.Empty).Replace("_c", string.Empty),
-                    Difficulty = server.Data["B-U-difficulty"],
-                    GameTime = TimeSpan.FromSeconds(playtime)
-                };
-
-                _logger.LogInformation("Posting Onslaught stats message: {Message}", onslaughtMessage);
-                _stats.PostLevelComplete(onslaughtMessage);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "Failed to process onslaught stats update!");
+                    _logger.LogError(e, "Failed to process onslaught stats update!");
+                }
             }
         }
 
