@@ -15,6 +15,7 @@ public interface IEAConnection
 
     void InitializeInsecure(Stream network, string clientEndpoint, string serverEndpoint);
     void InitializeSecure(TlsServerProtocol network, string clientEndpoint, string serverEndpoint);
+    void Terminate();
 
     IAsyncEnumerable<Packet> StartConnection(ILogger logger, CancellationToken ct = default);
 
@@ -32,6 +33,7 @@ public class EAConnection : IEAConnection
     public string ServerAddress => _serverAddress;
 
     private string _serverAddress = string.Empty;
+    private bool _terminated = false;
 
     public void InitializeInsecure(Stream network, string clientEndpoint, string serverEndpoint)
     {
@@ -70,18 +72,19 @@ public class EAConnection : IEAConnection
         uint currentMultiPacketSize = 0;
         int currentMultiPacketReceivedSize = 0;
 
-        while (NetworkStream.CanRead == true || !ct.IsCancellationRequested)
+        while (NetworkStream.CanRead == true && !ct.IsCancellationRequested && !_terminated)
         {
             int read;
+
             try
             {
                 read = await NetworkStream!.ReadAsync(readBuffer.AsMemory(), ct);
             }
-            catch (TlsNoCloseNotifyException e) when (e.Message == "No close_notify alert received before connection closed")
+            catch (TlsNoCloseNotifyException)
             {
                 break;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 logger.LogDebug(e, "Failed to read client stream, endpoint: {endpoint}", ClientEndpoint);
                 break;
@@ -163,6 +166,11 @@ public class EAConnection : IEAConnection
         logger.LogInformation("Connection has been closed: {endpoint}", ClientEndpoint);
     }
 
+    public void Terminate()
+    {
+        _terminated = true;
+    }
+
     public async Task<bool> SendPacket(Packet packet)
     {
         if (NetworkStream is null || !NetworkStream.CanWrite)
@@ -192,6 +200,7 @@ public class EAConnection : IEAConnection
         catch (Exception e)
         {
             _logger?.LogDebug(e, "Failed writing to endpoint: {endpoint}!", ClientEndpoint);
+            _terminated = true;
             return false;
         }
     }
