@@ -116,7 +116,7 @@ public class EAConnection : IEAConnection
                     throw new NotImplementedException();
                 }
 
-                if (packet.TransmissionType == FeslTransmissionType.MultiPacketResponse)
+                if (packet.TransmissionType == FeslTransmissionType.MultiPacketResponse || packet.TransmissionType == FeslTransmissionType.MultiPacketRequest)
                 {
                     var encodedPart = packet["data"].Replace("%3d", "=");
                     var partPayload = Convert.FromBase64String(encodedPart);
