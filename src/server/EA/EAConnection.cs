@@ -29,9 +29,9 @@ public class EAConnection : IEAConnection
     public Stream? NetworkStream { get; private set; }
 
     public string NetworkAddress => ClientEndpoint.Split(':')[0];
+    public string ServerAddress => _serverAddress;
 
     private string _serverAddress = string.Empty;
-    public string ServerAddress => _serverAddress;
 
     public void InitializeInsecure(Stream network, string clientEndpoint, string serverEndpoint)
     {
