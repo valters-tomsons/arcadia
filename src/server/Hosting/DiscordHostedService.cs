@@ -192,7 +192,7 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
             var level = $"Levels/ONS_MP_{msg.MapKey}";
             var levelName = LevelDisplayName(level);
             var gt = msg.GameTime;
-            var message = $"Finished {levelName} on {msg.Difficulty} in {gt.Hours} hours, {gt.Minutes} minutes and {gt.Seconds} seconds".Replace(" 0 hours, ", string.Empty);
+            var message = $"Finished {levelName} on {msg.Difficulty} in {gt.Hours} hours, {gt.Minutes} minutes and {gt.Seconds} seconds".Replace(" 0 hours, ", " ");
 
             eb.AddField(msg.PlayerName, message);
         }
