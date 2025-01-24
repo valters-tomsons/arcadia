@@ -53,6 +53,7 @@ public class FeslHandler
             ["fsys/MemCheck"] = HandleMemCheck,
             ["fsys/Ping"] = HandlePing,
             ["fsys/GetPingSites"] = HandleGetPingSites,
+            ["fsys/Goodbye"] = HandleGoodbye,
             ["pnow/Start"] = HandlePlayNow,
             ["acct/NuPS3Login"] = HandleNuPs3Login,
             ["acct/PS3Login"] = HandlePs3Login,
@@ -154,6 +155,12 @@ public class FeslHandler
         var helloPacket = new Packet("fsys", FeslTransmissionType.SinglePacketResponse, request.Id, serverHelloData);
         await _conn.SendPacket(helloPacket);
         await SendMemCheck();
+    }
+
+    private Task HandleGoodbye(Packet request)
+    {
+        _conn.Terminate();
+        return Task.CompletedTask;
     }
 
     private async Task HandlePlayNow(Packet request)
