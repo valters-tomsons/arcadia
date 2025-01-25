@@ -24,6 +24,8 @@ public interface IEAConnection
 
 public class EAConnection : IEAConnection
 {
+    private const int ReadBufferSize = 8192;
+
     private ILogger? _logger;
 
     public string ClientEndpoint { get; private set; } = string.Empty;
@@ -65,7 +67,7 @@ public class EAConnection : IEAConnection
 
         if (NetworkStream is null) throw new InvalidOperationException("Connection must be initialized before starting");
 
-        var readBuffer = new byte[8192];
+        var readBuffer = new byte[ReadBufferSize];
 
         using var multiPacketBuffer = new MemoryStream();
         uint? currentMultiPacketId = null;
@@ -93,6 +95,12 @@ public class EAConnection : IEAConnection
             if (read == 0)
             {
                 continue;
+            }
+
+            if (read > readBuffer.Length)
+            {
+                _logger.LogCritical("Client sent a packet exceeding read buffer size!");
+                break;
             }
 
             var incomingData = readBuffer[..read];
