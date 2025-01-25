@@ -82,10 +82,8 @@ public class EAConnection : IEAConnection
             {
                 read = await NetworkStream!.ReadAsync(readBuffer.AsMemory(), ct);
             }
-            catch (TlsNoCloseNotifyException)
-            {
-                break;
-            }
+            catch (ObjectDisposedException) { break; }
+            catch (TlsNoCloseNotifyException) { break; }
             catch (Exception e)
             {
                 logger.LogDebug(e, "Failed to read client stream, endpoint: {endpoint}", ClientEndpoint);
