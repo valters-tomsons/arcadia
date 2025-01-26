@@ -98,10 +98,7 @@ public class FeslHandler
         }
         finally
         {
-            _pingTimer.Change(Timeout.Infinite, Timeout.Infinite);
-            _memchTimer.Change(Timeout.Infinite, Timeout.Infinite);
-            await _pingTimer.DisposeAsync();
-            await _memchTimer.DisposeAsync();
+            await DisposeTimers();
         }
 
         return _plasma ?? throw new NotImplementedException();
@@ -115,10 +112,7 @@ public class FeslHandler
             await HandlePacket(packet);
         }
 
-        _pingTimer.Change(Timeout.Infinite, Timeout.Infinite);
-        _memchTimer.Change(Timeout.Infinite, Timeout.Infinite);
-        await _pingTimer.DisposeAsync();
-        await _memchTimer.DisposeAsync();
+        await DisposeTimers();
 
         return _plasma ?? throw new NotImplementedException();
     }
@@ -712,7 +706,15 @@ public class FeslHandler
         // FESL backend is requesting the client to respond to the memcheck, so this is a request
         // But since memchecks are not part of the meaningful conversation with the client, they don't have a packed id
         var memcheckPacket = new Packet("fsys", FeslTransmissionType.SinglePacketRequest, 0, memCheckData);
-        await _conn.SendPacket(memcheckPacket);
+
+        try
+        {
+            await _conn.SendPacket(memcheckPacket);
+        }
+        catch
+        {
+            await DisposeTimers();
+        }
     }
 
     private async Task SendPing()
@@ -723,9 +725,24 @@ public class FeslHandler
         }
 
         var feslPing = new Packet("fsys", FeslTransmissionType.SinglePacketRequest, 0, new() { { "TXN", "Ping" } });
-        await _conn.SendPacket(feslPing);
-
         var theaterPing = new Packet("PING", TheaterTransmissionType.Request, 0);
-        await _plasma.TheaterConnection.SendPacket(theaterPing);
+
+        try
+        {
+            await _conn.SendPacket(feslPing);
+            await _plasma.TheaterConnection.SendPacket(theaterPing);
+        }
+        catch
+        {
+            await DisposeTimers();
+        }
+    }
+
+    private async Task DisposeTimers()
+    {
+        _pingTimer.Change(Timeout.Infinite, Timeout.Infinite);
+        _memchTimer.Change(Timeout.Infinite, Timeout.Infinite);
+        await _pingTimer.DisposeAsync();
+        await _memchTimer.DisposeAsync();
     }
 }
