@@ -87,16 +87,22 @@ public class FeslHandler
 
     public async Task<PlasmaSession> HandleClientConnection(TlsServerProtocol tlsProtocol, string clientEndpoint, string serverEndpoint)
     {
-        _conn.InitializeSecure(tlsProtocol, clientEndpoint, serverEndpoint);
-        await foreach (var packet in _conn.StartConnection(_logger))
+        try
         {
-            await HandlePacket(packet);
-        }
+            _conn.InitializeSecure(tlsProtocol, clientEndpoint, serverEndpoint);
+            await foreach (var packet in _conn.StartConnection(_logger))
+            {
+                await HandlePacket(packet);
+            }
 
-        _pingTimer.Change(Timeout.Infinite, Timeout.Infinite);
-        _memchTimer.Change(Timeout.Infinite, Timeout.Infinite);
-        await _pingTimer.DisposeAsync();
-        await _memchTimer.DisposeAsync();
+        }
+        finally
+        {
+            _pingTimer.Change(Timeout.Infinite, Timeout.Infinite);
+            _memchTimer.Change(Timeout.Infinite, Timeout.Infinite);
+            await _pingTimer.DisposeAsync();
+            await _memchTimer.DisposeAsync();
+        }
 
         return _plasma ?? throw new NotImplementedException();
     }
