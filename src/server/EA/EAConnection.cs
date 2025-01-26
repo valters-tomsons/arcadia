@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Arcadia.EA.Constants;
@@ -24,7 +25,10 @@ public interface IEAConnection
 
 public class EAConnection : IEAConnection
 {
+    private static readonly ArrayPool<byte> _bufferPool = ArrayPool<byte>.Shared;
+
     private const int ReadBufferSize = 8192;
+    private const int MultiPacketBufferSize = 24000;
 
     private ILogger? _logger;
 
@@ -64,109 +68,121 @@ public class EAConnection : IEAConnection
     public async IAsyncEnumerable<Packet> StartConnection(ILogger logger, [EnumeratorCancellation] CancellationToken ct = default)
     {
         _logger = logger;
-
         if (NetworkStream is null) throw new InvalidOperationException("Connection must be initialized before starting");
 
-        var readBuffer = new byte[ReadBufferSize];
+        var bufferArray = _bufferPool.Rent(ReadBufferSize);
+        var readBuffer = bufferArray.AsMemory();
 
-        using var multiPacketBuffer = new MemoryStream();
+        MemoryStream? multiPacketBuffer = null;
         uint? currentMultiPacketId = null;
         uint currentMultiPacketSize = 0;
         int currentMultiPacketReceivedSize = 0;
 
-        while (NetworkStream.CanRead == true && !ct.IsCancellationRequested && !_terminated)
+        try
         {
-            int read;
-
-            try
+            while (NetworkStream.CanRead == true && !ct.IsCancellationRequested && !_terminated)
             {
-                read = await NetworkStream!.ReadAsync(readBuffer.AsMemory(), ct);
-            }
-            catch (ObjectDisposedException) { break; }
-            catch (TlsNoCloseNotifyException) { break; }
-            catch (Exception e)
-            {
-                logger.LogDebug(e, "Failed to read client stream, endpoint: {endpoint}", ClientEndpoint);
-                break;
-            }
+                int read;
 
-            if (read == 0)
-            {
-                continue;
-            }
-
-            if (read > readBuffer.Length)
-            {
-                _logger.LogCritical("Client sent a packet exceeding read buffer size!");
-                break;
-            }
-
-            var incomingData = readBuffer[..read];
-            var dataProcessed = 0;
-
-            while (dataProcessed < read)
-            {
-                var buffer = incomingData[dataProcessed..];
-                if (buffer.Length <= 12)
+                try
                 {
-                    _logger.LogCritical("Unexpected incoming message length");
-                    throw new NotImplementedException();
+                    read = await NetworkStream!.ReadAsync(readBuffer, ct);
+                }
+                catch (ObjectDisposedException) { break; }
+                catch (TlsNoCloseNotifyException) { break; }
+                catch (Exception e)
+                {
+                    logger.LogDebug(e, "Failed to read client stream, endpoint: {endpoint}", ClientEndpoint);
+                    break;
                 }
 
-                var packet = new Packet(buffer);
-                dataProcessed += (int)packet.Length;
-
-                if (packet.Length == 0)
+                if (read == 0)
                 {
-                    _logger.LogCritical("Unexpected packet length");
-                    throw new NotImplementedException();
-                }
-
-                if (packet.TransmissionType == FeslTransmissionType.MultiPacketResponse || packet.TransmissionType == FeslTransmissionType.MultiPacketRequest)
-                {
-                    var encodedPart = packet["data"].Replace("%3d", "=");
-                    var partPayload = Convert.FromBase64String(encodedPart);
-                    var size = uint.Parse(packet["size"]);
-
-                    if (currentMultiPacketId != packet.Id)
-                    {
-                        currentMultiPacketId = packet.Id;
-                        currentMultiPacketSize = size;
-                        currentMultiPacketReceivedSize = 0;
-
-                        if (size > 24000) throw new Exception($"Requested multi-packet buffer-size too large: {size}");
-                    }
-
-                    if (currentMultiPacketSize != size) throw new Exception($"Requested packet-size changed between requests! Initial size: {currentMultiPacketSize }, newSize: {size}");
-
-                    await multiPacketBuffer.WriteAsync(partPayload, ct);
-                    currentMultiPacketReceivedSize += encodedPart.Length;
-
-                    if (currentMultiPacketReceivedSize == currentMultiPacketSize)
-                    {
-                        var bufferData = multiPacketBuffer.ToArray();
-                        currentMultiPacketId = null;
-
-                        var combinedData = Utils.ParseFeslPacketToDict(bufferData);
-                        var combinedPacket = new Packet(packet.Type, packet.TransmissionType, packet.Id, combinedData, size);
-
-                        logger.LogTrace("'{type}' incoming multi-packet, combined:{data}", combinedPacket.Type, Encoding.ASCII.GetString(bufferData));
-
-                        yield return combinedPacket;
-                    }
-                    else if (currentMultiPacketReceivedSize > currentMultiPacketSize) throw new Exception($"Requested packet-size changed between requests! Initial size: {currentMultiPacketSize}, tried to write: {currentMultiPacketSize}");
-
                     continue;
                 }
-                else
+
+                if (read > readBuffer.Length)
                 {
-                    currentMultiPacketId = null;
-                    logger.LogTrace("'{type}' incoming:{data}", packet.Type, Encoding.ASCII.GetString(packet.Data ?? []));
+                    _logger.LogCritical("Client sent a packet exceeding read buffer size!");
+                    break;
                 }
 
+                var dataProcessed = 0;
+                while (dataProcessed < read)
+                {
+                    var endRange = dataProcessed + read;
+                    var buffer = readBuffer[dataProcessed..endRange];
+                    if (buffer.Length <= 12)
+                    {
+                        _logger.LogCritical("Unexpected incoming message length");
+                        throw new NotImplementedException();
+                    }
 
-                yield return packet;
+                    var packet = new Packet(buffer.ToArray());
+                    dataProcessed += (int)packet.Length;
+
+                    if (packet.Length == 0)
+                    {
+                        _logger.LogCritical("Unexpected packet length");
+                        throw new NotImplementedException();
+                    }
+
+                    if (packet.TransmissionType == FeslTransmissionType.MultiPacketResponse || packet.TransmissionType == FeslTransmissionType.MultiPacketRequest)
+                    {
+                        multiPacketBuffer ??= new(MultiPacketBufferSize);
+
+                        var encodedPart = packet["data"].Replace("%3d", "=");
+                        var partPayload = Convert.FromBase64String(encodedPart);
+                        var size = uint.Parse(packet["size"]);
+
+                        if (currentMultiPacketId != packet.Id)
+                        {
+                            currentMultiPacketId = packet.Id;
+                            currentMultiPacketSize = size;
+                            currentMultiPacketReceivedSize = 0;
+
+                            if (size > MultiPacketBufferSize) throw new Exception($"Requested multi-packet buffer-size too large: {size}");
+                        }
+
+                        if (currentMultiPacketSize != size) throw new Exception($"Requested packet-size changed between requests! Initial size: {currentMultiPacketSize}, newSize: {size}");
+
+                        await multiPacketBuffer.WriteAsync(partPayload, ct);
+                        currentMultiPacketReceivedSize += encodedPart.Length;
+
+                        if (currentMultiPacketReceivedSize == currentMultiPacketSize)
+                        {
+                            var bufferData = multiPacketBuffer.ToArray();
+                            currentMultiPacketId = null;
+
+                            var combinedData = Utils.ParseFeslPacketToDict(bufferData);
+                            var combinedPacket = new Packet(packet.Type, packet.TransmissionType, packet.Id, combinedData, size);
+
+                            logger.LogTrace("'{type}' incoming multi-packet, combined:{data}", combinedPacket.Type, Encoding.ASCII.GetString(bufferData));
+
+                            yield return combinedPacket;
+                        }
+                        else if (currentMultiPacketReceivedSize > currentMultiPacketSize) throw new Exception($"Requested packet-size changed between requests! Initial size: {currentMultiPacketSize}, tried to write: {currentMultiPacketSize}");
+
+                        continue;
+                    }
+                    else
+                    {
+                        currentMultiPacketId = null;
+                        logger.LogTrace("'{type}' incoming:{data}", packet.Type, Encoding.ASCII.GetString(packet.Data ?? []));
+                    }
+
+                    yield return packet;
+                }
             }
+        }
+        finally
+        {
+            if (multiPacketBuffer is not null)
+            {
+                await multiPacketBuffer.DisposeAsync();
+            }
+
+            _bufferPool.Return(bufferArray);
         }
 
         logger.LogInformation("Connection has been closed: {endpoint}", ClientEndpoint);
