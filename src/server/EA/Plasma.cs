@@ -37,4 +37,6 @@ public class GameServerListing
     public ConcurrentDictionary<long, PlasmaSession> ConnectedPlayers { get; init; } = [];
 
     public bool CanJoin { get; set; }
+
+    public DateTimeOffset StartedAt { get; init; } = DateTimeOffset.Now;
 }

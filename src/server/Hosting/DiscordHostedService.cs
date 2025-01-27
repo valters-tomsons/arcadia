@@ -221,7 +221,6 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
                     x.Embed = new EmbedBuilder()
                             .WithTitle("Arcadia")
                             .WithDescription(content.StatusMessage)
-                            .WithCurrentTimestamp()
                             .Build();
                 });
             }
@@ -305,7 +304,7 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
 
             try
             {
-                var serverName = $"**{server.NAME}**";
+                var serverName = $"**{server.NAME.Replace("P2P-", string.Empty)}**";
 
                 var level = server.Data.GetValueOrDefault("B-U-level");
                 var levelName = LevelDisplayName(level);
@@ -313,16 +312,17 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
 
                 var difficulty = server.Data.GetValueOrDefault("B-U-difficulty") ?? "`N/A`";
                 var gamemode = server.Data.GetValueOrDefault("B-U-gamemode") ?? "`N/A`";
-                var online = $"{server.ConnectedPlayers.Count}/{server.Data["MAX-PLAYERS"]}";
+
+                var playerNames = string.Join(", ", server.ConnectedPlayers.Select(x => x.Value.NAME));
+                var onlineCount = $"{server.ConnectedPlayers.Count}/{server.Data["MAX-PLAYERS"]}";
 
                 var eb = new EmbedBuilder()
-                    .WithTitle(serverName)
+                    .WithTitle($"{serverName} ({gamemode})")
                     .WithImageUrl(levelImageUrl)
                     .AddField("Level", levelName)
                     .AddField("Difficulty", difficulty)
-                    .AddField("Gamemode", gamemode)
-                    .AddField("Players", online)
-                    .AddField("Domain", server.PartitionId);
+                    .AddField("Players", $"{onlineCount} | {playerNames}")
+                    .WithTimestamp(server.StartedAt);
 
                 gidEmbeds[i] = (server.GID, eb.Build());
             }
