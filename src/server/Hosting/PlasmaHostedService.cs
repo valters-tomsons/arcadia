@@ -143,9 +143,9 @@ public class PlasmaHostedService : IHostedService
         var clientEndpoint = tcpClient.Client.RemoteEndPoint?.ToString()! ?? throw new NullReferenceException("ClientEndpoint cannot be null!");
         _logger.LogInformation("Opening connection from: {clientEndpoint} to {port}", clientEndpoint, connectionPort);
 
-        using var scope = _scopeFactory.CreateAsyncScope();
-
-        var networkStream = tcpClient.GetStream();
+        using var tcp = tcpClient;
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        await using var networkStream = tcpClient.GetStream();
         PlasmaSession? plasma = null;
 
         try
@@ -188,7 +188,7 @@ public class PlasmaHostedService : IHostedService
                 catch (TlsFatalAlert e)
                 {
                     _logger.LogError(e, "SSL handshake failed!");
-                    return;
+                    throw;
                 }
 
                 var clientHandler = scope.ServiceProvider.GetRequiredService<FeslHandler>();
@@ -197,20 +197,22 @@ public class PlasmaHostedService : IHostedService
         }
         finally
         {
-            _logger.LogInformation("Closing connection: {clientEndpoint}", clientEndpoint);
+            _logger.LogInformation("Closing connection: {clientEndpoint} | {name}", clientEndpoint, plasma?.NAME);
 
             if (plasma != null)
             {
-                _logger.LogInformation("Terminating plasma session: {uid}, {name} | fesl={fesl}, thea={thea}", plasma.UID, plasma.NAME, plasma.FeslConnection is not null, plasma.TheaterConnection is not null);
-
-                plasma.FeslConnection?.NetworkStream?.Close();
-                plasma.TheaterConnection?.NetworkStream?.Close();
                 _sharedCache.RemovePlasmaSession(plasma);
-            }
 
-            await networkStream.DisposeAsync();
-            tcpClient.Close();
-            tcpClient.Dispose();
+                if (plasma.FeslConnection?.NetworkStream != null)
+                {
+                    await plasma.FeslConnection.NetworkStream.DisposeAsync();
+                }
+
+                if (plasma.TheaterConnection?.NetworkStream != null)
+                {
+                    await plasma.TheaterConnection.NetworkStream.DisposeAsync();
+                }
+            }
         }
     }
 

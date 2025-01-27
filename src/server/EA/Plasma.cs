@@ -34,7 +34,7 @@ public class GameServerListing
     public string NAME { get; init; } = string.Empty;
 
     public ConcurrentQueue<PlasmaSession> JoiningPlayers { get; init; } = [];
-    public List<PlasmaSession> ConnectedPlayers { get; init; } = [];
+    public ConcurrentDictionary<long, PlasmaSession> ConnectedPlayers { get; init; } = [];
 
     public bool CanJoin { get; set; }
 }

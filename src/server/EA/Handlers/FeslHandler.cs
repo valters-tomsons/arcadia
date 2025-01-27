@@ -101,7 +101,15 @@ public class FeslHandler
             await DisposeTimers();
         }
 
-        return _plasma ?? throw new NotImplementedException();
+        return _plasma ?? new()
+        {
+            FeslConnection = _conn,
+            UID = 0,
+            NAME = string.Empty,
+            LKEY = string.Empty,
+            ClientString = string.Empty,
+            PartitionId = string.Empty
+        };
     }
 
     public async Task<PlasmaSession> HandleClientConnectionInsecure(NetworkStream network, string clientEndpoint, string serverEndpoint)

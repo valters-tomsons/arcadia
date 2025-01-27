@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using Arcadia.EA;
 using Microsoft.Extensions.Logging;
@@ -40,11 +39,19 @@ public class SharedCache(ILogger<SharedCache> logger, SharedCounters counters)
 
     public void RemovePlasmaSession(PlasmaSession plasma)
     {
-        var hostedGames = _gameServers.Where(x => x.UID == plasma.UID);
-        foreach (var game in hostedGames)
+        if (!_connections.Contains(plasma))
+        {
+            return;
+        }
+
+        var gamesOwnedBySession = _gameServers.Where(x => x.UID == plasma.UID);
+        foreach (var game in gamesOwnedBySession)
         {
             _gameServers.Remove(game);
         }
+
+        var sessionInGame = FindGameWithPlayerByUid(plasma.PartitionId, plasma.UID);
+        sessionInGame?.ConnectedPlayers.Remove(plasma.UID, out var _);
 
         _connections.Remove(plasma);
     }
@@ -102,19 +109,19 @@ public class SharedCache(ILogger<SharedCache> logger, SharedCounters counters)
         _gameServers.Add(new()
         {
             GID = serverGid,
-            Data = new ConcurrentDictionary<string, string>(data),
+            Data = new(data),
             PartitionId = partitionId
         });
     }
 
     public GameServerListing? FindGameWithPlayer(string partitionId, string playerName)
     {
-        return _gameServers.FirstOrDefault(x => x.ConnectedPlayers.Any(y => y.PartitionId == partitionId && y.NAME.Equals(playerName)));
+        return _gameServers.FirstOrDefault(x => x.ConnectedPlayers.Values.Any(y => y.PartitionId == partitionId && y.NAME.Equals(playerName)));
     }
 
     public GameServerListing? FindGameWithPlayerByUid(string partitionId, long uid)
     {
-        return _gameServers.FirstOrDefault(x => x.ConnectedPlayers.Any(y => y.PartitionId == partitionId && y.UID == uid));
+        return _gameServers.FirstOrDefault(x => x.ConnectedPlayers.Any(x => x.Key == uid && x.Value.PartitionId == partitionId));
     }
 
     public GameServerListing? GetGameByGid(string partitionId, long serverGid)

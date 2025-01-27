@@ -57,7 +57,15 @@ public class TheaterHandler
             await HandlePacket(packet);
         }
 
-        return _plasma ?? throw new NotImplementedException();
+        return _plasma ?? new()
+        {
+            TheaterConnection = _conn,
+            UID = 0,
+            NAME = string.Empty,
+            LKEY = string.Empty,
+            ClientString = string.Empty,
+            PartitionId = string.Empty
+        };
     }
 
     public async Task HandlePacket(Packet packet)
@@ -337,7 +345,7 @@ public class TheaterHandler
         };
 
         var packet = new Packet("EGEG", TheaterTransmissionType.OkResponse, 0, response);
-        game.ConnectedPlayers.Add(player);
+        game.ConnectedPlayers.TryAdd(player.UID, player);
         await player.TheaterConnection.SendPacket(packet);
     }
 
@@ -576,7 +584,7 @@ public class TheaterHandler
         var game = _sharedCache.GetGameByGid(_plasma!.PartitionId, gid) ?? throw new NotImplementedException();
 
         var pid = int.Parse(request["PID"]);
-        var player = game.ConnectedPlayers.SingleOrDefault(x => x.PID == pid) ?? throw new NotImplementedException();
+        var player = game.ConnectedPlayers.Values.SingleOrDefault(x => x.PID == pid) ?? throw new NotImplementedException();
 
         var response = new Dictionary<string, string>
         {
@@ -586,7 +594,7 @@ public class TheaterHandler
         var packet = new Packet("PLVT", TheaterTransmissionType.OkResponse, 0, response);
         await _conn.SendPacket(packet);
 
-        game.ConnectedPlayers.Remove(player);
+        game.ConnectedPlayers.Remove(player.UID, out var _);
     }
 
     private Task HandlePING(Packet _)
