@@ -32,7 +32,7 @@ public class SharedCache(ILogger<SharedCache> logger, SharedCounters counters)
 
     public PlasmaSession AddTheaterConnection(IEAConnection theater, string lkey)
     {
-        var plasma = _connections.SingleOrDefault(x => x.LKEY == lkey) ?? throw new Exception();
+        var plasma = _connections.SingleOrDefault(x => x.LKEY == lkey) ?? throw new Exception("Failed to find a plasma session pair!");
         plasma.TheaterConnection = theater;
         return plasma;
     }
