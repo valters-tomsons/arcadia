@@ -10,7 +10,6 @@ using System.Net;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Tls;
 using Arcadia.EA.Ports;
-using Arcadia.Storage;
 using Arcadia.EA.Handlers;
 using Arcadia.EA.Constants;
 
@@ -22,18 +21,16 @@ public class PlasmaHostedService : IHostedService
     private readonly ArcadiaSettings _arcadiaSettings;
     private readonly DebugSettings _debugSettings;
     private readonly IServiceScopeFactory _scopeFactory;
-    private readonly SharedCache _sharedCache;
     private readonly AsymmetricKeyParameter _feslCertKey;
     private readonly Certificate _feslPubCert;
 
     private readonly List<TcpListener> _tcpListeners = [];
     private readonly List<UdpClient> _udpListeners = [];
 
-    public PlasmaHostedService(ILogger<PlasmaHostedService> logger, IOptions<ArcadiaSettings> arcadiaSettings, ProtoSSL certGenerator, IServiceScopeFactory scopeFactory, SharedCache sharedCache, IOptions<DebugSettings> debugSettings)
+    public PlasmaHostedService(ILogger<PlasmaHostedService> logger, IOptions<ArcadiaSettings> arcadiaSettings, ProtoSSL certGenerator, IServiceScopeFactory scopeFactory, IOptions<DebugSettings> debugSettings)
     {
         _logger = logger;
         _scopeFactory = scopeFactory;
-        _sharedCache = sharedCache;
         _arcadiaSettings = arcadiaSettings.Value;
         (_feslCertKey, _feslPubCert) = certGenerator.GetFeslEaCert();
         _debugSettings = debugSettings.Value;
@@ -143,40 +140,37 @@ public class PlasmaHostedService : IHostedService
         var clientEndpoint = tcpClient.Client.RemoteEndPoint?.ToString()! ?? throw new NullReferenceException("ClientEndpoint cannot be null!");
         _logger.LogInformation("Opening connection from: {clientEndpoint} to {port}", clientEndpoint, connectionPort);
 
-        using var tcp = tcpClient;
         await using var scope = _scopeFactory.CreateAsyncScope();
-        await using var networkStream = tcpClient.GetStream();
-        PlasmaSession? plasma = null;
 
-        try
+        using var tcp = tcpClient;
+        await using var networkStream = tcp.GetStream();
+
+        if (PortExtensions.IsTheater(connectionPort))
         {
-            if (PortExtensions.IsTheater(connectionPort))
+            var clientHandler = scope.ServiceProvider.GetRequiredService<TheaterHandler>();
+            await clientHandler.HandleClientConnection(networkStream, clientEndpoint, tcpClient.Client.LocalEndPoint!.ToString()!);
+        }
+        else if (_arcadiaSettings.MessengerPort == connectionPort)
+        {
+            var clientHandler = scope.ServiceProvider.GetRequiredService<MessengerHandler>();
+            await clientHandler.HandleClientConnection(networkStream, clientEndpoint, tcpClient.Client.LocalEndPoint!.ToString()!);
+        }
+        else
+        {
+            if (!PortExtensions.IsFeslPort(connectionPort))
             {
-                var clientHandler = scope.ServiceProvider.GetRequiredService<TheaterHandler>();
-                plasma = await clientHandler.HandleClientConnection(networkStream, clientEndpoint, tcpClient.Client.LocalEndPoint!.ToString()!);
+                _logger.LogError("Unknown game port: {port}, defaulting to Fesl...", connectionPort);
             }
-            else if (_arcadiaSettings.MessengerPort == connectionPort)
-            {
-                var clientHandler = scope.ServiceProvider.GetRequiredService<MessengerHandler>();
-                await clientHandler.HandleClientConnection(networkStream, clientEndpoint, tcpClient.Client.LocalEndPoint!.ToString()!);
-            }
-            else if (_debugSettings.ForcePlaintext)
-            {
-                if (!PortExtensions.IsFeslPort(connectionPort))
-                {
-                    _logger.LogError("Unknown port game: {port}, defaulting to FeslHandler...", connectionPort);
-                }
 
-                var clientHandler = scope.ServiceProvider.GetRequiredService<FeslHandler>();
-                plasma = await clientHandler.HandleClientConnectionInsecure(networkStream, clientEndpoint, tcpClient.Client.LocalEndPoint!.ToString()!);
+            var clientHandler = scope.ServiceProvider.GetRequiredService<FeslHandler>();
+
+            if (_debugSettings.ForcePlaintext)
+            {
+                _logger.LogWarning("Connecting fesl client without TLS!");
+                await clientHandler.HandleClientConnection(networkStream, clientEndpoint, tcpClient.Client.LocalEndPoint!.ToString()!);
             }
             else
             {
-                if (!PortExtensions.IsFeslPort(connectionPort))
-                {
-                    _logger.LogError("Unknown port game: {port}, defaulting to FeslHandler...", connectionPort);
-                }
-
                 var crypto = scope.ServiceProvider.GetRequiredService<Rc4TlsCrypto>();
                 var connTls = new Ssl3TlsServer(crypto, _feslPubCert, _feslCertKey);
                 var serverProtocol = new TlsServerProtocol(networkStream);
@@ -191,27 +185,7 @@ public class PlasmaHostedService : IHostedService
                     throw;
                 }
 
-                var clientHandler = scope.ServiceProvider.GetRequiredService<FeslHandler>();
-                plasma = await clientHandler.HandleClientConnection(serverProtocol, clientEndpoint, tcpClient.Client.LocalEndPoint!.ToString()!);
-            }
-        }
-        finally
-        {
-            _logger.LogInformation("Closing connection: {clientEndpoint} | {name}", clientEndpoint, plasma?.NAME);
-
-            if (plasma != null)
-            {
-                _sharedCache.RemovePlasmaSession(plasma);
-
-                if (plasma.FeslConnection?.NetworkStream != null)
-                {
-                    await plasma.FeslConnection.NetworkStream.DisposeAsync();
-                }
-
-                if (plasma.TheaterConnection?.NetworkStream != null)
-                {
-                    await plasma.TheaterConnection.NetworkStream.DisposeAsync();
-                }
+                await clientHandler.HandleClientConnection(serverProtocol.Stream, clientEndpoint, tcpClient.Client.LocalEndPoint!.ToString()!);
             }
         }
     }
