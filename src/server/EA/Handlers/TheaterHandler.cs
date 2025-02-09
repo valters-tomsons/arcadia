@@ -51,11 +51,21 @@ public class TheaterHandler
 
     public async Task<PlasmaSession> HandleClientConnection(NetworkStream network, string clientEndpoint, string serverEndpoint)
     {
-        _conn.InitializeInsecure(network, clientEndpoint, serverEndpoint);
-        await foreach (var packet in _conn.StartConnection(_logger))
+        try
         {
-            await HandlePacket(packet);
+            _conn.Initialize(network, clientEndpoint, serverEndpoint);
+            await foreach (var packet in _conn.StartConnection(_logger))
+            {
+                await HandlePacket(packet);
+            }
+
         }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Error in theater: {Message}", e.Message);
+        }
+
+        _logger.LogInformation("Closing Theater connection: {clientEndpoint} | {name}", clientEndpoint, _plasma?.NAME);
 
         return _plasma ?? new()
         {

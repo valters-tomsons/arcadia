@@ -85,21 +85,32 @@ public class FeslHandler
         }.ToImmutableDictionary();
     }
 
-    public async Task<PlasmaSession> HandleClientConnection(TlsServerProtocol tlsProtocol, string clientEndpoint, string serverEndpoint)
+    public async Task<PlasmaSession> HandleClientConnection(Stream network, string clientEndpoint, string serverEndpoint)
     {
         try
         {
-            _conn.InitializeSecure(tlsProtocol, clientEndpoint, serverEndpoint);
+            _conn.Initialize(network, clientEndpoint, serverEndpoint);
             await foreach (var packet in _conn.StartConnection(_logger))
             {
                 await HandlePacket(packet);
             }
 
         }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Error in fesl: {Message}", e.Message);
+        }
         finally
         {
             await DisposeTimers();
         }
+
+        if (_plasma is not null)
+        {
+            _sharedCache.RemovePlasmaSession(_plasma);
+        }
+
+        _logger.LogInformation("Closing FESL connection: {clientEndpoint} | {name}", clientEndpoint, _plasma?.NAME);
 
         return _plasma ?? new()
         {
@@ -110,19 +121,6 @@ public class FeslHandler
             ClientString = string.Empty,
             PartitionId = string.Empty
         };
-    }
-
-    public async Task<PlasmaSession> HandleClientConnectionInsecure(NetworkStream network, string clientEndpoint, string serverEndpoint)
-    {
-        _conn.InitializeInsecure(network, clientEndpoint, serverEndpoint);
-        await foreach (var packet in _conn.StartConnection(_logger))
-        {
-            await HandlePacket(packet);
-        }
-
-        await DisposeTimers();
-
-        return _plasma ?? throw new NotImplementedException();
     }
 
     public async Task HandlePacket(Packet packet)

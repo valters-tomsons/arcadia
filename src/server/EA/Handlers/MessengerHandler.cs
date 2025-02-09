@@ -30,7 +30,7 @@ public class MessengerHandler
 
     public async Task HandleClientConnection(NetworkStream network, string clientEndpoint, string serverEndpoint)
     {
-        _conn.InitializeInsecure(network, clientEndpoint, serverEndpoint);
+        _conn.Initialize(network, clientEndpoint, serverEndpoint);
         await foreach (var packet in _conn.StartConnection(_logger))
         {
             await HandlePacket(packet);
