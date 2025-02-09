@@ -31,6 +31,7 @@ var host = Host.CreateDefaultBuilder()
 
         services
             .AddSingleton<ProtoSSL>()
+            .AddSingleton<Rc4TlsCrypto>()
             .AddSingleton<SharedCounters>()
             .AddSingleton<SharedCache>()
             .AddSingleton<StatsStorage>();
@@ -44,7 +45,6 @@ var host = Host.CreateDefaultBuilder()
             .AddSingleton<DiscordSocketClient>();
 
         services
-            .AddScoped<Rc4TlsCrypto>()
             .AddScoped<IEAConnection, EAConnection>()
             .AddScoped<FeslHandler>()
             .AddScoped<TheaterHandler>()
