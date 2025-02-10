@@ -23,7 +23,7 @@ public class FeslHandlerTests
         mockConnection = fixture.Freeze<Mock<IEAConnection>>();
 
         mockConnection.Setup(x => x.SendPacket(It.IsAny<Packet>(), It.IsAny<CancellationToken>()))
-                      .Callback<Packet>(responses.Enqueue)
+                      .Callback<Packet, CancellationToken>((packet, ct) => responses.Enqueue(packet))
                       .Returns(Task.FromResult(true))
                       .Verifiable();
 
@@ -36,7 +36,9 @@ public class FeslHandlerTests
     {
         Dictionary<string, string> requestData = new() {
             ["TXN"] = "Hello",
-            ["clientString"] = clientString };
+            ["clientString"] = clientString,
+            ["sku"] = "ps3"
+        };
         if (clientType is not null) requestData.Add("clientType", clientType);
         var request = new Packet("fsys", SinglePacketRequest, 0, requestData);
 
