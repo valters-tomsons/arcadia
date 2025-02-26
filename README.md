@@ -48,6 +48,14 @@ Battlefield 1943 | Not Playable    | Only access to tutorial works. Playgroups/l
 * https://github.com/RipleyTom/rpcn
 * https://www.psdevwiki.com/ps3/X-I-5-Ticket
 
+## Licenses
+
+All code in this project is licensed under GNU General Public License v2.0 (GPL 2.0) except as otherwise noted. 
+
+Certain parts of this project may be covered by different licenses as explicitly indicated in either a license header at the beginning of the relevant file, or separate LICENSE file within the applicable directory.
+
+Please refer to the documentation of each NuGet package for their specific license details.
+
 ## Domain Name Reference Table
 
 Game             | FESL Domain | Vulnerable SSL
