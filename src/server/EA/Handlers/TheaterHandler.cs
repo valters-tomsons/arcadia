@@ -525,7 +525,7 @@ public class TheaterHandler
         }
         else
         {
-            var brackets = Thread.VolatileRead(ref _brackets);
+            var brackets = Volatile.Read(ref _brackets);
             var reqTid = int.Parse(request["TID"]);
             var originalTid = reqTid - brackets / 2;
 
