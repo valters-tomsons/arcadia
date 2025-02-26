@@ -521,20 +521,20 @@ public class TheaterHandler
     {
         if (request["START"] == "1")
         {
-            Interlocked.Add(ref _brackets, 2);
+            _brackets += 2;
         }
         else
         {
-            var brackets = Volatile.Read(ref _brackets);
             var reqTid = int.Parse(request["TID"]);
-            var originalTid = reqTid - brackets / 2;
+            var originalTid = reqTid - _brackets / 2;
 
-            for (var packet = 0; packet < brackets; packet++)
+            for (var packet = 0; packet < _brackets; packet++)
             {
                 var response = new Packet(request.Type, TheaterTransmissionType.OkResponse, 0);
                 response["TID"] = $"{originalTid + packet}";
+
                 await _conn.SendPacket(response);
-                Interlocked.Decrement(ref _brackets);
+                _brackets--;
             }
         }
     }
