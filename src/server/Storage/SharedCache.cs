@@ -14,7 +14,9 @@ public class SharedCache(ILogger<SharedCache> logger, SharedCounters counters)
     private readonly List<GameServerListing> _gameServers = [];
     private readonly List<PlasmaSession> _connections = [];
 
-    public PlasmaSession CreatePlasmaConnection(IEAConnection fesl, string onlineId, string clientString, string partitionId)
+    private readonly SemaphoreSlim _semaphore = new(1);
+
+    public async Task<PlasmaSession> CreatePlasmaConnection(IEAConnection fesl, string onlineId, string clientString, string partitionId)
     {
         PlasmaSession result = new()
         {
@@ -26,7 +28,17 @@ public class SharedCache(ILogger<SharedCache> logger, SharedCounters counters)
             PartitionId = partitionId
         };
 
-        _connections.Add(result);
+        await _semaphore.WaitAsync();
+
+        try
+        {
+            _connections.Add(result);
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+
         return result;
     }
 
@@ -37,33 +49,60 @@ public class SharedCache(ILogger<SharedCache> logger, SharedCounters counters)
         return plasma;
     }
 
-    public void RemovePlasmaSession(PlasmaSession plasma)
+    public async Task RemovePlasmaSession(PlasmaSession plasma)
     {
         if (!_connections.Contains(plasma))
         {
             return;
         }
 
-        var gamesOwnedBySession = _gameServers.Where(x => x.UID == plasma.UID);
-        foreach (var game in gamesOwnedBySession)
+        await _semaphore.WaitAsync();
+
+        try
+        {
+            var gamesOwnedBySession = _gameServers.Where(x => x.UID == plasma.UID);
+            foreach (var game in gamesOwnedBySession)
+            {
+                _gameServers.Remove(game);
+            }
+
+            var sessionInGame = FindGameWithPlayerByUid(plasma.PartitionId, plasma.UID);
+            sessionInGame?.ConnectedPlayers.Remove(plasma.UID, out var _);
+
+            _connections.Remove(plasma);
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    }
+
+    public async Task AddGameListing(GameServerListing game)
+    {
+        await _semaphore.WaitAsync();
+
+        try
+        {
+            _gameServers.Add(game);
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    }
+
+    public async Task RemoveGameListing(GameServerListing game)
+    {
+        await _semaphore.WaitAsync();
+
+        try
         {
             _gameServers.Remove(game);
         }
-
-        var sessionInGame = FindGameWithPlayerByUid(plasma.PartitionId, plasma.UID);
-        sessionInGame?.ConnectedPlayers.Remove(plasma.UID, out var _);
-
-        _connections.Remove(plasma);
-    }
-
-    public void AddGameListing(GameServerListing game)
-    {
-        _gameServers.Add(game);
-    }
-
-    public void RemoveGameListing(GameServerListing game)
-    {
-        _gameServers.Remove(game);
+        finally
+        {
+            _semaphore.Release();
+        }
     }
 
     public PlasmaSession? FindPartitionSessionByUser(string partitionId, string playerName)
@@ -81,7 +120,7 @@ public class SharedCache(ILogger<SharedCache> logger, SharedCounters counters)
         return _connections.SingleOrDefault(x => x.UID == uid);
     }
 
-    public void UpsertGameServerDataByGid(string partitionId, long serverGid, IDictionary<string, string> data)
+    public async Task UpsertGameServerDataByGid(string partitionId, long serverGid, IDictionary<string, string> data)
     {
         if (serverGid < 1)
         {
@@ -89,7 +128,7 @@ public class SharedCache(ILogger<SharedCache> logger, SharedCounters counters)
             return;
         }
 
-        foreach(var item in DataKeyBlacklist)
+        foreach (var item in DataKeyBlacklist)
         {
             data.Remove(item);
         }
@@ -106,12 +145,22 @@ public class SharedCache(ILogger<SharedCache> logger, SharedCounters counters)
             return;
         }
 
-        _gameServers.Add(new()
+        await _semaphore.WaitAsync();
+
+        try
         {
-            GID = serverGid,
-            Data = new(data),
-            PartitionId = partitionId
-        });
+            _gameServers.Add(new()
+            {
+                GID = serverGid,
+                Data = new(data),
+                PartitionId = partitionId
+            });
+
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
     }
 
     public GameServerListing? FindGameWithPlayer(string partitionId, string playerName)

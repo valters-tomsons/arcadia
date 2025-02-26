@@ -137,7 +137,7 @@ public class TheaterHandler
 
         if (game is not null && isGid && _plasma?.UID == game.UID)
         {
-            _sharedCache.RemoveGameListing(game);
+            await _sharedCache.RemoveGameListing(game);
         }
 
         var packet = new Packet("ECNL", TheaterTransmissionType.OkResponse, 0, response);
@@ -470,7 +470,7 @@ public class TheaterHandler
             return;
         }
 
-        _sharedCache.AddGameListing(game);
+        await _sharedCache.AddGameListing(game);
 
         var response = new Dictionary<string, string>
         {
@@ -539,37 +539,33 @@ public class TheaterHandler
         }
     }
 
-    private Task HandleUGDE(Packet request)
+    private async Task HandleUGDE(Packet request)
     {
         var gid = long.Parse(request["GID"]);
         var game = _sharedCache.GetGameByGid(_plasma!.PartitionId, gid) ?? throw new NotImplementedException();
 
-        _sharedCache.UpsertGameServerDataByGid(_plasma.PartitionId, gid, request.DataDict);
+        await _sharedCache.UpsertGameServerDataByGid(_plasma.PartitionId, gid, request.DataDict);
 
         if (!string.IsNullOrWhiteSpace(request["B-U-level"]))
         {
             game.CanJoin = true;
         }
-
-        return Task.CompletedTask;
     }
 
-    private Task HandleUGAM(Packet request)
+    private async Task HandleUGAM(Packet request)
     {
         var gid = long.Parse(request["GID"]);
         var game = _sharedCache.GetGameByGid(_plasma!.PartitionId, gid) ?? throw new NotImplementedException();
 
         if (game.UID == _plasma?.UID)
         {
-            _sharedCache.UpsertGameServerDataByGid(_plasma.PartitionId, gid, request.DataDict);
+            await _sharedCache.UpsertGameServerDataByGid(_plasma.PartitionId, gid, request.DataDict);
 
             if (!string.IsNullOrWhiteSpace(request["B-U-level"]))
             {
                 game.CanJoin = true;
             }
         }
-
-        return Task.CompletedTask;
     }
 
     private async Task HandleRGAM(Packet request)
@@ -585,7 +581,7 @@ public class TheaterHandler
         var packet = new Packet("RGAM", TheaterTransmissionType.OkResponse, 0, response);
         await _conn.SendPacket(packet);
 
-        _sharedCache.RemoveGameListing(game);
+        await _sharedCache.RemoveGameListing(game);
     }
 
     private async Task HandlePLVT(Packet request)
