@@ -61,48 +61,7 @@ public class PlasmaHostedService : IHostedService
             _logger.LogInformation("Initializing listener on {address}:{port}", _arcadiaSettings.ListenAddress, port);
 
             StartTcpListenerTask(port, processCt);
-
-            var isTheater = PortExtensions.IsTheater(port);
-            if (isTheater)
-            {
-                var udpListener = new UdpClient(port);
-                _udpListeners.Add(udpListener);
-
-                ThreadPool.QueueUserWorkItem(async callback =>
-                {
-                    while (!processCt.IsCancellationRequested)
-                    {
-                        try
-                        {
-                            var udpResult = await udpListener.ReceiveAsync();
-                            var request = new Packet(udpResult.Buffer);
-                            if (request.Type == "ECHO")
-                            {
-                                Dictionary<string, string> data = new()
-                                {
-                                    { "TXN", "ECHO" },
-                                    { "IP", udpResult.RemoteEndPoint.Address.ToString() },
-                                    { "PORT", udpResult.RemoteEndPoint.Port.ToString() },
-                                    { "ERR", "0" },
-                                    { "TYPE", "1" },
-                                    { "TID", request["TID"] }
-                                };
-
-                                var response = await new Packet(request.Type, TheaterTransmissionType.OkResponse, 0, data).Serialize();
-                                await udpListener.SendAsync(response, udpResult.RemoteEndPoint, processCt);
-                            }
-                            else
-                            {
-                                _logger.LogError("Unknown UDP request type: {type}", request.Type);
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            _logger.LogError(e, "Error receiving UDP datagram on port {port}", port);
-                        }
-                    }
-                });
-            }
+            StartUdpListenerTask(port, processCt);
         }
 
         return Task.CompletedTask;
@@ -190,6 +149,51 @@ public class PlasmaHostedService : IHostedService
 
                 await clientHandler.HandleClientConnection(serverProtocol.Stream, clientEndpoint, tcpClient.Client.LocalEndPoint!.ToString()!);
             }
+        }
+    }
+
+    private void StartUdpListenerTask(int port, CancellationToken processCt)
+    {
+        var isTheater = PortExtensions.IsTheater(port);
+        if (isTheater)
+        {
+            var udpListener = new UdpClient(port);
+            _udpListeners.Add(udpListener);
+
+            ThreadPool.QueueUserWorkItem(async callback =>
+            {
+                while (!processCt.IsCancellationRequested)
+                {
+                    try
+                    {
+                        var udpResult = await udpListener.ReceiveAsync();
+                        var request = new Packet(udpResult.Buffer);
+                        if (request.Type == "ECHO")
+                        {
+                            Dictionary<string, string> data = new()
+                            {
+                                    { "TXN", "ECHO" },
+                                    { "IP", udpResult.RemoteEndPoint.Address.ToString() },
+                                    { "PORT", udpResult.RemoteEndPoint.Port.ToString() },
+                                    { "ERR", "0" },
+                                    { "TYPE", "1" },
+                                    { "TID", request["TID"] }
+                            };
+
+                            var response = await new Packet(request.Type, TheaterTransmissionType.OkResponse, 0, data).Serialize();
+                            await udpListener.SendAsync(response, udpResult.RemoteEndPoint, processCt);
+                        }
+                        else
+                        {
+                            _logger.LogError("Unknown UDP request type: {type}", request.Type);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogError(e, "Error receiving UDP datagram");
+                    }
+                }
+            });
         }
     }
 
