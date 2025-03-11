@@ -29,6 +29,9 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
 
+    - name: Run unit tests
+      run: dotnet test -c Release
+
     - name: Publish arcadia
       run: dotnet publish ./src/server -c Release -r ${{ matrix.os }} -o ./arcadia-${{ matrix.os }}
 
