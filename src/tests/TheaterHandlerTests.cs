@@ -22,8 +22,8 @@ public class TheaterHandlerTests
         fixture = new Fixture().Customize(new AutoMoqCustomization());
         mockConnection = fixture.Freeze<Mock<IEAConnection>>();
 
-        mockConnection.Setup(x => x.SendPacket(It.IsAny<Packet>(), It.IsAny<CancellationToken>()))
-                      .Callback<Packet, CancellationToken>((packet, ct) => responses.Enqueue(packet))
+        mockConnection.Setup(x => x.SendPacket(It.IsAny<Packet>()))
+                      .Callback<Packet>(responses.Enqueue)
                       .Returns(Task.FromResult(true))
                       .Verifiable();
 
