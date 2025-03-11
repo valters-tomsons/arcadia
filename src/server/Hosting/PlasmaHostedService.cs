@@ -152,6 +152,8 @@ public class PlasmaHostedService : IHostedService
 
                 plasma = await clientHandler.HandleClientConnection(serverProtocol.Stream, clientEndpoint, tcpClient.Client.LocalEndPoint!.ToString()!, cts.Token);
             }
+
+            plasma.TheaterConnection?.Terminate();
         }
 
         await cts.CancelAsync();
