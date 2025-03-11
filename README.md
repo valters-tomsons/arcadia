@@ -74,4 +74,5 @@ NFS Undercover   | nfsmw2-ps3.fesl.ea.com   | no
 Team Fortress 2  | hl2-ps3.fesl.ea.com      | no
 General "CDN"    | easo.ea.com              | `n/a`
 
-Theater address is generally controlled via Fesl's Server Hello, so Arcadia always sends `theater.ps3.arcadia`. Only `Win32` game has a hardcoded theater address. 
+* Theater address on console is controlled by Fesl's Hello message
+* Arcadia always sends `theater.ps3.arcadia`
