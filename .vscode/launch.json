@@ -13,13 +13,13 @@
             "stopAtEntry": false
         },
         {
-            "name": "run certgen",
+            "name": "Run CertGen",
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/tools/certgen/bin/Debug/net9.0/certgen.dll",
+            "program": "${workspaceFolder}/src/certgen/bin/Debug/net9.0/certgen.dll",
             "args": [],
-            "cwd": "${workspaceFolder}/tools/certgen",
+            "cwd": "${workspaceFolder}/src/certgen",
             "console": "integratedTerminal",
             "stopAtEntry": false
         }

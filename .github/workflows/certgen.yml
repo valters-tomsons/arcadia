@@ -4,7 +4,7 @@ on:
   push:
     branches: [ "*" ]
     paths:
-      - 'tools/certgen/**'
+      - 'src/certgen/**'
       - '.github/workflows/certgen.yml'
   pull_request:
     branches: [ "main" ]
