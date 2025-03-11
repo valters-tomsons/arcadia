@@ -1,5 +1,4 @@
 using System.Buffers;
-using System.Runtime.CompilerServices;
 using System.Text;
 using Arcadia.EA.Constants;
 using Microsoft.Extensions.Logging;
@@ -14,11 +13,11 @@ public interface IEAConnection : IAsyncDisposable
     string NetworkAddress { get; }
     string ServerAddress { get; }
 
-    void Initialize(Stream network, string clientEndpoint, string serverEndpoint);
+    void Initialize(Stream network, string clientEndpoint, string serverEndpoint, CancellationToken ct);
     void Terminate();
 
-    IAsyncEnumerable<Packet> StartConnection(ILogger logger, CancellationToken ct = default);
-    Task<bool> SendPacket(Packet packet, CancellationToken ct = default);
+    IAsyncEnumerable<Packet> StartConnection(ILogger logger);
+    Task<bool> SendPacket(Packet packet);
 }
 
 public sealed class EAConnection : IEAConnection
@@ -35,10 +34,10 @@ public sealed class EAConnection : IEAConnection
     private readonly byte[] _readBufferArray = _bufferPool.Rent(ReadBufferSize);
     private readonly MemoryStream _multiPacketBuffer = new(ReadBufferSize);
 
-    private string _serverAddress = string.Empty;
-    private bool _terminated = false;
+    private string _serverAddress = null!;
+    private CancellationTokenSource _cts = null!;
 
-    public void Initialize(Stream network, string clientEndpoint, string serverEndpoint)
+    public void Initialize(Stream network, string clientEndpoint, string serverEndpoint, CancellationToken ct)
     {
         if (NetworkStream is not null)
         {
@@ -47,10 +46,12 @@ public sealed class EAConnection : IEAConnection
 
         ClientEndpoint = clientEndpoint;
         NetworkStream = network;
+
         _serverAddress = serverEndpoint.Split(':')[0];
+        _cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
     }
 
-    public async IAsyncEnumerable<Packet> StartConnection(ILogger parentLogger, [EnumeratorCancellation] CancellationToken ct = default)
+    public async IAsyncEnumerable<Packet> StartConnection(ILogger parentLogger)
     {
         _logger = parentLogger;
         if (NetworkStream is null) throw new InvalidOperationException("Connection must be initialized before starting");
@@ -60,13 +61,13 @@ public sealed class EAConnection : IEAConnection
         uint? currentMultiPacketId = null;
         uint requestedMultiPacketSize = 0;
 
-        while (NetworkStream.CanRead == true && !ct.IsCancellationRequested && !_terminated)
+        while (NetworkStream.CanRead == true && !_cts.IsCancellationRequested)
         {
             int read;
 
             try
             {
-                read = await NetworkStream.ReadAsync(readBuffer, ct);
+                read = await NetworkStream.ReadAsync(readBuffer, _cts.Token);
             }
             catch (ObjectDisposedException) { break; }
             catch (TlsNoCloseNotifyException) { break; }
@@ -121,7 +122,7 @@ public sealed class EAConnection : IEAConnection
 
                     if (requestedMultiPacketSize != size) throw new Exception($"Requested packet-size changed between requests! Initial size: {requestedMultiPacketSize}, newSize: {size}");
 
-                    await _multiPacketBuffer.WriteAsync(partPayload, ct);
+                    await _multiPacketBuffer.WriteAsync(partPayload, _cts.Token);
 
                     if (_multiPacketBuffer.Length == requestedMultiPacketSize)
                     {
@@ -157,10 +158,10 @@ public sealed class EAConnection : IEAConnection
 
     public void Terminate()
     {
-        _terminated = true;
+        _cts.Cancel();
     }
 
-    public async Task<bool> SendPacket(Packet packet, CancellationToken ct = default)
+    public async Task<bool> SendPacket(Packet packet)
     {
         if (NetworkStream is null || !NetworkStream.CanWrite)
         {
@@ -168,10 +169,10 @@ public sealed class EAConnection : IEAConnection
         }
 
         var packetBuffer = await packet.Serialize();
-        return await SendBinary(packetBuffer, ct);
+        return await SendBinary(packetBuffer);
     }
 
-    private async Task<bool> SendBinary(byte[] buffer, CancellationToken ct)
+    private async Task<bool> SendBinary(byte[] buffer)
     {
         if (NetworkStream is null || !NetworkStream.CanWrite)
         {
@@ -182,14 +183,14 @@ public sealed class EAConnection : IEAConnection
         try
         {
             NetworkStream.Write(buffer);
-            await NetworkStream.FlushAsync(ct);
+            await NetworkStream.FlushAsync(_cts.Token);
             _logger?.LogTrace("data sent:{data}", Encoding.ASCII.GetString(buffer));
             return true;
         }
         catch (Exception e)
         {
             _logger?.LogDebug(e, "Failed writing to endpoint: {endpoint}!", ClientEndpoint);
-            _terminated = true;
+            _cts.Cancel();
             return false;
         }
     }
@@ -198,5 +199,6 @@ public sealed class EAConnection : IEAConnection
     {
         _bufferPool.Return(_readBufferArray, clearArray: true);
         await _multiPacketBuffer.DisposeAsync();
+        _cts.Dispose();
     }
 }

@@ -83,11 +83,11 @@ public class FeslHandler
         }.ToImmutableDictionary();
     }
 
-    public async Task<PlasmaSession> HandleClientConnection(Stream network, string clientEndpoint, string serverEndpoint)
+    public async Task<PlasmaSession> HandleClientConnection(Stream network, string clientEndpoint, string serverEndpoint, CancellationToken ct)
     {
         try
         {
-            _conn.Initialize(network, clientEndpoint, serverEndpoint);
+            _conn.Initialize(network, clientEndpoint, serverEndpoint, ct);
             await foreach (var packet in _conn.StartConnection(_logger))
             {
                 await HandlePacket(packet);

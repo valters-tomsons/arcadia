@@ -49,11 +49,11 @@ public class TheaterHandler
         }.ToImmutableDictionary();
     }
 
-    public async Task<PlasmaSession> HandleClientConnection(NetworkStream network, string clientEndpoint, string serverEndpoint)
+    public async Task HandleClientConnection(NetworkStream network, string clientEndpoint, string serverEndpoint, CancellationToken ct)
     {
         try
         {
-            _conn.Initialize(network, clientEndpoint, serverEndpoint);
+            _conn.Initialize(network, clientEndpoint, serverEndpoint, ct);
             await foreach (var packet in _conn.StartConnection(_logger))
             {
                 await HandlePacket(packet);
@@ -66,16 +66,6 @@ public class TheaterHandler
         }
 
         _logger.LogInformation("Closing Theater connection: {clientEndpoint} | {name}", clientEndpoint, _plasma?.NAME);
-
-        return _plasma ?? new()
-        {
-            TheaterConnection = _conn,
-            UID = 0,
-            NAME = string.Empty,
-            LKEY = string.Empty,
-            ClientString = string.Empty,
-            PartitionId = string.Empty
-        };
     }
 
     public async Task HandlePacket(Packet packet)

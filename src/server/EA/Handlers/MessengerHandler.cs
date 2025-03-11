@@ -28,9 +28,9 @@ public class MessengerHandler
         }.ToImmutableDictionary();
     }
 
-    public async Task HandleClientConnection(NetworkStream network, string clientEndpoint, string serverEndpoint)
+    public async Task HandleClientConnection(NetworkStream network, string clientEndpoint, string serverEndpoint, CancellationToken ct)
     {
-        _conn.Initialize(network, clientEndpoint, serverEndpoint);
+        _conn.Initialize(network, clientEndpoint, serverEndpoint, ct);
         await foreach (var packet in _conn.StartConnection(_logger))
         {
             await HandlePacket(packet);

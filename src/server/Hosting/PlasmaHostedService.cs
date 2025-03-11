@@ -107,15 +107,17 @@ public class PlasmaHostedService : IHostedService
         using var tcp = tcpClient;
         await using var networkStream = tcp.GetStream();
 
+        using var cts = new CancellationTokenSource();
+
         if (PortExtensions.IsTheater(connectionPort))
         {
             var clientHandler = scope.ServiceProvider.GetRequiredService<TheaterHandler>();
-            await clientHandler.HandleClientConnection(networkStream, clientEndpoint, tcpClient.Client.LocalEndPoint!.ToString()!);
+            await clientHandler.HandleClientConnection(networkStream, clientEndpoint, tcpClient.Client.LocalEndPoint!.ToString()!, cts.Token);
         }
         else if (_arcadiaSettings.MessengerPort == connectionPort)
         {
             var clientHandler = scope.ServiceProvider.GetRequiredService<MessengerHandler>();
-            await clientHandler.HandleClientConnection(networkStream, clientEndpoint, tcpClient.Client.LocalEndPoint!.ToString()!);
+            await clientHandler.HandleClientConnection(networkStream, clientEndpoint, tcpClient.Client.LocalEndPoint!.ToString()!, cts.Token);
         }
         else
         {
@@ -125,11 +127,12 @@ public class PlasmaHostedService : IHostedService
             }
 
             var clientHandler = scope.ServiceProvider.GetRequiredService<FeslHandler>();
+            PlasmaSession plasma;
 
             if (_debugSettings.ForcePlaintext)
             {
                 _logger.LogWarning("Connecting fesl client without TLS!");
-                await clientHandler.HandleClientConnection(networkStream, clientEndpoint, tcpClient.Client.LocalEndPoint!.ToString()!);
+                plasma = await clientHandler.HandleClientConnection(networkStream, clientEndpoint, tcpClient.Client.LocalEndPoint!.ToString()!, cts.Token);
             }
             else
             {
@@ -147,9 +150,11 @@ public class PlasmaHostedService : IHostedService
                     throw;
                 }
 
-                await clientHandler.HandleClientConnection(serverProtocol.Stream, clientEndpoint, tcpClient.Client.LocalEndPoint!.ToString()!);
+                plasma = await clientHandler.HandleClientConnection(serverProtocol.Stream, clientEndpoint, tcpClient.Client.LocalEndPoint!.ToString()!, cts.Token);
             }
         }
+
+        await cts.CancelAsync();
     }
 
     private void StartUdpListenerTask(int port, CancellationToken processCt)
