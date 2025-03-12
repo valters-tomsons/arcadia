@@ -382,16 +382,26 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
         };
     }
 
-    private static string LevelImageUrl(string? levelName)
+    private string LevelImageUrl(string? levelName)
     {
-        return levelName switch
+        const string hostBase = "https://raw.githubusercontent.com/valters-tomsons/arcadia/refs/heads/main/src/server/static/assets/";
+
+        var fileName = levelName switch
         {
-            "Levels/ONS_MP_002" => "https://tomsonscloudstorage01.blob.core.windows.net/arcadia/BC2_Valparaiso.jpg",
-            "Levels/ONS_MP_004" => "https://tomsonscloudstorage01.blob.core.windows.net/arcadia/BC2_Isla_Inocentes.jpg",
-            "Levels/ONS_MP_005" => "https://tomsonscloudstorage01.blob.core.windows.net/arcadia/BC2_Atacama_Desert.jpg",
-            "Levels/ONS_MP_008" => "https://tomsonscloudstorage01.blob.core.windows.net/arcadia/BC2_Nelson_Bay.jpg",
-            "levels/wake_island_s" => "https://tomsonscloudstorage01.blob.core.windows.net/arcadia/1943_Wake_Island.jpg",
+            "Levels/ONS_MP_002" => "BC2_Valparaiso.jpg",
+            "Levels/ONS_MP_004" => "BC2_Isla_Inocentes.jpg",
+            "Levels/ONS_MP_005" => "BC2_Atacama_Desert.jpg",
+            "Levels/ONS_MP_008" => "BC2_Nelson_Bay.jpg",
+            "levels/wake_island_s" => "BC1943_Wake_Island.jpg",
             _ => string.Empty,
         };
+
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            _logger.LogWarning("No associated image banner for level: {levelName}", levelName);
+            return string.Empty;
+        }
+
+        return string.Concat(hostBase, fileName);
     }
 }
