@@ -5,7 +5,7 @@ using AutoFixture.AutoMoq;
 using Moq;
 using Xunit;
 using System.Collections.Concurrent;
-using Arcadia.EA.Handlers;
+using Arcadia.Handlers;
 
 namespace tests;
 

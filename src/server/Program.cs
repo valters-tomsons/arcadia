@@ -9,8 +9,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 using Arcadia.Storage;
 using NReco.Logging.File;
-using Arcadia.EA.Handlers;
 using Discord.WebSocket;
+using Arcadia.Handlers;
 
 var host = Host.CreateDefaultBuilder()
     .ConfigureAppConfiguration((_, config) => config

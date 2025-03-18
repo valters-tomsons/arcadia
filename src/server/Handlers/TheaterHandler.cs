@@ -1,12 +1,13 @@
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Net.Sockets;
+using Arcadia.EA;
 using Arcadia.EA.Constants;
 using Arcadia.Storage;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Arcadia.EA.Handlers;
+namespace Arcadia.Handlers;
 
 public class TheaterHandler
 {

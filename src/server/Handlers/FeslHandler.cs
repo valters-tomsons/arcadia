@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Globalization;
+using Arcadia.EA;
 using Arcadia.EA.Constants;
 using Arcadia.EA.Ports;
 using Arcadia.Storage;
@@ -7,7 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NPTicket;
 
-namespace Arcadia.EA.Handlers;
+namespace Arcadia.Handlers;
 
 public class FeslHandler
 {
