@@ -11,11 +11,11 @@ public class MessengerHandler
 {
     private readonly ILogger<MessengerHandler> _logger;
     private readonly IEAConnection _conn;
-    private readonly SharedCache _storage;
+    private readonly ConnectionManager _storage;
 
     private readonly ImmutableDictionary<string, Func<Packet, Task>> _handlers;
 
-    public MessengerHandler(IEAConnection conn, ILogger<MessengerHandler> logger, SharedCache storage)
+    public MessengerHandler(IEAConnection conn, ILogger<MessengerHandler> logger, ConnectionManager storage)
     {
         _logger = logger;
         _conn = conn;

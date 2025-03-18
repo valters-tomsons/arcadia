@@ -8,14 +8,14 @@ using Microsoft.Extensions.Options;
 
 namespace Arcadia.Hosting;
 
-public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHostedService> logger, SharedCache sharedCache, IOptions<DiscordSettings> config, StatsStorage stats) : BackgroundService
+public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHostedService> logger, ConnectionManager sharedCache, IOptions<DiscordSettings> config, StatsStorage stats) : BackgroundService
 {
     private const string messageIdFile = "./messageId";
     private static readonly TimeSpan PeriodicUpdateInterval = TimeSpan.FromSeconds(10);
 
     private readonly DiscordSocketClient _client = client;
     private readonly ILogger<DiscordHostedService> _logger = logger;
-    private readonly SharedCache _sharedCache = sharedCache;
+    private readonly ConnectionManager _sharedCache = sharedCache;
     private readonly IOptions<DiscordSettings> _config = config;
     private readonly StatsStorage _stats = stats;
 

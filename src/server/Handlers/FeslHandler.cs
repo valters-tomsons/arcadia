@@ -17,7 +17,7 @@ public class FeslHandler
     private readonly ILogger<FeslHandler> _logger;
     private readonly IOptions<ArcadiaSettings> _settings;
     private readonly SharedCounters _sharedCounters;
-    private readonly SharedCache _sharedCache;
+    private readonly ConnectionManager _sharedCache;
     private readonly IEAConnection _conn;
     private readonly StatsStorage _stats;
 
@@ -33,7 +33,7 @@ public class FeslHandler
     private readonly Timer _pingTimer;
     private readonly Timer _memchTimer;
 
-    public FeslHandler(IEAConnection conn, ILogger<FeslHandler> logger, IOptions<ArcadiaSettings> settings, SharedCounters sharedCounters, SharedCache sharedCache, StatsStorage stats)
+    public FeslHandler(IEAConnection conn, ILogger<FeslHandler> logger, IOptions<ArcadiaSettings> settings, SharedCounters sharedCounters, ConnectionManager sharedCache, StatsStorage stats)
     {
         _logger = logger;
         _settings = settings;

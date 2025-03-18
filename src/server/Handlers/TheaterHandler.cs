@@ -13,7 +13,7 @@ public class TheaterHandler
 {
     private readonly ILogger<TheaterHandler> _logger;
     private readonly SharedCounters _sharedCounters;
-    private readonly SharedCache _sharedCache;
+    private readonly ConnectionManager _sharedCache;
     private readonly IEAConnection _conn;
     private readonly DebugSettings _dbgSettings;
 
@@ -21,7 +21,7 @@ public class TheaterHandler
 
     private PlasmaSession? _plasma;
 
-    public TheaterHandler(IEAConnection conn, ILogger<TheaterHandler> logger, SharedCounters sharedCounters, SharedCache sharedCache, IOptions<DebugSettings> dbgOptions)
+    public TheaterHandler(IEAConnection conn, ILogger<TheaterHandler> logger, SharedCounters sharedCounters, ConnectionManager sharedCache, IOptions<DebugSettings> dbgOptions)
     {
         _logger = logger;
         _sharedCounters = sharedCounters;

@@ -4,11 +4,11 @@ using Microsoft.Extensions.Logging;
 
 namespace Arcadia.Storage;
 
-public class SharedCache(ILogger<SharedCache> logger, SharedCounters counters)
+public class ConnectionManager(ILogger<ConnectionManager> logger, SharedCounters counters)
 {
     private static readonly ImmutableArray<string> DataKeyBlacklist = ["TID", "PID"];
 
-    private readonly ILogger<SharedCache> _logger = logger;
+    private readonly ILogger<ConnectionManager> _logger = logger;
     private readonly SharedCounters _counters = counters;
 
     private readonly List<GameServerListing> _gameServers = [];

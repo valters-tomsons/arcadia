@@ -1,4 +1,4 @@
-﻿using Arcadia;
+using Arcadia;
 using Arcadia.Tls.Crypto;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
@@ -33,7 +33,7 @@ var host = Host.CreateDefaultBuilder()
             .AddSingleton<ProtoSSL>()
             .AddSingleton<Rc4TlsCrypto>()
             .AddSingleton<SharedCounters>()
-            .AddSingleton<SharedCache>()
+            .AddSingleton<ConnectionManager>()
             .AddSingleton<StatsStorage>();
 
         services
