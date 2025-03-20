@@ -346,6 +346,11 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
     {
         var maxPlayers = server.Data["MAX-PLAYERS"];
 
+        if (server.ConnectedPlayers.IsEmpty)
+        {
+            return $"0/{maxPlayers}";
+        }
+
         _playersStringBuilder.Clear();
         _playersStringBuilder
             .Append(server.ConnectedPlayers.Count)
