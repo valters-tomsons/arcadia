@@ -1,3 +1,5 @@
+using System.Text;
+using Arcadia.EA;
 using Arcadia.Storage;
 using Discord;
 using Discord.Net;
@@ -313,15 +315,12 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
                 var difficulty = server.Data.GetValueOrDefault("B-U-difficulty") ?? "`N/A`";
                 var gamemode = server.Data.GetValueOrDefault("B-U-gamemode") ?? "`N/A`";
 
-                var playerNames = string.Join(", ", server.ConnectedPlayers.Select(x => x.Value.NAME));
-                var onlineCount = $"{server.ConnectedPlayers.Count}/{server.Data["MAX-PLAYERS"]}";
-
                 var eb = new EmbedBuilder()
                     .WithTitle($"{serverName} ({gamemode})")
                     .WithImageUrl(levelImageUrl)
                     .AddField("Level", levelName)
                     .AddField("Difficulty", difficulty)
-                    .AddField("Players", $"{onlineCount} | {playerNames}")
+                    .AddField("Players", GetPlayerCountString(server))
                     .WithTimestamp(server.StartedAt);
 
                 gidEmbeds[i] = (server.GID, eb.Build());
@@ -340,6 +339,22 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
         var statusMsg = string.Format(statusFormat, gameCount, statusEnd);
 
         return (statusMsg, embeds);
+    }
+
+    private static readonly StringBuilder _playersStringBuilder = new();
+    private static string GetPlayerCountString(GameServerListing server)
+    {
+        var maxPlayers = server.Data["MAX-PLAYERS"];
+
+        _playersStringBuilder.Clear();
+        _playersStringBuilder
+            .Append(server.ConnectedPlayers.Count)
+            .Append('/')
+            .Append(maxPlayers)
+            .Append(" | ")
+            .AppendJoin(", ", server.ConnectedPlayers.Select(x => x.Value.NAME));
+
+        return _playersStringBuilder.ToString();
     }
 
     private async Task<Dictionary<ulong, ulong>> GetCachedStatusMessageIds()
