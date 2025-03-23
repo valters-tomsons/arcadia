@@ -402,7 +402,7 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
         };
     }
 
-    private string LevelImageUrl(string? levelName)
+    private static string LevelImageUrl(string? levelName)
     {
         const string hostBase = "https://raw.githubusercontent.com/valters-tomsons/arcadia/refs/heads/main/src/server/static/assets/";
 
@@ -415,12 +415,6 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
             "levels/wake_island_s" => "BC1943_Wake_Island.jpg",
             _ => string.Empty,
         };
-
-        if (string.IsNullOrWhiteSpace(fileName))
-        {
-            _logger.LogWarning("No associated image banner for level: {levelName}", levelName);
-            return string.Empty;
-        }
 
         return string.Concat(hostBase, fileName);
     }
