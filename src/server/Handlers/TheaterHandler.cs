@@ -242,7 +242,7 @@ public class TheaterHandler
             ["UID"] = $"{session.UID}",
             ["LID"] = $"{server.LID}",
             ["GID"] = $"{gameId}",
-            ["IP"] = session.TheaterConnection.NetworkAddress
+            ["IP"] = session.TheaterConnection.RemoteAddress
         };
 
         var enterGameRequestPacket = new Packet("EGRQ", TheaterTransmissionType.OkResponse, 0, response);
@@ -270,7 +270,7 @@ public class TheaterHandler
             ["GID"] = $"{game.GID}",
             ["HU"] = $"{game.UID}",
             ["HN"] = $"{game.NAME}",
-            ["I"] = game.TheaterConnection.NetworkAddress,
+            ["I"] = game.TheaterConnection.RemoteAddress,
             ["P"] = $"{serverInfo["PORT"]}",
             ["N"] = $"{game.NAME}",
             ["AP"] = "0",
@@ -340,7 +340,7 @@ public class TheaterHandler
             ["EKEY"] = $"{game.EKEY}",
             ["INT-IP"] = $"{serverData["INT-IP"]}",
             ["UGID"] = $"{game.UGID}",
-            ["I"] = game.TheaterConnection.NetworkAddress,
+            ["I"] = game.TheaterConnection.RemoteAddress,
             ["LID"] = $"{game.LID}",
             ["GID"] = $"{game.GID}"
         };
@@ -400,7 +400,7 @@ public class TheaterHandler
                 ["HN"] = game.NAME,
                 ["HU"] = $"{game.UID}",
                 ["N"] = game.NAME,
-                ["I"] = game.TheaterConnection?.NetworkAddress ?? throw new NotImplementedException(),
+                ["I"] = game.TheaterConnection?.RemoteAddress ?? throw new NotImplementedException(),
                 ["P"] = game.Data["PORT"],
                 ["MP"] = game.Data["MAX-PLAYERS"],
                 ["F"] = "0",

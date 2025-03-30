@@ -8,12 +8,12 @@ namespace Arcadia.EA;
 
 public interface IEAConnection : IAsyncDisposable
 {
-    string ClientEndpoint { get; }
+    string RemoteEndpoint { get; }
     Stream? NetworkStream { get; }
-    string NetworkAddress { get; }
-    string ServerAddress { get; }
+    string RemoteAddress { get; }
+    string LocalAddress { get; }
 
-    void Initialize(Stream network, string clientEndpoint, string serverEndpoint, CancellationToken ct);
+    void Initialize(Stream network, string remoteEndpoint, string localEndpoint, CancellationToken ct);
     void Terminate();
 
     IAsyncEnumerable<Packet> StartConnection(ILogger logger);
@@ -22,9 +22,9 @@ public interface IEAConnection : IAsyncDisposable
 
 public sealed class EAConnection : IEAConnection
 {
-    public string ClientEndpoint { get; private set; } = string.Empty;
-    public string NetworkAddress => ClientEndpoint.Split(':')[0];
-    public string ServerAddress => _serverAddress;
+    public string RemoteEndpoint { get; private set; } = string.Empty;
+    public string RemoteAddress => RemoteEndpoint.Split(':')[0];
+    public string LocalAddress => _serverAddress;
     public Stream? NetworkStream { get; private set; }
 
     private const int ReadBufferSize = 8192;
@@ -37,17 +37,17 @@ public sealed class EAConnection : IEAConnection
     private string _serverAddress = null!;
     private CancellationTokenSource _cts = null!;
 
-    public void Initialize(Stream network, string clientEndpoint, string serverEndpoint, CancellationToken ct)
+    public void Initialize(Stream network, string remoteEndpoint, string localEndpoint, CancellationToken ct)
     {
         if (NetworkStream is not null)
         {
             throw new InvalidOperationException("Tried to initialize an already initialized connection!");
         }
 
-        ClientEndpoint = clientEndpoint;
+        RemoteEndpoint = remoteEndpoint;
         NetworkStream = network;
 
-        _serverAddress = serverEndpoint.Split(':')[0];
+        _serverAddress = localEndpoint.Split(':')[0];
         _cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
     }
 
@@ -73,7 +73,7 @@ public sealed class EAConnection : IEAConnection
             catch (TlsNoCloseNotifyException) { break; }
             catch (Exception e)
             {
-                _logger.LogDebug(e, "Failed to read client stream, endpoint: {endpoint}", ClientEndpoint);
+                _logger.LogDebug(e, "Failed to read client stream, endpoint: {endpoint}", RemoteEndpoint);
                 break;
             }
 
@@ -153,7 +153,7 @@ public sealed class EAConnection : IEAConnection
             }
         }
 
-        _logger.LogInformation("Connection has been closed: {endpoint}", ClientEndpoint);
+        _logger.LogInformation("Connection has been closed: {endpoint}", RemoteEndpoint);
     }
 
     public void Terminate()
@@ -176,7 +176,7 @@ public sealed class EAConnection : IEAConnection
     {
         if (NetworkStream is null || !NetworkStream.CanWrite)
         {
-            _logger?.LogDebug("Tried writing to disconnected endpoint: {endpoint}!", ClientEndpoint);
+            _logger?.LogDebug("Tried writing to disconnected endpoint: {endpoint}!", RemoteEndpoint);
             return false;
         }
 
@@ -189,7 +189,7 @@ public sealed class EAConnection : IEAConnection
         }
         catch (Exception e)
         {
-            _logger?.LogDebug(e, "Failed writing to endpoint: {endpoint}!", ClientEndpoint);
+            _logger?.LogDebug(e, "Failed writing to endpoint: {endpoint}!", RemoteEndpoint);
             _cts.Cancel();
             return false;
         }

@@ -373,7 +373,7 @@ public class FeslHandler
 
     private async Task HandleGetPingSites(Packet request)
     {
-        var serverIp = _plasma!.FeslConnection!.ServerAddress;
+        var serverIp = _plasma!.FeslConnection!.LocalAddress;
         var responseData = new Dictionary<string, string>
         {
             { "TXN", "GetPingSites" },

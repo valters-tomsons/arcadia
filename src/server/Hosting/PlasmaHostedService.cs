@@ -99,8 +99,9 @@ public class PlasmaHostedService : IHostedService
 
     private async Task HandleTcpConnection(TcpClient tcpClient, int connectionPort)
     {
-        var clientEndpoint = tcpClient.Client.RemoteEndPoint?.ToString()! ?? throw new NullReferenceException("ClientEndpoint cannot be null!");
-        _logger.LogInformation("Opening connection from: {clientEndpoint} to {port}", clientEndpoint, connectionPort);
+        var remoteEndpoint = tcpClient.Client.RemoteEndPoint?.ToString()! ?? throw new NullReferenceException("ClientEndpoint cannot be null!");
+        var localEndpoint = tcpClient.Client.LocalEndPoint!.ToString()!;
+        _logger.LogInformation("Opening connection from: {clientEndpoint} to {port}", remoteEndpoint, connectionPort);
 
         await using var scope = _scopeFactory.CreateAsyncScope();
 
@@ -112,12 +113,12 @@ public class PlasmaHostedService : IHostedService
         if (PortExtensions.IsTheater(connectionPort))
         {
             var clientHandler = scope.ServiceProvider.GetRequiredService<TheaterHandler>();
-            await clientHandler.HandleClientConnection(networkStream, clientEndpoint, tcpClient.Client.LocalEndPoint!.ToString()!, cts.Token);
+            await clientHandler.HandleClientConnection(networkStream, remoteEndpoint, localEndpoint, cts.Token);
         }
         else if (_arcadiaSettings.MessengerPort == connectionPort)
         {
             var clientHandler = scope.ServiceProvider.GetRequiredService<MessengerHandler>();
-            await clientHandler.HandleClientConnection(networkStream, clientEndpoint, tcpClient.Client.LocalEndPoint!.ToString()!, cts.Token);
+            await clientHandler.HandleClientConnection(networkStream, remoteEndpoint, localEndpoint, cts.Token);
         }
         else
         {
@@ -132,7 +133,7 @@ public class PlasmaHostedService : IHostedService
             if (_debugSettings.ForcePlaintext)
             {
                 _logger.LogWarning("Connecting fesl client without TLS!");
-                plasma = await clientHandler.HandleClientConnection(networkStream, clientEndpoint, tcpClient.Client.LocalEndPoint!.ToString()!, cts.Token);
+                plasma = await clientHandler.HandleClientConnection(networkStream, remoteEndpoint, localEndpoint, cts.Token);
             }
             else
             {
@@ -150,7 +151,7 @@ public class PlasmaHostedService : IHostedService
                     throw;
                 }
 
-                plasma = await clientHandler.HandleClientConnection(serverProtocol.Stream, clientEndpoint, tcpClient.Client.LocalEndPoint!.ToString()!, cts.Token);
+                plasma = await clientHandler.HandleClientConnection(serverProtocol.Stream, remoteEndpoint, localEndpoint, cts.Token);
             }
 
             plasma.TheaterConnection?.Terminate();
