@@ -51,7 +51,7 @@ public sealed class EAConnection : IEAConnection
         _cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
     }
 
-    public async IAsyncEnumerable<Packet> ReceiveAsync(ILogger parentLogger)
+    public async IAsyncEnumerable<Packet> ReceiveAsync(ILogger? parentLogger)
     {
         _logger = parentLogger;
         if (NetworkStream is null) throw new InvalidOperationException("Connection must be initialized before starting");
@@ -73,7 +73,7 @@ public sealed class EAConnection : IEAConnection
             catch (TlsNoCloseNotifyException) { break; }
             catch (Exception e)
             {
-                _logger.LogDebug(e, "Failed to read client stream, endpoint: {endpoint}", RemoteEndpoint);
+                _logger?.LogDebug(e, "Failed to read client stream, endpoint: {endpoint}", RemoteEndpoint);
                 break;
             }
 
@@ -84,7 +84,7 @@ public sealed class EAConnection : IEAConnection
 
             if (read > readBuffer.Length)
             {
-                _logger.LogCritical("Client sent a packet exceeding read buffer size!");
+                _logger?.LogCritical("Client sent a packet exceeding read buffer size!");
                 break;
             }
 
@@ -96,7 +96,7 @@ public sealed class EAConnection : IEAConnection
 
                 if (buffer.Length <= 12)
                 {
-                    _logger.LogCritical("Unexpected incoming message length");
+                    _logger?.LogCritical("Unexpected incoming message length");
                     throw new NotImplementedException();
                 }
 
@@ -105,7 +105,7 @@ public sealed class EAConnection : IEAConnection
 
                 if (packet.Length == 0)
                 {
-                    _logger.LogCritical("Unexpected packet length");
+                    _logger?.LogCritical("Unexpected packet length");
                     throw new NotImplementedException();
                 }
 
@@ -136,7 +136,7 @@ public sealed class EAConnection : IEAConnection
                         var combinedData = Utils.ParseFeslPacketToDict(bufferData);
                         var combinedPacket = new Packet(packet.Type, packet.TransmissionType, packet.Id, combinedData, size);
 
-                        _logger.LogTrace("'{type}' incoming multi-packet, combined:{data}", combinedPacket.Type, Encoding.ASCII.GetString(bufferData));
+                        _logger?.LogTrace("'{type}' incoming multi-packet, combined:{data}", combinedPacket.Type, Encoding.ASCII.GetString(bufferData));
 
                         yield return combinedPacket;
                     }
@@ -147,14 +147,14 @@ public sealed class EAConnection : IEAConnection
                 else
                 {
                     currentMultiPacketId = null;
-                    _logger.LogTrace("'{type}' incoming:{data}", packet.Type, Encoding.ASCII.GetString(packet.Data ?? []));
+                    _logger?.LogTrace("'{type}' incoming:{data}", packet.Type, Encoding.ASCII.GetString(packet.Data ?? []));
                 }
 
                 yield return packet;
             }
         }
 
-        _logger.LogInformation("Connection has been closed: {endpoint}", RemoteEndpoint);
+        _logger?.LogInformation("Connection has been closed: {endpoint}", RemoteEndpoint);
     }
 
     public void Terminate()
