@@ -89,10 +89,11 @@ public sealed class EAConnection : IEAConnection
             }
 
             var dataProcessed = 0;
-            while (dataProcessed < read)
+            while (dataProcessed < read && !_cts.IsCancellationRequested)
             {
                 var endRange = dataProcessed + read;
                 var buffer = readBuffer[dataProcessed..endRange];
+
                 if (buffer.Length <= 12)
                 {
                     _logger.LogCritical("Unexpected incoming message length");
