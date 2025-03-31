@@ -16,7 +16,7 @@ public interface IEAConnection : IAsyncDisposable
     void Initialize(Stream network, string remoteEndpoint, string localEndpoint, CancellationToken ct);
     void Terminate();
 
-    IAsyncEnumerable<Packet> StartConnection(ILogger logger);
+    IAsyncEnumerable<Packet> ReceiveAsync(ILogger logger);
     Task<bool> SendPacket(Packet packet);
 }
 
@@ -51,7 +51,7 @@ public sealed class EAConnection : IEAConnection
         _cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
     }
 
-    public async IAsyncEnumerable<Packet> StartConnection(ILogger parentLogger)
+    public async IAsyncEnumerable<Packet> ReceiveAsync(ILogger parentLogger)
     {
         _logger = parentLogger;
         if (NetworkStream is null) throw new InvalidOperationException("Connection must be initialized before starting");

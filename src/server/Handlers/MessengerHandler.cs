@@ -32,7 +32,7 @@ public class MessengerHandler
     public async Task HandleClientConnection(NetworkStream network, string clientEndpoint, string serverEndpoint, CancellationToken ct)
     {
         _conn.Initialize(network, clientEndpoint, serverEndpoint, ct);
-        await foreach (var packet in _conn.StartConnection(_logger))
+        await foreach (var packet in _conn.ReceiveAsync(_logger))
         {
             await HandlePacket(packet);
         }
