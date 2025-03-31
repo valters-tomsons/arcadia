@@ -30,7 +30,7 @@ public static class PacketUtils
     {
         var dataBytes = Encoding.ASCII.GetBytes(packetData);
 
-        int length = dataBytes.Length + 12;
+        int length = dataBytes.Length + Packet.HEADER_SIZE;
         byte[] bytes = BitConverter.GetBytes(length);
 
         if (BitConverter.IsLittleEndian)

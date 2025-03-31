@@ -67,7 +67,7 @@ public sealed class EAConnection : IEAConnection
 
             try
             {
-                read = await NetworkStream.ReadAtLeastAsync(readBuffer, 12, false, _cts.Token);
+                read = await NetworkStream.ReadAtLeastAsync(readBuffer, Packet.HEADER_SIZE, false, _cts.Token);
             }
             catch (ObjectDisposedException) { break; }
             catch (TlsNoCloseNotifyException) { break; }
@@ -94,7 +94,7 @@ public sealed class EAConnection : IEAConnection
                 var endRange = dataProcessed + read;
                 var buffer = readBuffer[dataProcessed..endRange];
 
-                if (buffer.Length <= 12)
+                if (buffer.Length <= Packet.HEADER_SIZE)
                 {
                     _logger?.LogCritical("Unexpected incoming message length");
                     throw new NotImplementedException();

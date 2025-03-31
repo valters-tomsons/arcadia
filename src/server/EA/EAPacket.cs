@@ -4,6 +4,8 @@ namespace Arcadia.EA;
 
 public readonly struct Packet
 {
+    public const int HEADER_SIZE = 12;
+
     public Dictionary<string, string> DataDict { get; }
     public string this[string key]
     {
@@ -23,7 +25,7 @@ public readonly struct Packet
     {
         Type = Encoding.ASCII.GetString(packet, 0, 4);
 
-        var headerSplit = Utils.SplitAt(packet, 12);
+        var headerSplit = Utils.SplitAt(packet, HEADER_SIZE);
         Checksum = headerSplit[0][4..];
 
         var bigEndianChecksum = (BitConverter.IsLittleEndian ? Checksum.Reverse().ToArray() : Checksum).AsSpan();
@@ -32,7 +34,7 @@ public readonly struct Packet
         TransmissionType = idAndTransmissionType & 0xff000000;
         Id = idAndTransmissionType & 0x00ffffff;
 
-        Data = headerSplit[1][..((int)Length - 12)];
+        Data = headerSplit[1][..((int)Length - HEADER_SIZE)];
         DataDict = Utils.ParseFeslPacketToDict(Data);
     }
 
