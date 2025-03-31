@@ -67,7 +67,7 @@ public sealed class EAConnection : IEAConnection
 
             try
             {
-                read = await NetworkStream.ReadAsync(readBuffer, _cts.Token);
+                read = await NetworkStream.ReadAtLeastAsync(readBuffer, 12, false, _cts.Token);
             }
             catch (ObjectDisposedException) { break; }
             catch (TlsNoCloseNotifyException) { break; }
