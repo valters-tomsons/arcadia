@@ -31,20 +31,14 @@ var host = Host.CreateDefaultBuilder()
 
         services
             .AddSingleton<ProtoSSL>()
-            .AddSingleton<Rc4TlsCrypto>()
             .AddSingleton<SharedCounters>()
             .AddSingleton<ConnectionManager>()
-            .AddSingleton<StatsStorage>();
-
-        services
-            .AddSingleton<DiscordSocketConfig>(x => new()
-            {
-                GatewayIntents = Discord.GatewayIntents.Guilds | Discord.GatewayIntents.GuildMessages,
-
-            })
+            .AddSingleton<StatsStorage>()
+            .AddSingleton<DiscordSocketConfig>(x => new() { GatewayIntents = Discord.GatewayIntents.Guilds | Discord.GatewayIntents.GuildMessages })
             .AddSingleton<DiscordSocketClient>();
 
         services
+            .AddScoped<Rc4TlsCrypto>()
             .AddScoped<IEAConnection, EAConnection>()
             .AddScoped<FeslHandler>()
             .AddScoped<TheaterHandler>()
@@ -54,7 +48,6 @@ var host = Host.CreateDefaultBuilder()
             .AddHostedService<PlasmaHostedService>()
             .AddHostedService<StaticFileHostedService>()
             .AddHostedService<DiscordHostedService>();
-
 
         services.AddLogging(log =>
         {
