@@ -128,33 +128,56 @@ public class PlasmaHostedService : IHostedService
             }
 
             var clientHandler = scope.ServiceProvider.GetRequiredService<FeslHandler>();
-            PlasmaSession plasma;
+            PlasmaSession? plasma = null;
 
-            if (_debugSettings.ForcePlaintext)
+            try
             {
-                _logger.LogWarning("Connecting fesl client without TLS!");
-                plasma = await clientHandler.HandleClientConnection(networkStream, remoteEndpoint, localEndpoint, cts.Token);
+                if (_debugSettings.ForcePlaintext)
+                {
+                    _logger.LogWarning("Connecting fesl client without TLS!");
+                    plasma = await clientHandler.HandleClientConnection(networkStream, remoteEndpoint, localEndpoint, cts.Token);
+                }
+                else
+                {
+                    var crypto = scope.ServiceProvider.GetRequiredService<Rc4TlsCrypto>();
+                    var connTls = new Ssl3TlsServer(crypto, _feslPubCert, _feslCertKey);
+                    var serverProtocol = new TlsServerProtocol(networkStream);
+
+                    try
+                    {
+                        serverProtocol.Accept(connTls);
+                    }
+                    catch (TlsFatalAlert e)
+                    {
+                        _logger.LogError(e, "SSL handshake failed!");
+                        throw;
+                    }
+
+                    plasma = await clientHandler.HandleClientConnection(serverProtocol.Stream, remoteEndpoint, localEndpoint, cts.Token);
+                }
             }
-            else
+            finally
             {
-                var crypto = scope.ServiceProvider.GetRequiredService<Rc4TlsCrypto>();
-                var connTls = new Ssl3TlsServer(crypto, _feslPubCert, _feslCertKey);
-                var serverProtocol = new TlsServerProtocol(networkStream);
-
-                try
+                if (plasma?.TheaterConnection is not null)
                 {
-                    serverProtocol.Accept(connTls);
-                }
-                catch (TlsFatalAlert e)
-                {
-                    _logger.LogError(e, "SSL handshake failed!");
-                    throw;
+                    try
+                    {
+                        plasma.TheaterConnection.Terminate();
+                        await plasma.TheaterConnection.DisposeAsync();
+                    }
+                    catch { }
                 }
 
-                plasma = await clientHandler.HandleClientConnection(serverProtocol.Stream, remoteEndpoint, localEndpoint, cts.Token);
+                if (plasma?.FeslConnection is not null)
+                {
+                    try
+                    {
+                        plasma.FeslConnection.Terminate();
+                        await plasma.FeslConnection.DisposeAsync();
+                    }
+                    catch { }
+                }
             }
-
-            plasma.TheaterConnection?.Terminate();
         }
 
         await cts.CancelAsync();
