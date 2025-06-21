@@ -743,6 +743,20 @@ public class FeslHandler
         }
     }
 
+    private async Task SendError(Packet req, int code, string message)
+    {
+        var response = new Dictionary<string, string>
+        {
+            { "TXN", req.TXN },
+            { "localizedMessage", message },
+            { "errorContainer.[]", "0" },
+            { "errorCode", $"{code}" }
+        };
+
+        var loginPacket = new Packet("acct", FeslTransmissionType.SinglePacketResponse, req.Id, response);
+        await _conn.SendPacket(loginPacket);
+    }
+
     private async Task DisposeTimers()
     {
         _pingTimer.Change(Timeout.Infinite, Timeout.Infinite);
