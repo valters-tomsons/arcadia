@@ -171,38 +171,45 @@ public class FeslHandler
     private async Task HandlePlayNow(Packet request)
     {
         var pnowId = _sharedCounters.GetNextPnowId();
-        var data1 = new Dictionary<string, string>
-        {
-            { "TXN", "Start" },
-            { "id.id", $"{pnowId}" },
-            { "id.partition", partitionId },
-        };
 
-        var packet1 = new Packet("pnow", FeslTransmissionType.SinglePacketResponse, request.Id, data1);
-        await _conn.SendPacket(packet1);
+        await _conn.SendPacket(
+            new(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, new()
+            {
+                { "TXN", "Start" },
+                { "id.id", $"{pnowId}" },
+                { "id.partition", partitionId },
+            })
+        );
 
-        var servers = _sharedCache.GetPartitionServers(partitionId).Where(x => x.CanJoin).ToArray();
-        var data2 = new Dictionary<string, string>
+        var pnowResult = new Dictionary<string, string>
         {
             { "TXN", "Status" },
             { "id.id", $"{pnowId}" },
             { "id.partition", partitionId },
             { "sessionState", "COMPLETE" },
-            { "props.{}", "3" },
-            { "props.{resultType}", "JOIN" },
-            // { "props.{resultType}", "CREATE" }, // Nfs
-            { "props.{avgFit}", "1.0" },
-            { "props.{games}.[]", $"{servers.Length}" },
         };
 
-        for (var i = 0; i < servers.Length; i++)
+        var servers = _sharedCache.GetPartitionServers(partitionId).Where(x => x.CanJoin).ToArray();
+        if (servers.Length > 0)
         {
-            data2.Add($"props.{{games}}.{i}.gid", $"{servers[i].GID}");
-            data2.Add($"props.{{games}}.{i}.lid", $"{servers[i].LID}");
+            pnowResult.Add("props.{}", "3");
+            pnowResult.Add("props.{resultType}", PlayNowResultType.JOIN);
+            pnowResult.Add("props.{avgFit}", "1.0");
+            pnowResult.Add("props.{games}.[]", $"{servers.Length}");
+
+            for (var i = 0; i < servers.Length; i++)
+            {
+                pnowResult.Add($"props.{{games}}.{i}.gid", $"{servers[i].GID}");
+                pnowResult.Add($"props.{{games}}.{i}.lid", $"{servers[i].LID}");
+            }
+        }
+        else
+        {
+            pnowResult.Add("props.{}", "1");
+            pnowResult.Add("props.{resultType}", PlayNowResultType.NOSERVER);
         }
 
-        var packet2 = new Packet("pnow", FeslTransmissionType.SinglePacketResponse, request.Id, data2);
-        await _conn.SendPacket(packet2);
+        await _conn.SendPacket(new(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, pnowResult));
     }
 
     private async Task HandleGetRecord(Packet request)
