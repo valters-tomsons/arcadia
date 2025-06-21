@@ -27,6 +27,8 @@ public class PlasmaHostedService : IHostedService
     private readonly List<TcpListener> _tcpListeners = [];
     private readonly List<UdpClient> _udpListeners = [];
 
+    private readonly SemaphoreSlim _sslHandshakeSemaphore = new(1, 1);
+
     public PlasmaHostedService(ILogger<PlasmaHostedService> logger, IOptions<ArcadiaSettings> arcadiaSettings, ProtoSSL certGenerator, IServiceScopeFactory scopeFactory, IOptions<DebugSettings> debugSettings)
     {
         _logger = logger;
@@ -139,18 +141,19 @@ public class PlasmaHostedService : IHostedService
                 }
                 else
                 {
-                    var crypto = scope.ServiceProvider.GetRequiredService<Rc4TlsCrypto>();
-                    var connTls = new Ssl3TlsServer(crypto, _feslPubCert, _feslCertKey);
-                    var serverProtocol = new TlsServerProtocol(networkStream);
+                    await _sslHandshakeSemaphore.WaitAsync(cts.Token);
+                    TlsServerProtocol serverProtocol;
 
                     try
                     {
+                        var crypto = scope.ServiceProvider.GetRequiredService<Rc4TlsCrypto>();
+                        var connTls = new Ssl3TlsServer(crypto, _feslPubCert, _feslCertKey);
+                        serverProtocol = new TlsServerProtocol(networkStream);
                         serverProtocol.Accept(connTls);
                     }
-                    catch (TlsFatalAlert e)
+                    finally
                     {
-                        _logger.LogError(e, "SSL handshake failed!");
-                        throw;
+                        _sslHandshakeSemaphore.Release();
                     }
 
                     plasma = await clientHandler.HandleClientConnection(serverProtocol.Stream, remoteEndpoint, localEndpoint, cts.Token);
