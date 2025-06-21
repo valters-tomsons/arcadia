@@ -530,12 +530,12 @@ public class FeslHandler
         //     return;
         // }
 
-        // var tosAccepted = request.DataDict.TryGetValue("tosVersion", out var tosAcceptedValue);
-        // if (!tosAccepted || string.IsNullOrEmpty(tosAcceptedValue as string))
-        // {
-        //     await SendError(request, 101, "The user was not found");
-        //     return;
-        // }
+        var tosAccepted = request.DataDict.TryGetValue("tosVersion", out var tosAcceptedValue);
+        if (!tosAccepted || string.IsNullOrEmpty(tosAcceptedValue as string))
+        {
+            await SendError(request, 101, "The user was not found");
+            return;
+        }
 
         var ticketPayload = request["ticket"];
         var ticketBytes = Convert.FromHexString(ticketPayload[1..]);
