@@ -524,23 +524,18 @@ public class FeslHandler
     // BC2, 1943
     private async Task HandleNuPs3Login(Packet request)
     {
-        // var tosAccepted = request.DataDict.TryGetValue("tosVersion", out var tosAcceptedValue);
         // if (false)
         // {
-        //     loginResponseData.Add("TXN", request.Type);
-        //     loginResponseData.Add("localizedMessage", "The password the user specified is incorrect");
-        //     loginResponseData.Add("errorContainer.[]", "0");
-        //     loginResponseData.Add("errorCode", "122");
+        //     await SendError(request, 122, "The password the user specified is incorrect");
+        //     return;
         // }
 
+        // var tosAccepted = request.DataDict.TryGetValue("tosVersion", out var tosAcceptedValue);
         // if (!tosAccepted || string.IsNullOrEmpty(tosAcceptedValue as string))
         // {
-        //     loginResponseData.Add("TXN", request.Type);
-        //     loginResponseData.Add( "localizedMessage", "The user was not found" );
-        //     loginResponseData.Add( "errorContainer.[]", 0 );
-        //     loginResponseData.Add( "errorCode", 101 );
+        //     await SendError(request, 101, "The user was not found");
+        //     return;
         // }
-        // else
 
         var ticketPayload = request["ticket"];
         var ticketBytes = Convert.FromHexString(ticketPayload[1..]);
