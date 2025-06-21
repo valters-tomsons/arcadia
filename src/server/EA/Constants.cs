@@ -14,3 +14,13 @@ public static class TheaterTransmissionType
     public const uint Request = 0x40000000;
     public const uint OkResponse = 0x00000000;
 }
+
+public readonly struct PlayNowResultType
+{
+    public const string NOMATCH = nameof(NOMATCH);
+    public const string NOSERVER = nameof(NOSERVER);
+    public const string JOIN = nameof(JOIN);
+    public const string LIST = nameof(LIST);
+    public const string CREATE = nameof(CREATE);
+    public const string CREATE_PROXY = nameof(CREATE_PROXY);
+}
