@@ -23,6 +23,13 @@ public record FileServerSettings
     public string UrlPrefix { get; init; } = "http://0.0.0.0:8080/";
 }
 
+public record DnsSettings
+{
+    public bool EnableDns { get; init; }
+    public string ServerAddress { get; init; } = string.Empty;
+    public int DnsPort { get; init; } = 53;
+}
+
 public record DiscordSettings
 {
     public bool EnableBot { get; init; } = false;

@@ -27,6 +27,7 @@ var host = Host.CreateDefaultBuilder()
             .Configure<FileServerSettings>(config.GetSection(nameof(FileServerSettings)))
             .Configure<DiscordSettings>(config.GetSection(nameof(DiscordSettings)))
             .Configure<DebugSettings>(config.GetSection(nameof(DebugSettings)))
+            .Configure<DnsSettings>(config.GetSection(nameof(DnsSettings)))
             .Configure<HostOptions>(x => x.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore);
 
         services
@@ -47,7 +48,8 @@ var host = Host.CreateDefaultBuilder()
         services
             .AddHostedService<PlasmaHostedService>()
             .AddHostedService<StaticFileHostedService>()
-            .AddHostedService<DiscordHostedService>();
+            .AddHostedService<DiscordHostedService>()
+            .AddHostedService<DnsHostedService>();
 
         services.AddLogging(log =>
         {
