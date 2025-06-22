@@ -8,9 +8,10 @@ public record ArcadiaSettings
     public string TheaterAddress { get; init; } = "theater.ps3.arcadia";
 
     public int[] ListenPorts { get; init; } = [
-        (int)TheaterGamePort.RomePS3, 
-        (int)FeslGamePort.RomePS3, 
-        (int)FeslGamePort.BeachPS3
+        (int)TheaterGamePort.RomePS3,
+        (int)FeslGamePort.RomePS3,
+        (int)FeslGamePort.BeachPS3,
+        (int)FeslGamePort.ArmyOfTwo2PS3,
     ];
 
     public int MessengerPort { get; init; } = 0;
