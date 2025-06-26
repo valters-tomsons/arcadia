@@ -552,7 +552,7 @@ public class TheaterHandler
         {
             await _sharedCache.UpsertGameServerDataByGid(_plasma.PartitionId, gid, request.DataDict);
 
-            if (!string.IsNullOrWhiteSpace(request["B-U-level"]))
+            if (!string.IsNullOrWhiteSpace(request["JOIN"]))
             {
                 game.CanJoin = true;
             }
