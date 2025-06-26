@@ -306,24 +306,14 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
 
             try
             {
-                var serverName = $"**{server.NAME.Replace("P2P-", string.Empty)}**";
-
-                var level = server.Data.GetValueOrDefault("B-U-level");
-                var levelName = LevelDisplayName(level);
-                var levelImageUrl = LevelImageUrl(level);
-
-                var difficulty = server.Data.GetValueOrDefault("B-U-difficulty") ?? "`N/A`";
-                var gamemode = server.Data.GetValueOrDefault("B-U-gamemode") ?? "`N/A`";
-
-                var eb = new EmbedBuilder()
-                    .WithTitle($"{serverName} ({gamemode})")
-                    .WithImageUrl(levelImageUrl)
-                    .AddField("Level", levelName)
-                    .AddField("Difficulty", difficulty)
-                    .AddField("Players", GetPlayerCountString(server))
-                    .WithTimestamp(server.StartedAt);
-
-                gidEmbeds[i] = (server.GID, eb.Build());
+                if (server.PartitionId.EndsWith("/AO3"))
+                {
+                    gidEmbeds[i] = BuildAO3Status(server);
+                }
+                else
+                {
+                    gidEmbeds[i] = BuildOnslaughtStatus(server);
+                }
             }
             catch (Exception e)
             {
@@ -339,6 +329,45 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
         var statusMsg = string.Format(statusFormat, gameCount, statusEnd);
 
         return (statusMsg, embeds);
+    }
+
+    private static (long GID, Embed Embed) BuildOnslaughtStatus(GameServerListing server)
+    {
+        var serverName = $"**{server.NAME.Replace("P2P-", string.Empty)}**";
+
+        var level = server.Data.GetValueOrDefault("B-U-level");
+        var levelName = LevelDisplayName(level);
+        var levelImageUrl = LevelImageUrl(level);
+
+        var difficulty = server.Data.GetValueOrDefault("B-U-difficulty") ?? "`N/A`";
+        var gamemode = server.Data.GetValueOrDefault("B-U-gamemode") ?? "`N/A`";
+
+        var eb = new EmbedBuilder()
+            .WithTitle($"{serverName} ({gamemode})")
+            .WithImageUrl(levelImageUrl)
+            .AddField("Level", levelName)
+            .AddField("Difficulty", difficulty)
+            .AddField("Players", GetPlayerCountString(server))
+            .WithTimestamp(server.StartedAt);
+
+        return (server.GID, eb.Build());
+    }
+
+    private static (long GID, Embed Embed) BuildAO3Status(GameServerListing server)
+    {
+        var serverName = $"**{server.NAME}**";
+        var gamemode = server.Data.GetValueOrDefault("B-U-Mode") ?? string.Empty;
+        var level = server.Data.GetValueOrDefault("B-U-Map") ?? "`N/A`";
+        var playlist = server.Data.GetValueOrDefault("B-U-MapPlaylist") ?? "`N/A`";
+
+        var eb = new EmbedBuilder()
+            .WithTitle($"{serverName} (AO3{gamemode})")
+            .AddField("Level", level)
+            .AddField("Playlist", level)
+            .AddField("Players", GetPlayerCountString(server))
+            .WithTimestamp(server.StartedAt);
+
+        return (server.GID, eb.Build());
     }
 
     private static readonly StringBuilder _playersStringBuilder = new();
