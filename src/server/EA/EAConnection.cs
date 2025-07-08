@@ -154,7 +154,7 @@ public sealed class EAConnection : IEAConnection
             }
         }
 
-        _logger?.LogInformation("Connection has been closed: {endpoint}", RemoteEndpoint);
+        _logger?.LogTrace("Connection has been closed: {endpoint}", RemoteEndpoint);
     }
 
     public Task Terminate()
