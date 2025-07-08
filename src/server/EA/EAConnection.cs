@@ -14,7 +14,7 @@ public interface IEAConnection : IAsyncDisposable
     string LocalAddress { get; }
 
     void Initialize(Stream network, string remoteEndpoint, string localEndpoint, CancellationToken ct);
-    void Terminate();
+    Task Terminate();
 
     IAsyncEnumerable<Packet> ReceiveAsync(ILogger logger);
     Task<bool> SendPacket(Packet packet);
@@ -157,9 +157,9 @@ public sealed class EAConnection : IEAConnection
         _logger?.LogInformation("Connection has been closed: {endpoint}", RemoteEndpoint);
     }
 
-    public void Terminate()
+    public Task Terminate()
     {
-        _cts.Cancel();
+        return _cts.CancelAsync();
     }
 
     public async Task<bool> SendPacket(Packet packet)

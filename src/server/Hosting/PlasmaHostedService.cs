@@ -165,7 +165,7 @@ public class PlasmaHostedService : IHostedService
                 {
                     try
                     {
-                        plasma.TheaterConnection.Terminate();
+                        await plasma.TheaterConnection.Terminate();
                         await plasma.TheaterConnection.DisposeAsync();
                     }
                     catch { }
@@ -175,7 +175,7 @@ public class PlasmaHostedService : IHostedService
                 {
                     try
                     {
-                        plasma.FeslConnection.Terminate();
+                        await plasma.FeslConnection.Terminate();
                         await plasma.FeslConnection.DisposeAsync();
                     }
                     catch { }

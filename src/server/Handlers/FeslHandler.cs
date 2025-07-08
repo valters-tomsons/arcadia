@@ -162,10 +162,9 @@ public class FeslHandler
         await SendMemCheck();
     }
 
-    private Task HandleGoodbye(Packet request)
+    private async Task HandleGoodbye(Packet request)
     {
-        _conn.Terminate();
-        return Task.CompletedTask;
+        await _conn.Terminate();
     }
 
     private async Task HandlePlayNow(Packet request)
