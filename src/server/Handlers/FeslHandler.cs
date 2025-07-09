@@ -745,12 +745,12 @@ public class FeslHandler
         }
     }
 
-    private async Task SendError(Packet req, int code, string message)
+    private async Task SendError(Packet req, int code, string? localizedMessage = null)
     {
         var response = new Dictionary<string, string>
         {
             { "TXN", req.TXN },
-            { "localizedMessage", message },
+            { "localizedMessage", localizedMessage ?? string.Empty },
             { "errorContainer.[]", "0" },
             { "errorCode", $"{code}" }
         };
