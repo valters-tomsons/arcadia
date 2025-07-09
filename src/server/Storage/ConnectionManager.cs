@@ -60,11 +60,7 @@ public class ConnectionManager(ILogger<ConnectionManager> logger, SharedCounters
 
         try
         {
-            var gamesOwnedBySession = _gameServers.Where(x => x.UID == plasma.UID);
-            foreach (var game in gamesOwnedBySession)
-            {
-                _gameServers.Remove(game);
-            }
+            _gameServers.RemoveAll(x => x.UID == plasma.UID && x.PartitionId == plasma.PartitionId);
 
             var sessionInGame = FindGameWithPlayerByUid(plasma.PartitionId, plasma.UID);
             sessionInGame?.ConnectedPlayers.Remove(plasma.UID, out var _);
