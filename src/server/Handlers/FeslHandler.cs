@@ -548,6 +548,13 @@ public class FeslHandler
         var ticket = Ticket.ReadFromBytes(ticketBytes);
         var onlineId = ticket.Username;
 
+        var existingSession = _sharedCache.FindPartitionSessionByUser(partitionId, onlineId);
+        if (existingSession is not null)
+        {
+            await SendError(request, 102);
+            return;
+        }
+
         _plasma = await _sharedCache.CreatePlasmaConnection(_conn, onlineId, clientString, partitionId);
         var loginResponseData = new Dictionary<string, string>
         {
