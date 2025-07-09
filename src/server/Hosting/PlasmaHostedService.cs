@@ -87,10 +87,6 @@ public class PlasmaHostedService : IHostedService
                     var tcpClient = await listener.AcceptTcpClientAsync(processCt);
                     _ = HandleTcpConnection(tcpClient, capturedPort);
                 }
-                catch (TlsNoCloseNotifyException)
-                {
-                    _logger.LogWarning("Client terminated the connection without warning on port {port}", capturedPort);
-                }
                 catch (Exception e)
                 {
                     _logger.LogError(e, "Error accepting client on port {port}", capturedPort);
