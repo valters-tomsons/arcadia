@@ -67,11 +67,12 @@ public sealed class EAConnection : IEAConnection
 
             try
             {
-                read = await NetworkStream.ReadAtLeastAsync(readBuffer, Packet.HEADER_SIZE, false, _cts.Token);
+                read = await NetworkStream.ReadAtLeastAsync(readBuffer, Packet.HEADER_SIZE, throwOnEndOfStream: true, _cts.Token);
             }
             catch (ObjectDisposedException) { break; }
             catch (TaskCanceledException) { break; }
             catch (TlsNoCloseNotifyException) { break; }
+            catch (EndOfStreamException) { break; }
             catch (Exception e)
             {
                 _logger?.LogDebug(e, "Failed to read client stream, endpoint: {endpoint}", RemoteEndpoint);
