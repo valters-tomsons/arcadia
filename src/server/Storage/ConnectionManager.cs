@@ -42,7 +42,7 @@ public class ConnectionManager(ILogger<ConnectionManager> logger, SharedCounters
         return result;
     }
 
-    public PlasmaSession AddTheaterConnection(IEAConnection theater, string lkey)
+    public PlasmaSession PairTheaterConnection(IEAConnection theater, string lkey)
     {
         var plasma = _connections.SingleOrDefault(x => x.LKEY == lkey) ?? throw new Exception("Failed to find a plasma session pair!");
         plasma.TheaterConnection = theater;

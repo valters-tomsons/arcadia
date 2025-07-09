@@ -101,7 +101,7 @@ public class TheaterHandler
     private async Task HandleUSER(Packet request)
     {
         var lkey = request["LKEY"];
-        _plasma = _sharedCache.AddTheaterConnection(_conn, lkey);
+        _plasma = _sharedCache.PairTheaterConnection(_conn, lkey);
 
         var response = new Dictionary<string, string>
         {
