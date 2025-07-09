@@ -573,6 +573,7 @@ public class FeslHandler
             // 101: unknown user
             // 102: account disabled
             // 103: account banned
+            // 105: account pending authorization
             // 120: account not entitled
             // 121: too many login attempts
             // 122: invalid password
