@@ -70,6 +70,8 @@ public class FeslHandler
             ["asso/GetAssociations"] = HandleGetAssociations,
             ["pres/PresenceSubscribe"] = HandlePresenceSubscribe,
             ["rank/GetStats"] = HandleGetStats,
+            ["rank/GetTopNAndStats"] = HandleGetTopNAndStats,
+            ["rank/GetRankedStats"] = HandleGetRankedStats,
             ["rank/GetRankedStatsForOwners"] = HandleGetRankedStatsForOwners,
             ["rank/UpdateStats"] = HandleUpdateStats,
             ["xmsg/GetMessages"] = HandleGetMessages,
@@ -270,6 +272,31 @@ public class FeslHandler
         // }
 
         var packet = new Packet("rank", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
+        await _conn.SendPacket(packet);
+    }
+
+    private async Task HandleGetRankedStats(Packet request)
+    {
+        var responseData = new Dictionary<string, string>
+        {
+            { "TXN", request.TXN },
+            { "stats.[]", "0" },
+        };
+
+        var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
+        await _conn.SendPacket(packet);
+    }
+
+    private async Task HandleGetTopNAndStats(Packet request)
+    {
+        var responseData = new Dictionary<string, string>
+        {
+            { "TXN", request.TXN },
+            { "stats.[]", "0" }, // rankCount
+            { "stats.0.addStats.[]", "0" } // statCount
+        };
+
+        var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
         await _conn.SendPacket(packet);
     }
 
