@@ -70,6 +70,7 @@ public class FeslHandler
             ["asso/GetAssociations"] = HandleGetAssociations,
             ["pres/PresenceSubscribe"] = HandlePresenceSubscribe,
             ["rank/GetStats"] = HandleGetStats,
+            ["rank/GetRankedStatsForOwners"] = HandleGetRankedStatsForOwners,
             ["rank/UpdateStats"] = HandleUpdateStats,
             ["xmsg/GetMessages"] = HandleGetMessages,
 
@@ -269,6 +270,35 @@ public class FeslHandler
         // }
 
         var packet = new Packet("rank", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
+        await _conn.SendPacket(packet);
+    }
+
+    private async Task HandleGetRankedStatsForOwners(Packet request)
+    {
+        var statCount = int.Parse(request.DataDict.GetValueOrDefault("keys.[]", "0"));
+        var ownerCount = int.Parse(request.DataDict.GetValueOrDefault("owners.[]", "0"));
+
+        var responseData = new Dictionary<string, string>
+        {
+            { "TXN", request.TXN },
+            { "rankedStats.[]", $"{ownerCount}" },
+            { "rankedStats.0.rankedStats.[]", $"{statCount}" }
+        };
+
+        for (var i = 0; i < ownerCount; i++)
+        {
+            var ownerId = request.DataDict[$"owners.{i}.ownerId"];
+            responseData.Add($"rankedStats.{i}.ownerId", ownerId);
+            responseData.Add($"rankedStats.{i}.ownerType", "1");
+
+            for (var j = 0; j < statCount; j++)
+            {
+                var statName = request.DataDict[$"keys.{j}"];
+                responseData.Add($"rankedStats.{i}.rankedStats.{j}.key", statName);
+            }
+        }
+
+        var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
         await _conn.SendPacket(packet);
     }
 
