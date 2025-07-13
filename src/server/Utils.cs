@@ -1,31 +1,9 @@
-using System.Reflection;
 using System.Text;
-using Org.BouncyCastle.Tls.Crypto;
-using Org.BouncyCastle.Tls.Crypto.Impl.BC;
 
 namespace Arcadia;
 
 public static class Utils
 {
-    public static byte[] HexStringToBytes(string value)
-    {
-        string cleanedRequest = value.Replace(" ", string.Empty).Replace("\n", string.Empty);
-        byte[] byteArray = Enumerable.Range(0, cleanedRequest.Length)
-                             .Where(x => x % 2 == 0)
-                             .Select(x => Convert.ToByte(cleanedRequest.Substring(x, 2), 16))
-                             .ToArray();
-        return byteArray;
-    }
-
-    public static byte[]? ReflectMasterSecretFromBCTls(TlsSecret secret)
-    {
-        // We need to use reflection to access the master secret from BC
-        // because using Extract() destroys the key for subsequent calls
-        const BindingFlags bindingFlags = BindingFlags.NonPublic | BindingFlags.Instance;
-        var field = typeof(BcTlsSecret).GetField("m_data", bindingFlags);
-        return (byte[]?)field?.GetValue(secret);
-    }
-
     public static byte[][] SplitAt(byte[] source, int index)
     {
         byte[] first = new byte[index];

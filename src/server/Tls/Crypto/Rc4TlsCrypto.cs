@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.Extensions.Options;
 using Org.BouncyCastle.Tls;
 using Org.BouncyCastle.Tls.Crypto;
@@ -16,7 +17,7 @@ public class Rc4TlsCrypto(IOptions<DebugSettings> settings) : BcTlsCrypto
     {
         if (_writeSslKeyLog)
         {
-            var secret = Utils.ReflectMasterSecretFromBCTls(cryptoParams.SecurityParameters.MasterSecret) ?? throw new Exception("Failed to reflect master secret");
+            var secret = ReflectMasterSecretFromBCTls(cryptoParams.SecurityParameters.MasterSecret) ?? throw new Exception("Failed to reflect master secret");
             var clientRandom = Convert.ToHexString(cryptoParams.SecurityParameters.ClientRandom);
             var masterSecret = Convert.ToHexString(secret);
 
@@ -45,5 +46,14 @@ public class Rc4TlsCrypto(IOptions<DebugSettings> settings) : BcTlsCrypto
     {
         return new TlsRc4Cipher(cryptoParams, cipherKeySize, CreateMac(cryptoParams, macAlgorithm),
             CreateMac(cryptoParams, macAlgorithm));
+    }
+
+    private static byte[]? ReflectMasterSecretFromBCTls(TlsSecret secret)
+    {
+        // We need to use reflection to access the master secret from BC
+        // because using Extract() destroys the key for subsequent calls
+        const BindingFlags bindingFlags = BindingFlags.NonPublic | BindingFlags.Instance;
+        var field = typeof(BcTlsSecret).GetField("m_data", bindingFlags);
+        return (byte[]?)field?.GetValue(secret);
     }
 }
