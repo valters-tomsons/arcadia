@@ -581,7 +581,11 @@ public class TheaterHandler
         var game = _sharedCache.GetGameByGid(_plasma!.PartitionId, gid) ?? throw new NotImplementedException();
 
         var pid = int.Parse(request["PID"]);
-        var player = game.ConnectedPlayers.Values.SingleOrDefault(x => x.PID == pid) ?? throw new NotImplementedException();
+        var player = game.ConnectedPlayers.Values.SingleOrDefault(x => x.PID == pid);
+        if (player is not null)
+        {
+            game.ConnectedPlayers.Remove(player.UID, out var _);
+        }
 
         var response = new Dictionary<string, string>
         {
