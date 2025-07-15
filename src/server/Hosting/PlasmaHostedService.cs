@@ -99,7 +99,9 @@ public class PlasmaHostedService : IHostedService
     {
         var remoteEndpoint = tcpClient.Client.RemoteEndPoint?.ToString()! ?? throw new NullReferenceException("ClientEndpoint cannot be null!");
         var localEndpoint = tcpClient.Client.LocalEndPoint!.ToString()!;
-        _logger.LogInformation("Opening connection from: {clientEndpoint} to {port}", remoteEndpoint, connectionPort);
+
+        using var loggerScope = _logger.BeginScope("({remoteIP})", remoteEndpoint.Split(':')[0]);
+        _logger.LogInformation("Opening connection to port {port}", connectionPort);
 
         await using var scope = _scopeFactory.CreateAsyncScope();
 
