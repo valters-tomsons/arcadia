@@ -73,8 +73,14 @@ public class ConnectionManager(ILogger<ConnectionManager> logger, SharedCounters
         }
     }
 
-    public async Task AddGameListing(GameServerListing game)
+    public async Task AddGameListing(GameServerListing game, Dictionary<string, string> data)
     {
+        foreach (var line in data)
+        {
+            if (DataKeyBlacklist.Contains(line.Key)) continue;
+            game.Data.TryAdd(line.Key, line.Value);
+        }
+
         await _semaphore.WaitAsync();
 
         try

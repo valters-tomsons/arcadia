@@ -461,7 +461,7 @@ public class TheaterHandler
             return;
         }
 
-        await _sharedCache.AddGameListing(game);
+        await _sharedCache.AddGameListing(game, request.DataDict);
 
         var response = new Dictionary<string, string>
         {
