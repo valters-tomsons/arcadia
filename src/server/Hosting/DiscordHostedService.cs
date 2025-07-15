@@ -363,7 +363,7 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
         var eb = new EmbedBuilder()
             .WithTitle($"{serverName} (AO3{gamemode})")
             .AddField("Level", level)
-            .AddField("Playlist", level)
+            .AddField("Playlist", playlist)
             .AddField("Players", GetPlayerCountString(server))
             .WithTimestamp(server.StartedAt);
 
