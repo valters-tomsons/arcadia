@@ -1,6 +1,5 @@
 using Xunit;
 using Arcadia.EA;
-using Arcadia;
 
 namespace tests;
 
@@ -23,7 +22,7 @@ public class EAPacketTests
 72 61 67 6d 65 6e 74 53 69 7a 65 3d 38 30 39 36
 0a 63 6c 69 65 6e 74 54 79 70 65 3d 0a 00";
 
-        var requestData = Utils.HexStringToBytes(request);
+        var requestData = HexStringToBytes(request);
         var packet = new Packet(requestData);
 
         Assert.Equal("fsys", packet.Type);
@@ -31,5 +30,15 @@ public class EAPacketTests
         Assert.Equal(0xc0000000, packet.TransmissionType);
         Assert.Equal("Hello", packet["TXN"]);
         Assert.Equal(requestData.Length, (int)packet.Length);
+    }
+
+    private static byte[] HexStringToBytes(string value)
+    {
+        string cleanedRequest = value.Replace(" ", string.Empty).Replace("\n", string.Empty);
+        byte[] byteArray = Enumerable.Range(0, cleanedRequest.Length)
+                             .Where(x => x % 2 == 0)
+                             .Select(x => Convert.ToByte(cleanedRequest.Substring(x, 2), 16))
+                             .ToArray();
+        return byteArray;
     }
 }
