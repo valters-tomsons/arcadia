@@ -308,7 +308,7 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
             {
                 if (server.PartitionId.EndsWith("/AO3"))
                 {
-                    gidEmbeds[i] = BuildAO3Status(server);
+                    // gidEmbeds[i] = BuildAO3Status(server);
                 }
                 else
                 {
