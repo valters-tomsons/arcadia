@@ -40,7 +40,7 @@ var host = Host.CreateDefaultBuilder()
             .AddSingleton<DiscordSocketClient>();
 
         services
-            .AddSingleton<SqliteConnection>(x => new("Data Source=arcadia.db"))
+            .AddTransient<SqliteConnection>(x => new("Data Source=arcadia.db"))
             .AddActivatedSingleton<Database>();
 
         services

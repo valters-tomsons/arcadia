@@ -1,31 +1,33 @@
 using Arcadia.Storage;
 using Dapper;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NPTicket;
 
 namespace Arcadia;
 
-public sealed class Database : IDisposable
+public sealed class Database
 {
     private readonly ILogger _logger;
-    private readonly SqliteConnection _connection;
+    private readonly IServiceProvider _serviceProvider;
 
-    private readonly SemaphoreSlim _lock = new(1, 1);
     private readonly bool _initialized;
 
-    public Database(ILogger<Database> logger, SqliteConnection connection)
+    public Database(ILogger<Database> logger, IServiceProvider serviceProvider)
     {
-        _connection = connection;
+        _serviceProvider = serviceProvider;
         _logger = logger;
 
         try
         {
-            _connection.Execute("PRAGMA journal_mode=WAL;");
+            using var conn = _serviceProvider.GetRequiredService<SqliteConnection>();
 
-            _connection.Execute("CREATE TABLE IF NOT EXISTS server_startup (started_at DATETIME DEFAULT CURRENT_TIMESTAMP)");
+            conn.Execute("PRAGMA journal_mode=WAL;");
 
-            _connection.Execute(
+            conn.Execute("CREATE TABLE IF NOT EXISTS server_startup (started_at DATETIME DEFAULT CURRENT_TIMESTAMP)");
+
+            conn.Execute(
             """
             CREATE TABLE IF NOT EXISTS onslaught_stats (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -37,7 +39,7 @@ public sealed class Database : IDisposable
             )
             """);
 
-            _connection.Execute(
+            conn.Execute(
             """
             CREATE TABLE IF NOT EXISTS login_metrics (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -63,27 +65,17 @@ public sealed class Database : IDisposable
     {
         if (!_initialized) return;
 
-        try
-        {
-            _lock.Wait();
-            _connection.Execute("INSERT INTO server_startup DEFAULT VALUES");
-        }
-        finally
-        {
-            _lock.Release();
-        }
+        using var conn = _serviceProvider.GetRequiredService<SqliteConnection>();
+        conn.Execute("INSERT INTO server_startup DEFAULT VALUES");
     }
 
     public void RecordOnslaughtCompletion(OnslaughtLevelCompleteMessage msg)
     {
         if (!_initialized) return;
 
-        try
-        {
-            _lock.Wait();
-
-            _connection.Execute(
-            """
+        using var conn = _serviceProvider.GetRequiredService<SqliteConnection>();
+        conn.Execute(
+        """
             INSERT INTO onslaught_stats (
                 MapKey, 
                 Difficulty,
@@ -96,18 +88,13 @@ public sealed class Database : IDisposable
                 @GameTime
             )
             """,
-            new
-            {
-                msg.MapKey,
-                msg.Difficulty,
-                msg.PlayerName,
-                GameTime = msg.GameTime.ToString()
-            });
-        }
-        finally
+        new
         {
-            _lock.Release();
-        }
+            msg.MapKey,
+            msg.Difficulty,
+            msg.PlayerName,
+            GameTime = msg.GameTime.ToString()
+        });
     }
 
     public async Task RecordLoginMetric(Ticket ticket)
@@ -121,12 +108,11 @@ public sealed class Database : IDisposable
             _ => string.Empty
         };
 
-        try
-        {
-            await _lock.WaitAsync();
 
-            _connection.Execute(
-            """
+        using var conn = _serviceProvider.GetRequiredService<SqliteConnection>();
+
+        conn.Execute(
+        """
             INSERT INTO login_metrics (Username, Platform, GameID) 
             VALUES (@Username, @Platform, @GameID)
             ON CONFLICT(Username, Platform, GameID) 
@@ -134,21 +120,11 @@ public sealed class Database : IDisposable
                 LoginCount = LoginCount + 1,
                 LastLoginDate = CURRENT_TIMESTAMP
             """,
-            new
-            {
-                ticket.Username,
-                Platform = GetPlatform(ticket.SignatureIdentifier),
-                GameID = ticket.TitleId
-            });
-        }
-        finally
+        new
         {
-            _lock.Release();
-        }
-    }
-
-    public void Dispose()
-    {
-        _lock.Dispose();
+            ticket.Username,
+            Platform = GetPlatform(ticket.SignatureIdentifier),
+            GameID = ticket.TitleId
+        });
     }
 }
