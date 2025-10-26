@@ -12,6 +12,7 @@
 **.log
 **/dumps/priv/*
 **/messageId
+**/arcadia.db*
 
 # dev settings
 **/dev.appsettings.json

@@ -20,6 +20,7 @@ public class FeslHandler
     private readonly ConnectionManager _sharedCache;
     private readonly IEAConnection _conn;
     private readonly StatsStorage _stats;
+    private readonly Database _db;
 
     private PlasmaSession? _plasma;
     private string clientString = string.Empty;
@@ -33,7 +34,7 @@ public class FeslHandler
     private readonly Timer _pingTimer;
     private readonly Timer _memchTimer;
 
-    public FeslHandler(IEAConnection conn, ILogger<FeslHandler> logger, IOptions<ArcadiaSettings> settings, SharedCounters sharedCounters, ConnectionManager sharedCache, StatsStorage stats)
+    public FeslHandler(IEAConnection conn, ILogger<FeslHandler> logger, IOptions<ArcadiaSettings> settings, SharedCounters sharedCounters, ConnectionManager sharedCache, StatsStorage stats, Database db)
     {
         _logger = logger;
         _settings = settings;
@@ -41,6 +42,7 @@ public class FeslHandler
         _sharedCache = sharedCache;
         _conn = conn;
         _stats = stats;
+        _db = db;
 
         _pingTimer = new(async _ => await SendPing(), null, Timeout.Infinite, Timeout.Infinite);
         _memchTimer = new(async _ => await SendMemCheck(), null, Timeout.Infinite, Timeout.Infinite);
@@ -529,16 +531,16 @@ public class FeslHandler
         switch(groupName)
         {
             case "BFBC2PS3":
-                response.AddEntitlements(_plasma!.UID, new(string, long, string)[]{
+                response.AddEntitlements(_plasma!.UID, [
                     (groupName, 1111100001, "BFBC2:PS3:ONSLAUGHT_PDLC"),
                     (groupName, 1111100002, "BFBC2:PS3:CIAB"),
                     (groupName, 1111100003, "BFBC2:PS3:VIP_PDLC")
-                });
+                ]);
                 break;
             case "BattlefieldBadCompany2":
-                response.AddEntitlements(_plasma!.UID, new(string, long, string)[]{
+                response.AddEntitlements(_plasma!.UID, [
                     (groupName, 1100000001, "BFBC2:COMMON:GAMESTOP")
-                });
+                ]);
                 break;
             default:
                 response.Add("entitlements.[]", "0");
@@ -570,6 +572,8 @@ public class FeslHandler
         var onlineId = ticket.Username;
 
         if (string.IsNullOrWhiteSpace(onlineId)) throw new NotImplementedException();
+
+        await _db.RecordLoginMetric(ticket);
 
         _plasma = await _sharedCache.CreatePlasmaConnection(_conn, onlineId, clientString, partitionId);
         var loginResponseData = new Dictionary<string, string>
@@ -611,6 +615,8 @@ public class FeslHandler
             await SendError(request, 102);
             return;
         }
+
+        await _db.RecordLoginMetric(ticket);
 
         _plasma = await _sharedCache.CreatePlasmaConnection(_conn, onlineId, clientString, partitionId);
         var loginResponseData = new Dictionary<string, string>

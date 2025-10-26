@@ -11,6 +11,7 @@ using Arcadia.Storage;
 using NReco.Logging.File;
 using Discord.WebSocket;
 using Arcadia.Handlers;
+using Microsoft.Data.Sqlite;
 
 var host = Host.CreateDefaultBuilder()
     .ConfigureAppConfiguration((_, config) => config
@@ -37,6 +38,10 @@ var host = Host.CreateDefaultBuilder()
             .AddSingleton<StatsStorage>()
             .AddSingleton<DiscordSocketConfig>(x => new() { GatewayIntents = Discord.GatewayIntents.Guilds | Discord.GatewayIntents.GuildMessages })
             .AddSingleton<DiscordSocketClient>();
+
+        services
+            .AddSingleton<SqliteConnection>(x => new("Data Source=arcadia.db"))
+            .AddActivatedSingleton<Database>();
 
         services
             .AddScoped<Rc4TlsCrypto>()
