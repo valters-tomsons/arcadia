@@ -183,7 +183,7 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
         const int batchSize = 8;
         for (var i = 0; i < batchSize; i++)
         {
-            var msg = _stats.GetLevelComplete();
+            var msg = _stats.DequeueCompletion();
             if (msg is null)
             {
                 if (i == 0) return;

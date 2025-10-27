@@ -84,35 +84,39 @@ public sealed class Database : IDisposable
         }
     }
 
-    public void RecordOnslaughtCompletion(OnslaughtLevelCompleteMessage msg)
+    public void RecordOnslaughtCompletion(OnslaughtLevelCompleteMessage[] messages)
     {
-        if (!_initialized) return;
+        if (messages.Length == 0 || !_initialized) return;
 
         try
         {
             _lock.EnterWriteLock();
             using var conn = _serviceProvider.GetRequiredService<SqliteConnection>();
-            conn.Execute(
-            """
-            INSERT INTO onslaught_stats (
-                MapKey, 
-                Difficulty,
-                PlayerName,
-                GameTime
-            ) VALUES (
-                @MapKey, 
-                @Difficulty, 
-                @PlayerName, 
-                @GameTime
-            )
-            """,
-            new
+
+            foreach (var msg in messages)
             {
-                msg.MapKey,
-                msg.Difficulty,
-                msg.PlayerName,
-                GameTime = msg.GameTime.ToString()
-            });
+                conn.Execute(
+                """
+                INSERT INTO onslaught_stats (
+                    MapKey, 
+                    Difficulty,
+                    PlayerName,
+                    GameTime
+                ) VALUES (
+                    @MapKey, 
+                    @Difficulty, 
+                    @PlayerName, 
+                    @GameTime
+                );
+                """,
+                new
+                {
+                    msg.MapKey,
+                    msg.Difficulty,
+                    msg.PlayerName,
+                    GameTime = msg.GameTime.ToString()
+                });
+            }
         }
         catch (Exception e)
         {

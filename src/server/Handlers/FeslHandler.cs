@@ -693,6 +693,8 @@ public class FeslHandler
 
         _logger.LogTrace("Client submitted {statsCount} stats!", statsCount);
 
+        var onslaughtStats = new List<OnslaughtLevelCompleteMessage>();
+
         for (var i = 0; i < statsCount; i++)
         {
             var statKey = request[$"u.0.s.{i}.k"];
@@ -733,8 +735,7 @@ public class FeslHandler
                     };
 
                     _logger.LogTrace("Posting Onslaught stats message: {Message}", onslaughtMessage);
-                    _db.RecordOnslaughtCompletion(onslaughtMessage);
-                    _stats.PostLevelComplete(onslaughtMessage);
+                    onslaughtStats.Add(onslaughtMessage);
                 }
                 catch (Exception e)
                 {
@@ -742,6 +743,8 @@ public class FeslHandler
                 }
             }
         }
+
+        _stats.PostLevelComplete([.. onslaughtStats]);
 
         await AcknowledgeRequest(request);
     }
