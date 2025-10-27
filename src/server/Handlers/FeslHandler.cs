@@ -573,7 +573,7 @@ public class FeslHandler
 
         if (string.IsNullOrWhiteSpace(onlineId)) throw new NotImplementedException();
 
-        await _db.RecordLoginMetric(ticket);
+        _db.RecordLoginMetric(ticket);
 
         _plasma = await _sharedCache.CreatePlasmaConnection(_conn, onlineId, clientString, partitionId);
         var loginResponseData = new Dictionary<string, string>
@@ -616,7 +616,7 @@ public class FeslHandler
             return;
         }
 
-        await _db.RecordLoginMetric(ticket);
+        _db.RecordLoginMetric(ticket);
 
         _plasma = await _sharedCache.CreatePlasmaConnection(_conn, onlineId, clientString, partitionId);
         var loginResponseData = new Dictionary<string, string>
@@ -733,6 +733,7 @@ public class FeslHandler
                     };
 
                     _logger.LogTrace("Posting Onslaught stats message: {Message}", onslaughtMessage);
+                    _db.RecordOnslaughtCompletion(onslaughtMessage);
                     _stats.PostLevelComplete(onslaughtMessage);
                 }
                 catch (Exception e)

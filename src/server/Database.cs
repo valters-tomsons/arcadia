@@ -114,13 +114,17 @@ public sealed class Database : IDisposable
                 GameTime = msg.GameTime.ToString()
             });
         }
+        catch (Exception e)
+        {
+            _logger.LogCritical(e, "Failed to record onslaught stats!");
+        }
         finally
         {
             _lock.ExitWriteLock();
         }
     }
 
-    public async Task RecordLoginMetric(Ticket ticket)
+    public void RecordLoginMetric(Ticket ticket)
     {
         if (!_initialized) return;
 
@@ -151,6 +155,10 @@ public sealed class Database : IDisposable
                 Platform = GetPlatform(ticket.SignatureIdentifier),
                 GameID = ticket.TitleId
             });
+        }
+        catch (Exception e)
+        {
+            _logger.LogCritical(e, "Failed to record login metric!");
         }
         finally
         {
