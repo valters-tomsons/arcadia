@@ -7,11 +7,12 @@ using NPTicket;
 
 namespace Arcadia;
 
-public sealed class Database
+public sealed class Database : IDisposable
 {
     private readonly ILogger _logger;
     private readonly IServiceProvider _serviceProvider;
 
+    private readonly ReaderWriterLockSlim _lock = new();
     private readonly bool _initialized;
 
     public Database(ILogger<Database> logger, IServiceProvider serviceProvider)
@@ -21,6 +22,8 @@ public sealed class Database
 
         try
         {
+            _lock.EnterWriteLock();
+
             using var conn = _serviceProvider.GetRequiredService<SqliteConnection>();
 
             conn.Execute("PRAGMA journal_mode=WAL;");
@@ -59,23 +62,38 @@ public sealed class Database
         {
             _logger.LogCritical(e, "Failed to initialize database, it will not be used!");
         }
+        finally
+        {
+            _lock.ExitWriteLock();
+        }
     }
 
     public void RecordStartup()
     {
         if (!_initialized) return;
 
-        using var conn = _serviceProvider.GetRequiredService<SqliteConnection>();
-        conn.Execute("INSERT INTO server_startup DEFAULT VALUES");
+        try
+        {
+            _lock.EnterWriteLock();
+            using var conn = _serviceProvider.GetRequiredService<SqliteConnection>();
+            conn.Execute("INSERT INTO server_startup DEFAULT VALUES");
+        }
+        finally
+        {
+            _lock.ExitWriteLock();
+        }
     }
 
     public void RecordOnslaughtCompletion(OnslaughtLevelCompleteMessage msg)
     {
         if (!_initialized) return;
 
-        using var conn = _serviceProvider.GetRequiredService<SqliteConnection>();
-        conn.Execute(
-        """
+        try
+        {
+            _lock.EnterWriteLock();
+            using var conn = _serviceProvider.GetRequiredService<SqliteConnection>();
+            conn.Execute(
+            """
             INSERT INTO onslaught_stats (
                 MapKey, 
                 Difficulty,
@@ -88,13 +106,18 @@ public sealed class Database
                 @GameTime
             )
             """,
-        new
+            new
+            {
+                msg.MapKey,
+                msg.Difficulty,
+                msg.PlayerName,
+                GameTime = msg.GameTime.ToString()
+            });
+        }
+        finally
         {
-            msg.MapKey,
-            msg.Difficulty,
-            msg.PlayerName,
-            GameTime = msg.GameTime.ToString()
-        });
+            _lock.ExitWriteLock();
+        }
     }
 
     public async Task RecordLoginMetric(Ticket ticket)
@@ -108,11 +131,13 @@ public sealed class Database
             _ => string.Empty
         };
 
+        try
+        {
+            _lock.EnterWriteLock();
+            using var conn = _serviceProvider.GetRequiredService<SqliteConnection>();
 
-        using var conn = _serviceProvider.GetRequiredService<SqliteConnection>();
-
-        conn.Execute(
-        """
+            conn.Execute(
+            """
             INSERT INTO login_metrics (Username, Platform, GameID) 
             VALUES (@Username, @Platform, @GameID)
             ON CONFLICT(Username, Platform, GameID) 
@@ -120,11 +145,21 @@ public sealed class Database
                 LoginCount = LoginCount + 1,
                 LastLoginDate = CURRENT_TIMESTAMP
             """,
-        new
+            new
+            {
+                ticket.Username,
+                Platform = GetPlatform(ticket.SignatureIdentifier),
+                GameID = ticket.TitleId
+            });
+        }
+        finally
         {
-            ticket.Username,
-            Platform = GetPlatform(ticket.SignatureIdentifier),
-            GameID = ticket.TitleId
-        });
+            _lock.ExitWriteLock();
+        }
+    }
+
+    public void Dispose()
+    {
+        _lock.Dispose();
     }
 }
