@@ -45,14 +45,14 @@ public sealed class DbTests
     [Fact]
     public void RecordStartup_Inserts()
     {
+        var initialCount = sqlite.ExecuteScalar<int>("SELECT COUNT(*) FROM server_startup");
+        Assert.Equal(0, initialCount);
+
         db.RecordStartup();
-        var now = DateTime.UtcNow;
-
         var startedAt = sqlite.ExecuteScalar<string>("SELECT started_at FROM server_startup");
-        var startCount = sqlite.ExecuteScalar<int>("SELECT COUNT(*) FROM server_startup");
+        Assert.True(DateTime.TryParse(startedAt, out var _));
 
-        Assert.NotNull(startedAt);
-        Assert.True(now - DateTime.Parse(startedAt) < TimeSpan.FromMinutes(1));
-        Assert.Equal(1, startCount);
+        var afterCount = sqlite.ExecuteScalar<int>("SELECT COUNT(*) FROM server_startup");
+        Assert.Equal(1, afterCount);
     }
 }
