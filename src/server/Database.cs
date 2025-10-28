@@ -1,6 +1,6 @@
+using System.Data;
 using Arcadia.Storage;
 using Dapper;
-using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NPTicket;
@@ -24,7 +24,7 @@ public sealed class Database : IDisposable
         {
             _lock.EnterWriteLock();
 
-            using var conn = _serviceProvider.GetRequiredService<SqliteConnection>();
+            using var conn = _serviceProvider.GetRequiredService<IDbConnection>();
 
             conn.Execute("PRAGMA journal_mode=WAL;");
 
@@ -75,7 +75,7 @@ public sealed class Database : IDisposable
         try
         {
             _lock.EnterWriteLock();
-            using var conn = _serviceProvider.GetRequiredService<SqliteConnection>();
+            using var conn = _serviceProvider.GetRequiredService<IDbConnection>();
             conn.Execute("INSERT INTO server_startup DEFAULT VALUES");
         }
         finally
@@ -91,7 +91,7 @@ public sealed class Database : IDisposable
         try
         {
             _lock.EnterWriteLock();
-            using var conn = _serviceProvider.GetRequiredService<SqliteConnection>();
+            using var conn = _serviceProvider.GetRequiredService<IDbConnection>();
 
             foreach (var msg in messages)
             {
@@ -142,7 +142,7 @@ public sealed class Database : IDisposable
         try
         {
             _lock.EnterWriteLock();
-            using var conn = _serviceProvider.GetRequiredService<SqliteConnection>();
+            using var conn = _serviceProvider.GetRequiredService<IDbConnection>();
 
             conn.Execute(
             """

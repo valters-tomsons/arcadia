@@ -12,6 +12,7 @@ using NReco.Logging.File;
 using Discord.WebSocket;
 using Arcadia.Handlers;
 using Microsoft.Data.Sqlite;
+using System.Data;
 
 var host = Host.CreateDefaultBuilder()
     .ConfigureAppConfiguration((_, config) => config
@@ -40,7 +41,7 @@ var host = Host.CreateDefaultBuilder()
             .AddSingleton<DiscordSocketClient>();
 
         services
-            .AddTransient<SqliteConnection>(x => new("Data Source=arcadia.db"))
+            .AddTransient<IDbConnection>(x => new SqliteConnection("Data Source=arcadia.db"))
             .AddActivatedSingleton<Database>();
 
         services
