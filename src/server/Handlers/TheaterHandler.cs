@@ -594,8 +594,6 @@ public class TheaterHandler
 
         var packet = new Packet("PLVT", TheaterTransmissionType.OkResponse, 0, response);
         await _conn.SendPacket(packet);
-
-        game.ConnectedPlayers.Remove(player.UID, out var _);
     }
 
     private Task HandlePING(Packet _)
