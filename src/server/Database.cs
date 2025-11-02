@@ -3,6 +3,7 @@ using Arcadia.Storage;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using NPTicket;
 
 namespace Arcadia;
@@ -15,10 +16,12 @@ public sealed class Database : IDisposable
     private readonly ReaderWriterLockSlim _lock = new();
     private readonly bool _initialized;
 
-    public Database(ILogger<Database> logger, IServiceProvider serviceProvider)
+    public Database(ILogger<Database> logger, IServiceProvider serviceProvider, IOptions<DebugSettings> options)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
+
+        if (options.Value.DisableDatabase) return;
 
         try
         {

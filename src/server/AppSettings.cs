@@ -46,4 +46,5 @@ public record DebugSettings
     public bool EnableDebugConsole { get; init; }
     public bool DisableTheaterJoinTimeout { get; init; }
     public bool ForcePlaintext { get; init; }
+    public bool DisableDatabase { get; init; }
 }
