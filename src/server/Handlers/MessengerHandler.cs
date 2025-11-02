@@ -25,7 +25,8 @@ public class MessengerHandler
         {
             ["AUTH"] = HandleAUTH,
             ["RGET"] = HandleRGET,
-            ["PSET"] = HandlePSET
+            ["PSET"] = AcknowledgeRequest,
+            ["PADD"] = AcknowledgeRequest
         }.ToImmutableDictionary();
     }
 
@@ -86,7 +87,7 @@ public class MessengerHandler
         await _conn.SendPacket(packet);
     }
 
-    private async Task HandlePSET(Packet request)
+    private async Task AcknowledgeRequest(Packet request)
     {
         var response = new Dictionary<string, string>
         {
