@@ -67,7 +67,7 @@ public class MessengerHandler
         {
             ["TTID"] = "0",
             ["TITL"] = "A Game",
-            ["ID"] = "1",
+            ["ID"] = request["ID"],
             ["USER"] = $"{request["USER"]}@messaging.ea.com/eagames/{plasma.PartitionId}"
         };
 
