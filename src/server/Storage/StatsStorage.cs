@@ -10,16 +10,20 @@ public record OnslaughtLevelCompleteMessage
     public required TimeSpan GameTime { get; init; }
 }
 
-public class StatsStorage
+public class StatsStorage(Database db)
 {
+    private readonly Database _db = db;
     private readonly ConcurrentQueue<OnslaughtLevelCompleteMessage> _onslaughtStats = new();
 
-    public void PostLevelComplete(OnslaughtLevelCompleteMessage msg)
+    public void PostLevelComplete(OnslaughtLevelCompleteMessage[] messages)
     {
-        _onslaughtStats.Enqueue(msg);
+        _db.RecordOnslaughtCompletion(messages);
+
+        foreach (var msg in messages)
+            _onslaughtStats.Enqueue(msg);
     }
 
-    public OnslaughtLevelCompleteMessage? GetLevelComplete()
+    public OnslaughtLevelCompleteMessage? DequeueCompletion()
     {
         var dequeued = _onslaughtStats.TryDequeue(out var msg);
         if (!dequeued || msg is null) return null;

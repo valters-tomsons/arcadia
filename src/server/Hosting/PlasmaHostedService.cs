@@ -23,16 +23,18 @@ public class PlasmaHostedService : IHostedService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly AsymmetricKeyParameter _feslCertKey;
     private readonly Certificate _feslPubCert;
+    private readonly Database _db;
 
     private readonly List<TcpListener> _tcpListeners = [];
     private readonly List<UdpClient> _udpListeners = [];
 
     private readonly SemaphoreSlim _sslHandshakeSemaphore = new(1, 1);
 
-    public PlasmaHostedService(ILogger<PlasmaHostedService> logger, IOptions<ArcadiaSettings> arcadiaSettings, ProtoSSL certGenerator, IServiceScopeFactory scopeFactory, IOptions<DebugSettings> debugSettings)
+    public PlasmaHostedService(ILogger<PlasmaHostedService> logger, IOptions<ArcadiaSettings> arcadiaSettings, ProtoSSL certGenerator, IServiceScopeFactory scopeFactory, IOptions<DebugSettings> debugSettings, Database db)
     {
         _logger = logger;
         _scopeFactory = scopeFactory;
+        _db = db;
         _arcadiaSettings = arcadiaSettings.Value;
         (_feslCertKey, _feslPubCert) = certGenerator.GetFeslEaCert();
         _debugSettings = debugSettings.Value;
@@ -44,6 +46,8 @@ public class PlasmaHostedService : IHostedService
         {
             throw new ApplicationException("Arcadia must listen on Plasma ports!");
         }
+
+        _db.RecordStartup();
 
         if (_arcadiaSettings.MessengerPort > 0)
         {
