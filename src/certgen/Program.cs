@@ -11,6 +11,7 @@ using Org.BouncyCastle.Tls.Crypto.Impl.BC;
 using Org.BouncyCastle.Utilities;
 using Org.BouncyCastle.X509;
 using Org.BouncyCastle.OpenSsl;
+using Org.BouncyCastle.Crypto.Parameters;
 
 ConsoleColor DefaultConsoleColor = Console.ForegroundColor;
 
@@ -38,7 +39,6 @@ DumpCertificate(PrivateKey, Certificate, cn);
 
 X509Certificate PatchCertificateSignaturePattern(X509Certificate cCertificate)
 {
-
     var cert = DotNetUtilities.ToX509Certificate(cCertificate);
     var certDer = cert.GetRawCertData();
 
@@ -57,6 +57,26 @@ X509Certificate PatchCertificateSignaturePattern(X509Certificate cCertificate)
     return new X509Certificate(certDer);
 }
 
+AsymmetricCipherKeyPair ConstructRsaKeyPair()
+{
+    BigInteger p = new("111453461317074268353761995724716395361446805418267262156522133799013175060193");
+    BigInteger q = new("114726748596358283670400355329452217110158824439119423212154846632671665145039");
+    BigInteger e = new("3");
+
+    BigInteger n = p.Multiply(q);
+    BigInteger phi = p.Subtract(BigInteger.One).Multiply(q.Subtract(BigInteger.One));
+    BigInteger d = e.ModInverse(phi);
+    
+    BigInteger dP = d.Remainder(p.Subtract(BigInteger.One));
+    BigInteger dQ = d.Remainder(q.Subtract(BigInteger.One));
+    BigInteger qInv = q.ModInverse(p);
+
+    var publicKeyParams = new RsaKeyParameters(false, n, e);
+    var privateKeyParams = new RsaPrivateCrtKeyParameters(n, e, d, p, q, dP, dQ, qInv);
+    
+    return new AsymmetricCipherKeyPair(publicKeyParams, privateKeyParams);
+}
+
 (AsymmetricKeyParameter PrivateKey, Certificate Certificate) GenerateVulnerableCert(string issuer, string subject)
 {
     var crypto = new BcTlsCrypto(new SecureRandom());
@@ -66,7 +86,7 @@ X509Certificate PatchCertificateSignaturePattern(X509Certificate cCertificate)
     var caKeyPair = rsaKeyPairGen.GenerateKeyPair();
     var caCertificate = GenerateX509Certificate(issuer, caKeyPair, caKeyPair.Private);
 
-    var cKeyPair = rsaKeyPairGen.GenerateKeyPair();
+    var cKeyPair = ConstructRsaKeyPair();
     var cCertificate = GenerateX509Certificate(subject, cKeyPair, caKeyPair.Private, caCertificate);
     var patched_cCertificate = PatchCertificateSignaturePattern(cCertificate);
 
