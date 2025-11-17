@@ -15,26 +15,15 @@ using Org.BouncyCastle.Crypto.Parameters;
 
 ConsoleColor DefaultConsoleColor = Console.ForegroundColor;
 
-const string Sha1CipherAlgorithm = "SHA1WITHRSA";
 ReadOnlyMemory<byte> Sha1CipherSignature = new byte[] { 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x05 };
+const string Sha1CipherAlgorithm = "SHA1WITHRSA";
 
-LogLine("Following IssuerDN & SubjectDN will be used if none are entered:");
-const string DefaultIssuerDN = "CN=OTG3 Certificate Authority, C=US, ST=California, L=Redwood City, O=\"Electronic Arts, Inc.\", OU=Online Technology Group, emailAddress=dirtysock-contact@ea.com";
-const string DefaultSubjectDN = "C=US, ST=California, O=\"Electronic Arts, Inc.\", OU=Online Technology Group, CN=fesl.ea.com, emailAddress=fesl@ea.com";
-LogLine(DefaultIssuerDN, ConsoleColor.DarkGray);
-LogLine(DefaultSubjectDN, ConsoleColor.DarkGray);
+const string IssuerDN = "CN=OTG3 Certificate Authority, C=US, ST=California, L=Redwood City, O=\"Electronic Arts, Inc.\", OU=Online Technology Group, emailAddress=dirtysock-contact@ea.com";
+const string SubjectDN = "C=US, ST=California, O=\"Electronic Arts, Inc.\", OU=Online Technology Group, CN=fesl.ea.com, emailAddress=fesl@ea.com";
 
-LogLine("Enter custom IssuerDN string?:");
-var issuerDn = Console.ReadLine();
+var (PrivateKey, Certificate) = GenerateFeslCert(IssuerDN, SubjectDN);
+var cn = new X509Name(SubjectDN).GetValueList(X509Name.CN)[0];
 
-LogLine("Enter custom SubjectDN string?:");
-var subjectDn = Console.ReadLine();
-
-if (string.IsNullOrWhiteSpace(issuerDn)) issuerDn = DefaultIssuerDN;
-if (string.IsNullOrWhiteSpace(subjectDn)) subjectDn = DefaultSubjectDN;
-var (PrivateKey, Certificate) = GenerateVulnerableCert(issuerDn, subjectDn);
-
-var cn = FindCN(subjectDn);
 DumpCertificate(PrivateKey, Certificate, cn);
 
 X509Certificate PatchCertificateSignaturePattern(X509Certificate cCertificate)
@@ -77,7 +66,7 @@ AsymmetricCipherKeyPair ConstructRsaKeyPair()
     return new AsymmetricCipherKeyPair(publicKeyParams, privateKeyParams);
 }
 
-(AsymmetricKeyParameter PrivateKey, Certificate Certificate) GenerateVulnerableCert(string issuer, string subject)
+(AsymmetricKeyParameter PrivateKey, Certificate Certificate) GenerateFeslCert(string issuer, string subject)
 {
     var crypto = new BcTlsCrypto(new SecureRandom());
     var rsaKeyPairGen = new RsaKeyPairGenerator();
@@ -88,10 +77,11 @@ AsymmetricCipherKeyPair ConstructRsaKeyPair()
 
     var cKeyPair = ConstructRsaKeyPair();
     var cCertificate = GenerateX509Certificate(subject, cKeyPair, caKeyPair.Private, caCertificate);
-    var patched_cCertificate = PatchCertificateSignaturePattern(cCertificate);
+
+    cCertificate = PatchCertificateSignaturePattern(cCertificate);
 
     var store = new Pkcs12StoreBuilder().Build();
-    var certEntry = new X509CertificateEntry(patched_cCertificate);
+    var certEntry = new X509CertificateEntry(cCertificate);
 
     var certDomain = subject.Split("CN=")[1].Split(",")[0];
 
@@ -116,7 +106,7 @@ void DumpCertificate(AsymmetricKeyParameter privateKey, Certificate certificate,
     // Export Private Key
     {
         var file = $"{certName}-priv.pem";
-        if (File.Exists(file)) LogLine($"Overwriting existing file: {file}!", ConsoleColor.Red);
+        if (File.Exists(file)) LogLine($"Overwriting existing file: {file}", ConsoleColor.Red);
 
         using var textWriter = new StreamWriter(file);
         using var pemWriter = new PemWriter(textWriter);
@@ -129,7 +119,7 @@ void DumpCertificate(AsymmetricKeyParameter privateKey, Certificate certificate,
     // Export Certificate
     {
         var file = $"{certName}-cert.pem";
-        if (File.Exists(file)) LogLine($"Overwriting existing file: {file}!", ConsoleColor.Red);
+        if (File.Exists(file)) LogLine($"Overwriting existing file: {file}", ConsoleColor.Red);
 
         using var textWriter = new StreamWriter(file);
         using var pemWriter = new PemWriter(textWriter);
@@ -142,7 +132,7 @@ void DumpCertificate(AsymmetricKeyParameter privateKey, Certificate certificate,
     // Export PFX
     {
         var file = $"{certName}.pfx";
-        if (File.Exists(file)) LogLine($"Overwriting existing file: {file}!", ConsoleColor.Red);
+        if (File.Exists(file)) LogLine($"Overwriting existing file: {file}", ConsoleColor.Red);
 
         var store = new Pkcs12StoreBuilder().Build();
         var certEntry = new X509CertificateEntry(x509);
@@ -158,21 +148,6 @@ void DumpCertificate(AsymmetricKeyParameter privateKey, Certificate certificate,
 
         LogLine(file);
     }
-}
-
-void LogLine(string? message = null, ConsoleColor? color = null)
-{
-    message ??= string.Empty;
-
-    if (color is null)
-    {
-        Console.WriteLine(message);
-        return;
-    }
-
-    Console.ForegroundColor = (ConsoleColor)color;
-    Console.WriteLine(message);
-    Console.ForegroundColor =  DefaultConsoleColor;
 }
 
 static X509Certificate GenerateX509Certificate(string subjectName, AsymmetricCipherKeyPair subjectKeyPair, AsymmetricKeyParameter issuerPrivKey, X509Certificate? issuerCert = null)
@@ -209,11 +184,17 @@ static int FindBytePattern(ReadOnlySpan<byte> buffer, ReadOnlySpan<byte> searchP
     return -1;
 }
 
-static string FindCN(string subjectDn)
+void LogLine(string? message = null, ConsoleColor? color = null)
 {
-    var cnIdx = subjectDn.IndexOf("CN=") + 3;
-    var endIdx = subjectDn.IndexOf(',', cnIdx);
+    message ??= string.Empty;
 
-    var cnLength = endIdx - cnIdx;
-    return subjectDn.Substring(cnIdx, cnLength);
+    if (color is null)
+    {
+        Console.WriteLine(message);
+        return;
+    }
+
+    Console.ForegroundColor = (ConsoleColor)color;
+    Console.WriteLine(message);
+    Console.ForegroundColor =  DefaultConsoleColor;
 }
