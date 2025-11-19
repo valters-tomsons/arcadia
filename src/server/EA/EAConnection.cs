@@ -142,7 +142,7 @@ public sealed class EAConnection : IEAConnection
 
                         yield return combinedPacket;
                     }
-                    else if (_multiPacketBuffer.Length > requestedMultiPacketSize) throw new Exception($"Requested packet-size changed between requests! Initial size: {requestedMultiPacketSize}, tried to write: {requestedMultiPacketSize}");
+                    else if (_multiPacketBuffer.Length > requestedMultiPacketSize) throw new Exception($"Requested packet-size changed between requests! Initial size: {requestedMultiPacketSize}, tried to write: {_multiPacketBuffer.Length}");
 
                     continue;
                 }
