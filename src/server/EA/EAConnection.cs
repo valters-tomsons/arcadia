@@ -117,6 +117,9 @@ public sealed class EAConnection : IEAConnection
                     var partPayload = Convert.FromBase64String(encodedPart);
                     var size = uint.Parse(packet["size"]);
 
+                    _logger?.LogTrace("Multi-packet part received - ID: {id}, Declared Size: {size}, Part Size: {partSize}, Buffer length before: {bufferLength}",
+                           packet.Id, size, partPayload.Length, _multiPacketBuffer.Length);
+
                     if (currentMultiPacketId != packet.Id)
                     {
                         currentMultiPacketId = packet.Id;
@@ -126,6 +129,9 @@ public sealed class EAConnection : IEAConnection
                     if (requestedMultiPacketSize != size) throw new Exception($"Requested packet-size changed between requests! Initial size: {requestedMultiPacketSize}, newSize: {size}");
 
                     await _multiPacketBuffer.WriteAsync(partPayload, _cts.Token);
+
+                    _logger?.LogTrace("Multi-packet part written - Buffer Length: {bufferLength}, Requested Size: {requestedSize}",
+                        _multiPacketBuffer.Length, requestedMultiPacketSize);
 
                     if (_multiPacketBuffer.Length == requestedMultiPacketSize)
                     {
@@ -142,7 +148,7 @@ public sealed class EAConnection : IEAConnection
 
                         yield return combinedPacket;
                     }
-                    else if (_multiPacketBuffer.Length > requestedMultiPacketSize) throw new Exception($"Requested packet-size changed between requests! Initial size: {requestedMultiPacketSize}, tried to write: {_multiPacketBuffer.Length}");
+                    else if (_multiPacketBuffer.Length > requestedMultiPacketSize) throw new Exception($"Buffer overflow! Buffer contains {_multiPacketBuffer.Length} bytes but expected only {requestedMultiPacketSize}");
 
                     continue;
                 }
