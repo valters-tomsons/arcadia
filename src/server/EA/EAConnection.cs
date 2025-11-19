@@ -60,6 +60,7 @@ public sealed class EAConnection : IEAConnection
 
         uint? currentMultiPacketId = null;
         uint requestedMultiPacketSize = 0;
+        long bufferedMultiPacketSize = 0;
 
         while (NetworkStream.CanRead == true && !_cts.IsCancellationRequested)
         {
@@ -114,41 +115,42 @@ public sealed class EAConnection : IEAConnection
                 if (packet.TransmissionType == FeslTransmissionType.MultiPacketResponse || packet.TransmissionType == FeslTransmissionType.MultiPacketRequest)
                 {
                     var encodedPart = packet["data"].Replace("%3d", "=");
+
                     var partPayload = Convert.FromBase64String(encodedPart);
                     var size = uint.Parse(packet["size"]);
 
-                    _logger?.LogTrace("Multi-packet part received - ID: {id}, Declared Size: {size}, Part Size: {partSize}, Buffer length before: {bufferLength}",
-                           packet.Id, size, partPayload.Length, _multiPacketBuffer.Length);
+                    _logger?.LogTrace("Multi-packet part received - ID: {id}, Declared Size: {size}, Part Size: {partSize}", packet.Id, size, encodedPart.Length);
 
                     if (currentMultiPacketId != packet.Id)
                     {
                         currentMultiPacketId = packet.Id;
                         requestedMultiPacketSize = size;
+
+                        _multiPacketBuffer.SetLength(0);
+                        _multiPacketBuffer.Position = 0;
+                        bufferedMultiPacketSize = 0;
                     }
 
                     if (requestedMultiPacketSize != size) throw new Exception($"Requested packet-size changed between requests! Initial size: {requestedMultiPacketSize}, newSize: {size}");
 
                     await _multiPacketBuffer.WriteAsync(partPayload, _cts.Token);
+                    bufferedMultiPacketSize += encodedPart.Length;
 
-                    _logger?.LogTrace("Multi-packet part written - Buffer Length: {bufferLength}, Requested Size: {requestedSize}",
-                        _multiPacketBuffer.Length, requestedMultiPacketSize);
+                    _logger?.LogTrace("Multi-packet part buffered - Length: {bufferLength}, Requested Size: {requestedSize}",
+                        bufferedMultiPacketSize, requestedMultiPacketSize);
 
-                    if (_multiPacketBuffer.Length == requestedMultiPacketSize)
+                    if (bufferedMultiPacketSize == requestedMultiPacketSize)
                     {
-                        var bufferData = _multiPacketBuffer.ToArray();
                         currentMultiPacketId = null;
 
-                        _multiPacketBuffer.SetLength(0);
-                        _multiPacketBuffer.Position = 0;
-
+                        var bufferData = _multiPacketBuffer.ToArray();
                         var combinedData = Utils.ParseFeslPacketToDict(bufferData);
                         var combinedPacket = new Packet(packet.Type, packet.TransmissionType, packet.Id, combinedData, size);
 
                         _logger?.LogTrace("'{type}' incoming multi-packet, combined:{data}", combinedPacket.Type, Encoding.ASCII.GetString(bufferData));
-
                         yield return combinedPacket;
                     }
-                    else if (_multiPacketBuffer.Length > requestedMultiPacketSize) throw new Exception($"Buffer overflow! Buffer contains {_multiPacketBuffer.Length} bytes but expected only {requestedMultiPacketSize}");
+                    else if (bufferedMultiPacketSize > requestedMultiPacketSize) throw new Exception($"Buffer overflow! Buffer contains {_multiPacketBuffer.Length} bytes but expected only {requestedMultiPacketSize}");
 
                     continue;
                 }
