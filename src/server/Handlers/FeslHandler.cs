@@ -259,19 +259,22 @@ public class FeslHandler
         }
         else
         {
-            responseData.Add("stats.[]", "0");
+
+            var keyCount = int.Parse(request.DataDict["keys.[]"] ?? "0");
+            responseData.Add("stats.[]", $"{keyCount}");
+
+            var keys = request.DataDict.Where(x => x.Key.EndsWith(".key")).Select(x => x.Value).ToArray();
+            var stats = _db.GetStaticStats(_plasma!.ClientString, keys);
+
+            for (var i = 0; i < keyCount; i++)
+            {
+                var key = request.DataDict[$"keys.{i}"];
+                var value = stats.Single(x => x.Key == key).Value;
+
+                responseData.Add($"stats.{i}.key", key);
+                responseData.Add($"stats.{i}.value", value);
+            }
         }
-
-        // TODO: Add some stats
-        // var keysStr = request.DataDict["keys.[]"] as string ?? string.Empty;
-        // var reqKeys = int.Parse(keysStr, CultureInfo.InvariantCulture);
-        // for (var i = 0; i < reqKeys; i++)
-        // {
-        //     var key = request.DataDict[$"keys.{i}"];
-
-        //     responseData.Add($"stats.{i}.key", key);
-        //     responseData.Add($"stats.{i}.value", 0.0);
-        // }
 
         var packet = new Packet("rank", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
         await _conn.SendPacket(packet);
@@ -314,6 +317,7 @@ public class FeslHandler
             { "rankedStats.0.rankedStats.[]", $"{statCount}" }
         };
 
+
         for (var i = 0; i < ownerCount; i++)
         {
             var ownerId = request.DataDict[$"owners.{i}.ownerId"];
@@ -324,6 +328,26 @@ public class FeslHandler
             {
                 var statName = request.DataDict[$"keys.{j}"];
                 responseData.Add($"rankedStats.{i}.rankedStats.{j}.key", statName);
+
+                responseData.Add($"rankedStats.{i}.rankedStats.{j}.value", "0.0");
+                responseData.Add($"rankedStats.{i}.rankedStats.{j}.rank", "-1");
+
+                // switch (statName)
+                // {
+                //     case "TR":
+                //         responseData.Add($"rankedStats.{i}.rankedStats.{j}.value", "3.1351948884225E11");
+                //         responseData.Add($"rankedStats.{i}.rankedStats.{j}.rank", "-1");
+                //         break;
+                //     case "TP":
+                //         responseData.Add($"rankedStats.{i}.rankedStats.{j}.value", "2590.0");
+                // responseData.Add($"rankedStats.{i}.rankedStats.{j}.text", "2023-03-28");
+                // responseData.Add($"rankedStats.{i}.rankedStats.{j}.rank", "751");
+                //         break;
+                //     case "TC":
+                //         responseData.Add($"rankedStats.{i}.rankedStats.{j}.value", "0.489");
+                //         responseData.Add($"rankedStats.{i}.rankedStats.{j}.rank", "-1");
+                //         break;
+                // }
             }
         }
 

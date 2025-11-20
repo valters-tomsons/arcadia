@@ -55,4 +55,26 @@ public sealed class DbTests
         var afterCount = sqlite.ExecuteScalar<int>("SELECT COUNT(*) FROM server_startup");
         Assert.Equal(1, afterCount);
     }
+
+    [Fact]
+    public void GetStaticStats_Returns()
+    {
+        sqlite.Execute("INSERT INTO static_stats (ClientString, Key, Value) VALUES ('Game01', 'MP', '1.0')");
+        sqlite.Execute("INSERT INTO static_stats (ClientString, Key, Value) VALUES ('Game01', 'SP', '99.0')");
+        sqlite.Execute("INSERT INTO static_stats (ClientString, Key, Value) VALUES ('Game01', 'NP', '-1.0')");
+
+        var actual = db.GetStaticStats("Game01", ["MP", "SP"]);
+
+        Assert.Collection(actual,
+        x =>
+        {
+            Assert.Equal("MP", x.Key);
+            Assert.Equal("1.0", x.Value);
+        },
+        x =>
+        {
+            Assert.Equal("SP", x.Key);
+            Assert.Equal("99.0", x.Value);
+        });
+    }
 }

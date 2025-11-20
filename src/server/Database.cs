@@ -59,6 +59,18 @@ public sealed class Database : IDisposable
             )
             """);
 
+            conn.Execute(
+            """
+            CREATE TABLE IF NOT EXISTS static_stats (
+                ClientString TEXT NOT NULL,
+                Key TEXT NOT NULL,
+                Value TEXT NOT NULL,
+                UNIQUE(ClientString, Key)
+            )
+            """);
+
+            conn.Execute(@static.Tf2DbStats.InsertStats);
+
             _initialized = true;
         }
         catch (Exception e)
@@ -170,6 +182,40 @@ public sealed class Database : IDisposable
         finally
         {
             _lock.ExitWriteLock();
+        }
+    }
+
+    public IReadOnlyCollection<(string Key, string Value)> GetStaticStats(string clientString, string[] keys)
+    {
+        if (!_initialized) return [];
+
+        try
+        {
+            _lock.EnterReadLock();
+            using var conn = _serviceProvider.GetRequiredService<IDbConnection>();
+
+            var results = conn.Query<(string Key, string Value)>(
+            """
+            SELECT Key, Value
+            FROM static_stats
+            WHERE ClientString = @ClientString AND Key in @Keys
+            """,
+            new
+            {
+                ClientString = clientString,
+                Keys = keys
+            });
+
+            return [.. results];
+        }
+        catch (Exception e)
+        {
+            _logger.LogCritical(e, "Failed to query for stats!");
+            return [];
+        }
+        finally
+        {
+            _lock.ExitReadLock();
         }
     }
 
