@@ -263,7 +263,7 @@ public class FeslHandler
             var keyCount = int.Parse(request.DataDict["keys.[]"] ?? "0");
             responseData.Add("stats.[]", $"{keyCount}");
 
-            var keys = request.DataDict.Where(x => x.Key.EndsWith(".key")).Select(x => x.Value).ToArray();
+            var keys = request.DataDict.Where(x => x.Key != "keys.[]" && x.Key.StartsWith("keys.")).Select(x => x.Value).ToArray();
             var stats = _db.GetStaticStats(_plasma!.ClientString, keys);
 
             for (var i = 0; i < keyCount; i++)
