@@ -244,36 +244,24 @@ public class FeslHandler
 
     private async Task HandleGetStats(Packet request)
     {
-        // TODO: Implement multi-packet responses 
         var responseData = new Dictionary<string, string>
         {
             { "TXN", "GetStats" },
         };
 
-        // Override BF1943 minimum player count requirement
-        if (request["keys.1"] == "pm_minplayers")
+        var keyCount = int.Parse(request.DataDict["keys.[]"] ?? "0");
+        responseData.Add("stats.[]", $"{keyCount}");
+
+        var keys = request.DataDict.Where(x => x.Key != "keys.[]" && x.Key.StartsWith("keys.")).Select(x => x.Value).ToArray();
+        var stats = _db.GetStaticStats(_plasma!.ClientString, keys);
+
+        for (var i = 0; i < keyCount; i++)
         {
-            responseData.Add("stats.[]", "1");
-            responseData.Add("stats.0.key", "pm_minplayers");
-            responseData.Add("stats.0.value", "1.0");
-        }
-        else
-        {
+            var key = request.DataDict[$"keys.{i}"];
+            var value = stats.Single(x => x.Key == key).Value;
 
-            var keyCount = int.Parse(request.DataDict["keys.[]"] ?? "0");
-            responseData.Add("stats.[]", $"{keyCount}");
-
-            var keys = request.DataDict.Where(x => x.Key != "keys.[]" && x.Key.StartsWith("keys.")).Select(x => x.Value).ToArray();
-            var stats = _db.GetStaticStats(_plasma!.ClientString, keys);
-
-            for (var i = 0; i < keyCount; i++)
-            {
-                var key = request.DataDict[$"keys.{i}"];
-                var value = stats.Single(x => x.Key == key).Value;
-
-                responseData.Add($"stats.{i}.key", key);
-                responseData.Add($"stats.{i}.value", value);
-            }
+            responseData.Add($"stats.{i}.key", key);
+            responseData.Add($"stats.{i}.value", value);
         }
 
         var packet = new Packet("rank", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
@@ -329,25 +317,24 @@ public class FeslHandler
                 var statName = request.DataDict[$"keys.{j}"];
                 responseData.Add($"rankedStats.{i}.rankedStats.{j}.key", statName);
 
-                responseData.Add($"rankedStats.{i}.rankedStats.{j}.value", "0.0");
-                responseData.Add($"rankedStats.{i}.rankedStats.{j}.rank", "-1");
+                // responseData.Add($"rankedStats.{i}.rankedStats.{j}.value", "0.0");
+                // responseData.Add($"rankedStats.{i}.rankedStats.{j}.rank", "-1");
 
-                // switch (statName)
-                // {
-                //     case "TR":
-                //         responseData.Add($"rankedStats.{i}.rankedStats.{j}.value", "3.1351948884225E11");
-                //         responseData.Add($"rankedStats.{i}.rankedStats.{j}.rank", "-1");
-                //         break;
-                //     case "TP":
-                //         responseData.Add($"rankedStats.{i}.rankedStats.{j}.value", "2590.0");
-                // responseData.Add($"rankedStats.{i}.rankedStats.{j}.text", "2023-03-28");
-                // responseData.Add($"rankedStats.{i}.rankedStats.{j}.rank", "751");
-                //         break;
-                //     case "TC":
-                //         responseData.Add($"rankedStats.{i}.rankedStats.{j}.value", "0.489");
-                //         responseData.Add($"rankedStats.{i}.rankedStats.{j}.rank", "-1");
-                //         break;
-                // }
+                switch (statName)
+                {
+                    case "TR":
+                        responseData.Add($"rankedStats.{i}.rankedStats.{j}.value", "3.1351948884225E11");
+                        responseData.Add($"rankedStats.{i}.rankedStats.{j}.rank", "-1");
+                        break;
+                    case "TP":
+                        responseData.Add($"rankedStats.{i}.rankedStats.{j}.value", "2590.0");
+                        responseData.Add($"rankedStats.{i}.rankedStats.{j}.rank", "-1");
+                        break;
+                    case "TC":
+                        responseData.Add($"rankedStats.{i}.rankedStats.{j}.value", "0.489");
+                        responseData.Add($"rankedStats.{i}.rankedStats.{j}.rank", "-1");
+                        break;
+                }
             }
         }
 
