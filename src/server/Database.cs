@@ -69,7 +69,11 @@ public sealed class Database : IDisposable
             )
             """);
 
-            conn.Execute(@static.Tf2DbStats.InsertStats);
+            try
+            {
+                conn.Execute(@static.Tf2DbStats.InsertStats);
+            }
+            catch (Exception e) { _logger.LogWarning(e, "Failed to init stats"); }
 
             _initialized = true;
         }
