@@ -4,6 +4,17 @@ public static class Tf2DbStats
 {
     public const string InsertStats =
 """
+INSERT INTO static_stats (ClientString, Key, Value) VALUES ('hl2-ps3', 'I', '4.0');
+INSERT INTO static_stats (ClientString, Key, Value) VALUES ('hl2-ps3', 'C', '16.0');
+INSERT INTO static_stats (ClientString, Key, Value) VALUES ('hl2-ps3', 'D', '5.0');
+INSERT INTO static_stats (ClientString, Key, Value) VALUES ('hl2-ps3', 'A', '1000.0');
+INSERT INTO static_stats (ClientString, Key, Value) VALUES ('hl2-ps3', 'B', '50.0');
+INSERT INTO static_stats (ClientString, Key, Value) VALUES ('hl2-ps3', 'H', '90.0');
+INSERT INTO static_stats (ClientString, Key, Value) VALUES ('hl2-ps3', 'G', '400.0');
+INSERT INTO static_stats (ClientString, Key, Value) VALUES ('hl2-ps3', 'F', '20.0');
+INSERT INTO static_stats (ClientString, Key, Value) VALUES ('hl2-ps3', 'E', '28.0');
+INSERT INTO static_stats (ClientString, Key, Value) VALUES ('hl2-ps3', 'J', '2.0');
+
 INSERT INTO static_stats (ClientString, Key, Value) VALUES ('hl2-ps3', 'ScT02', '4192.0');
 INSERT INTO static_stats (ClientString, Key, Value) VALUES ('hl2-ps3', 'ScT03', '184.0');
 INSERT INTO static_stats (ClientString, Key, Value) VALUES ('hl2-ps3', 'ScT04', '130.0');
