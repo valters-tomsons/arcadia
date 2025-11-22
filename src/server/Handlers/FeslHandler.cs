@@ -148,17 +148,19 @@ public class FeslHandler
         subDomain = clientString.Split('-').First().ToUpperInvariant();
         partitionId = $"/{request["sku"]}/{subDomain}";
 
+        const string hostName = "theater.ps3.arcadia";
+
         var currentTime = DateTime.UtcNow.ToString("MMM-dd-yyyy HH:mm:ss 'UTC'", CultureInfo.InvariantCulture);
         var serverHelloData = new Dictionary<string, string>
                 {
                     { "domainPartition.domain", request["sku"] },
-                    { "messengerIp", "theater.ps3.arcadia" },
+                    { "messengerIp", _settings.Value.MessengerAddress ?? hostName },
                     { "messengerPort", $"{_settings.Value.MessengerPort}" },
                     { "domainPartition.subDomain", subDomain },
                     { "TXN", "Hello" },
                     { "activityTimeoutSecs", "0" },
                     { "curTime", currentTime },
-                    { "theaterIp", _settings.Value.TheaterAddress },
+                    { "theaterIp", _settings.Value.TheaterAddress ?? hostName },
                     { "theaterPort", $"{DefaultTheaterPort}" }
                 };
 
