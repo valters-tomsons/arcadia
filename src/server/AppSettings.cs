@@ -5,7 +5,8 @@ namespace Arcadia;
 public record ArcadiaSettings
 {
     public string ListenAddress { get; init; } = System.Net.IPAddress.Loopback.ToString();
-    public string TheaterAddress { get; init; } = "theater.ps3.arcadia";
+    public string? TheaterAddress { get; init; }
+    public string? MessengerAddress { get; init; }
 
     public int[] ListenPorts { get; init; } = [
         (int)TheaterGamePort.RomePS3,
