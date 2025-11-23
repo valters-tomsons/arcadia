@@ -93,6 +93,12 @@ public class ConnectionManager(ILogger<ConnectionManager> logger, SharedCounters
         }
     }
 
+    public async void AddFakeListing(GameServerListing game)
+    {
+        game.Data["FAKE"] = "1";
+        _gameServers.Add(game);
+    }
+
     public async Task RemoveGameListing(GameServerListing game)
     {
         await _semaphore.WaitAsync();
