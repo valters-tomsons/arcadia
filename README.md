@@ -58,22 +58,21 @@ Please refer to the documentation of each NuGet package for their specific licen
 
 ## Domain Name Reference Table
 
-Game             | FESL Domain | Vulnerable SSL
----------------- | ----------- | --------------
-Bad Company 2    | bfbc2-ps3.fesl.ea.com    | yes
-Battlefield 1943 | beach-ps3.fesl.ea.com    | yes
-Army of Two 2010 | ao3-ps3.fesl.ea.com      | yes
-NFS Shift        | nfsps2-ps3.fesl.ea.com   | yes
-Bad Company 1    | bfbc-ps3.fesl.ea.com     | no
-Army of Two 2008 | ao2-ps3.fesl.ea.com      | no
-The Simpsons     | simpsons-ps3.fesl.ea.com | no
-MoH Airborne     | mohair-ps3.fesl.ea.com   | no
-NFS ProStreet    | nfsps-ps3.fesl.ea.com    | no
-NFS Carbon       | nfs-ps3.fesl.ea.com      | no
-NFS Undercover   | nfsmw2-ps3.fesl.ea.com   | no
-Team Fortress 2  | hl2-ps3.fesl.ea.com      | no
-LOTR Conquest    | lotr-pandemic-ps3.fesl.ea.com | no
-General "CDN"    | easo.ea.com              | `n/a`
+Game             | FESL Prefix (`*.fesl.ea.com`) | Vulnerable SSL
+---------------- | ----------------- | --------------
+Bad Company 2    | bfbc2-ps3         | yes
+Battlefield 1943 | beach-ps3         | yes
+Army of Two 2010 | ao3-ps3           | yes
+NFS Shift        | nfsps2-ps3        | yes
+Bad Company 1    | bfbc-ps3          | no
+Army of Two 2008 | ao2-ps3           | no
+The Simpsons     | simpsons-ps3      | no
+MoH Airborne     | mohair-ps3        | no
+NFS ProStreet    | nfsps-ps3         | no
+NFS Carbon       | nfs-ps3           | no
+NFS Undercover   | nfsmw2-ps3        | no
+Team Fortress 2  | hl2-ps3           | no
+LOTR Conquest    | lotr-pandemic-ps3 | no
 
 * See [`Ports.cs`](/src/server/EA/Ports.cs) for default fesl client ports
 * Theater address and port in PS3 games is controlled by Fesl's Hello message
