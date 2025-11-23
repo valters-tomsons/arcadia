@@ -68,7 +68,7 @@ public class MessengerHandler
             ["TTID"] = "0",
             ["TITL"] = "A Game",
             ["ID"] = request["ID"],
-            ["USER"] = $"{request["USER"]}@messaging.ea.com/eagames/{plasma.PartitionId}"
+            ["USER"] = $"{plasma.NAME}@messaging.ea.com/eagames/{plasma.PartitionId}"
         };
 
         var packet = new Packet(request.Type, TheaterTransmissionType.OkResponse, 0, response);
