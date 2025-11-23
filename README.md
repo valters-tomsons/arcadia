@@ -72,6 +72,7 @@ NFS ProStreet    | nfsps-ps3.fesl.ea.com    | no
 NFS Carbon       | nfs-ps3.fesl.ea.com      | no
 NFS Undercover   | nfsmw2-ps3.fesl.ea.com   | no
 Team Fortress 2  | hl2-ps3.fesl.ea.com      | no
+LOTR Conquest    | lotr-pandemic-ps3.fesl.ea.com | no
 General "CDN"    | easo.ea.com              | `n/a`
 
 * See [`Ports.cs`](/src/server/EA/Ports.cs) for default fesl client ports
