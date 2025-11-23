@@ -453,11 +453,11 @@ public class FeslHandler
         var responseData = new Dictionary<string, string>
         {
             { "TXN", "GetPingSites" },
-            { "pingSite.[]", "4"},
+            { "minPingSitesToPing", "0"},
+            { "pingSite.[]", "1"},
             { "pingSite.0.addr", serverIp },
             { "pingSite.0.type", "0"},
-            { "pingSite.0.name", "eu1"},
-            { "minPingSitesToPing", "0"}
+            { "pingSite.0.name", "eu-ip"},
         };
 
         var packet = new Packet("fsys", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
