@@ -535,7 +535,7 @@ public class TheaterHandler
         var gid = long.Parse(request["GID"]);
         var game = _sharedCache.GetGameByGid(_plasma!.PartitionId, gid) ?? throw new NotImplementedException();
 
-        await _sharedCache.UpsertGameServerDataByGid(_plasma.PartitionId, gid, request.DataDict);
+        await _sharedCache.UpsertGameServerDataByGid(gid, request.DataDict);
 
         if (!string.IsNullOrWhiteSpace(request["B-U-level"]))
         {
@@ -550,7 +550,7 @@ public class TheaterHandler
 
         if (game.UID == _plasma?.UID)
         {
-            await _sharedCache.UpsertGameServerDataByGid(_plasma.PartitionId, gid, request.DataDict);
+            await _sharedCache.UpsertGameServerDataByGid(gid, request.DataDict);
 
             if (!string.IsNullOrWhiteSpace(request["JOIN"]))
             {

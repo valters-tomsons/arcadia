@@ -122,7 +122,7 @@ public class ConnectionManager(ILogger<ConnectionManager> logger, SharedCounters
         return _connections.SingleOrDefault(x => x.UID == uid);
     }
 
-    public async Task UpsertGameServerDataByGid(string partitionId, long serverGid, IDictionary<string, string> data)
+    public async Task UpsertGameServerDataByGid(long serverGid, IDictionary<string, string> data)
     {
         if (serverGid < 1)
         {
@@ -135,34 +135,14 @@ public class ConnectionManager(ILogger<ConnectionManager> logger, SharedCounters
             data.Remove(item);
         }
 
-        var server = _gameServers.SingleOrDefault(x => x.GID == serverGid);
-        if (server is not null)
+        var server = _gameServers.SingleOrDefault(x => x.GID == serverGid) ?? throw new("Tried to update non-existant server");
+        foreach (var line in data)
         {
-            foreach (var line in data)
-            {
-                var removed = server.Data.Remove(line.Key, out var _);
-                server.Data.TryAdd(line.Key, line.Value);
-            }
-
-            return;
+            var removed = server.Data.Remove(line.Key, out var _);
+            server.Data.TryAdd(line.Key, line.Value);
         }
 
-        await _semaphore.WaitAsync();
-
-        try
-        {
-            _gameServers.Add(new()
-            {
-                GID = serverGid,
-                Data = new(data),
-                PartitionId = partitionId
-            });
-
-        }
-        finally
-        {
-            _semaphore.Release();
-        }
+        return;
     }
 
     public GameServerListing? FindGameWithPlayer(string partitionId, string playerName)
