@@ -454,10 +454,7 @@ public class FeslHandler
         {
             { "TXN", "GetPingSites" },
             { "minPingSitesToPing", "0"},
-            { "pingSite.[]", "1"},
-            { "pingSite.0.addr", serverIp },
-            { "pingSite.0.type", "0"},
-            { "pingSite.0.name", "eu-ip"},
+            { "pingSite.[]", "0"},
         };
 
         var packet = new Packet("fsys", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
