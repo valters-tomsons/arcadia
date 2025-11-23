@@ -23,6 +23,7 @@ public class GameServerListing
     public ConcurrentDictionary<string, string> Data { get; init; } = new();
 
     public required string PartitionId { get; init; }
+    public required string Platform { get; init; }
 
     public long UID { get; init; }
     public long GID { get; init; }

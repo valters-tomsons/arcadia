@@ -20,6 +20,7 @@ public class TheaterHandler
     private readonly ImmutableDictionary<string, Func<Packet, Task>> _handlers;
 
     private PlasmaSession? _plasma;
+    private string? _platform;
 
     public TheaterHandler(IEAConnection conn, ILogger<TheaterHandler> logger, SharedCounters sharedCounters, ConnectionManager sharedCache, IOptions<DebugSettings> dbgOptions)
     {
@@ -85,6 +86,8 @@ public class TheaterHandler
 
     private async Task HandleCONN(Packet request)
     {
+        _platform = request["PLAT"]?.ToLower();
+
         var tid = request["TID"];
         var response = new Dictionary<string, string>
         {
@@ -276,7 +279,7 @@ public class TheaterHandler
             ["AP"] = "0",
             ["MP"] = $"{serverInfo["MAX-PLAYERS"]}",
             ["JP"] = $"{game.JoiningPlayers.Count}",
-            ["PL"] = "ps3",
+            ["PL"] = game.Platform,
             ["PW"] = "0",
             ["TYPE"] = $"{serverInfo["TYPE"]}",
             ["J"] = $"{serverInfo["JOIN"]}",
@@ -331,7 +334,7 @@ public class TheaterHandler
         var serverData = game.Data;
         var response = new Dictionary<string, string>
         {
-            ["PL"] = "ps3",
+            ["PL"] = game.Platform,
             ["TICKET"] = $"{serverData["TICKET"]}",
             ["PID"] = $"{request["PID"]}",
             ["P"] = $"{serverData["PORT"]}",
@@ -421,6 +424,7 @@ public class TheaterHandler
     private async Task HandleCGAM(Packet request)
     {
         if (_plasma is null) throw new NotImplementedException();
+        if (_platform is null) throw new Exception("Cannot create game with null platform!");
 
         var game = new GameServerListing()
         {
@@ -428,9 +432,10 @@ public class TheaterHandler
             TheaterConnection = _conn,
             UID = _plasma.UID,
             GID = _sharedCounters.GetNextGameId(),
+            Platform = _platform,
             LID = 257,
             UGID = "NOGUID",
-            EKEY = "NOENCYRPTIONKEY", // Yes, that's the actual string
+            EKEY = "NOENCYRPTIONKEY",
             SECRET = "NOSECRET",
             NAME = request["NAME"],
             Data = new()
