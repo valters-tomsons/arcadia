@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <SelfContained>true</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
     <DebugType>pdbonly</DebugType>
