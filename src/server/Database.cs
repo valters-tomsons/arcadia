@@ -100,9 +100,9 @@ public sealed class Database : IDisposable
             UID = uid,
             GID = gid,
             LID = 257,
-            UGID = "NOGUID",
-            EKEY = "NOENCYRPTIONKEY",
-            SECRET = "NOSECRET",
+            UGID = section["UGID"],
+            EKEY = section["EKEY"],
+            SECRET = section["SECRET"],
             NAME = section["NAME"],
             CanJoin = true,
             Data = new()
