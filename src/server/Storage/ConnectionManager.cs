@@ -122,7 +122,7 @@ public class ConnectionManager(ILogger<ConnectionManager> logger, SharedCounters
         return _connections.SingleOrDefault(x => x.UID == uid);
     }
 
-    public async Task UpsertGameServerDataByGid(long serverGid, IDictionary<string, string> data)
+    public void UpsertGameServerDataByGid(long serverGid, IDictionary<string, string> data)
     {
         if (serverGid < 1)
         {
@@ -141,8 +141,6 @@ public class ConnectionManager(ILogger<ConnectionManager> logger, SharedCounters
             var removed = server.Data.Remove(line.Key, out var _);
             server.Data.TryAdd(line.Key, line.Value);
         }
-
-        return;
     }
 
     public GameServerListing? FindGameWithPlayer(string partitionId, string playerName)

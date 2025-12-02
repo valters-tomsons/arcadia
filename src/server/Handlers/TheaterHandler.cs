@@ -535,33 +535,37 @@ public class TheaterHandler
         }
     }
 
-    private async Task HandleUGDE(Packet request)
+    private Task HandleUGDE(Packet request)
     {
         var gid = long.Parse(request["GID"]);
         var game = _sharedCache.GetGameByGid(_plasma!.PartitionId, gid) ?? throw new NotImplementedException();
 
-        await _sharedCache.UpsertGameServerDataByGid(gid, request.DataDict);
+        _sharedCache.UpsertGameServerDataByGid(gid, request.DataDict);
 
         if (!string.IsNullOrWhiteSpace(request["B-U-level"]))
         {
             game.CanJoin = true;
         }
+
+        return Task.CompletedTask;
     }
 
-    private async Task HandleUGAM(Packet request)
+    private Task HandleUGAM(Packet request)
     {
         var gid = long.Parse(request["GID"]);
         var game = _sharedCache.GetGameByGid(_plasma!.PartitionId, gid) ?? throw new NotImplementedException();
 
         if (game.UID == _plasma?.UID)
         {
-            await _sharedCache.UpsertGameServerDataByGid(gid, request.DataDict);
+            _sharedCache.UpsertGameServerDataByGid(gid, request.DataDict);
 
             if (!string.IsNullOrWhiteSpace(request["JOIN"]))
             {
                 game.CanJoin = true;
             }
         }
+
+        return Task.CompletedTask;
     }
 
     private async Task HandleRGAM(Packet request)
