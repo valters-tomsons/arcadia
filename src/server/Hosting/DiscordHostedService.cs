@@ -313,7 +313,7 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
                 {
                     "BFBC2" => BuildOnslaughtStatus(server),
                     // "AO3" => BuildAO3Status(server),
-                    // "MERCS2" => BuildMercs2Status(server),
+                    "MERCS2" => BuildMercs2Status(server),
                     _ => throw new($"No game status builder for '{server.PartitionId}'")
                 };
             }
@@ -368,6 +368,34 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
             .AddField("Playlist", playlist)
             .AddField("Players", GetPlayerCountString(server))
             .WithTimestamp(server.StartedAt);
+
+        return (server.GID, eb.Build());
+    }
+
+    private static (long GID, Embed Embed) BuildMercs2Status(GameServerListing server)
+    {
+        var eb = new EmbedBuilder()
+            .WithTitle($"Mercenaries 2")
+            .AddField("Players", GetPlayerCountString(server))
+            .WithTimestamp(server.StartedAt);
+
+        var oil = server.Data["B-U-Oil"];
+        if (oil is not null && oil != "0")
+        {
+            eb.AddField("Oil", oil);
+        }
+
+        var money = server.Data["B-U-Money"];
+        if (money is not null && money != "0")
+        {
+            eb.AddField("Money", money);
+        }
+
+        var mission = server.Data["B-U-Mission"];
+        if (!string.IsNullOrWhiteSpace(mission))
+        {
+            eb.AddField("Mission", mission);
+        }
 
         return (server.GID, eb.Build());
     }
