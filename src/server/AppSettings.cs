@@ -16,7 +16,7 @@ public record ArcadiaSettings
         (int)FeslGamePort.Mercenaries2,
     ];
 
-    public int MessengerPort { get; init; } = 0;
+    public int MessengerPort { get; init; } = 42069;
 }
 
 public record FileServerSettings
