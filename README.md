@@ -1,9 +1,8 @@
 # Arcadia
 
-Arcadia is an experimental emulator for [the sunsetted EA Plasma](http://web.archive.org/web/20240506160521/https://www.ea.com/games/battlefield/legacy-sunset) game backend services. Primarily targeting Frostbite games on PS3.
-It's currently in early development and currently only supports player-hosted co-op Onslaught DLC in Bad Company 2. 
+Arcadia is a server emulator for [the sunsetted EA Plasma](http://web.archive.org/web/20240506160521/https://www.ea.com/games/battlefield/legacy-sunset) game backend services. *Primarily* targeting games for Playstation 3.
 
-Not affiliated with EA or DICE.
+Not affiliated, associated, authorized, endorsed by, or in any way officially connected with Electronic Arts Inc. or any of its subsidiaries or affiliates. The use of any trademarks, logos, or brand names is for identification purposes only and does not imply endorsement or affiliation.
 
 ## Community
 
@@ -13,10 +12,10 @@ Discord: https://discord.gg/9WbQFYEt8B
 
 Both PSN and RPCN clients are supported and can play in the same server.
 
-Game             |   Status | Live status
------------------| ------   | ----- 
-Bad Company 2    | Semi-Restored | **Requires Onslaught DLC!** Players can only host and play public CO-OP Onslaught matches.
-Battlefield 1943 | Not Playable    | Only access to tutorial works. Playgroups/lobbies are semi-functional. No servers.
+Game             |   Status      | Live status
+-----------------| ----------    | ----- 
+Bad Company 2    | COOP Only     | **Requires Onslaught DLC**, only player hosted servers. No servers for regular multiplayer.
+Battlefield 1943 | Tutorial Only | Can connect. No servers.
 
 ## RPCS3 Configuration
 
