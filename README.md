@@ -73,6 +73,7 @@ NFS Carbon       | nfs-ps3           | no
 NFS Undercover   | nfsmw2-ps3        | no
 Team Fortress 2  | hl2-ps3           | no
 LOTR Conquest    | lotr-pandemic-ps3 | no
+Mercenaries 2    | mercs2-ps3        | no
 
 * See [`Ports.cs`](/src/server/EA/Ports.cs) for default fesl client ports
 * Theater address and port in PS3 games is controlled by Fesl's Hello message
