@@ -39,6 +39,7 @@ public class DnsHostedService : IHostedService
         _masterFile.AddIPAddressResourceRecord("nfs-ps3.fesl.ea.com", hostAddr);
         _masterFile.AddIPAddressResourceRecord("nfsmw2-ps3.fesl.ea.com", hostAddr);
         _masterFile.AddIPAddressResourceRecord("hl2-ps3.fesl.ea.com", hostAddr);
+        _masterFile.AddIPAddressResourceRecord("lotr-pandemic-ps3.fesl.ea.com", hostAddr);
 
         _server.Listening += (sender, args) => _logger.LogInformation($"DNS server listening!");
         _server.Requested += (sender, args) => _logger.LogDebug("DNS request: {Request}", args.Request);
