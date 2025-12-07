@@ -379,16 +379,10 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
             .AddField("Players", GetPlayerCountString(server))
             .WithTimestamp(server.StartedAt);
 
-        var oil = server.Data["B-U-Oil"];
-        if (oil is not null && oil != "0")
+        var friendlyFire = server.Data["B-U-FriendlyFire"];
+        if (!string.IsNullOrWhiteSpace(friendlyFire))
         {
-            eb.AddField("Oil", oil);
-        }
-
-        var money = server.Data["B-U-Money"];
-        if (money is not null && money != "0")
-        {
-            eb.AddField("Money", money);
+            eb.AddField("Friendly Fire", friendlyFire == "1" ? "Yes" : "No");
         }
 
         var mission = server.Data["B-U-Mission"];
