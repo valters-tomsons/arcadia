@@ -62,6 +62,7 @@ public class FeslHandler
             ["acct/NuGetPersonas"] = HandleNuGetPersonas,
             ["acct/NuLoginPersona"] = HandleNuLoginPersona,
             ["acct/NuGetTos"] = HandleGetTos,
+            ["acct/GetTos"] = HandleGetTos,
             ["acct/NuPS3AddAccount"] = HandleAddAccount,
             ["acct/LookupUserInfo"] = HandleLookupUserInfo,
             ["acct/NuLookupUserInfo"] = HandleNuLookupUserInfo,
@@ -459,7 +460,7 @@ public class FeslHandler
 
         var data = new Dictionary<string, string>
         {
-            { "TXN", "NuGetTos" },
+            { "TXN", request.TXN },
             { "version", "20426_17.20426_17" },
             { "tos", $"{System.Net.WebUtility.UrlEncode(tos).Replace('+', ' ')}" },
         };
