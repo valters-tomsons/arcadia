@@ -306,18 +306,20 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
 
             try
             {
-                if (server.PartitionId.EndsWith("/AO3"))
+                var partitionId = server.PartitionId.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).LastOrDefault()?.ToUpperInvariant()
+                    ?? throw new("Cannot find PartitionId");
+
+                gidEmbeds[i] = partitionId switch
                 {
-                    // gidEmbeds[i] = BuildAO3Status(server);
-                }
-                else
-                {
-                    gidEmbeds[i] = BuildOnslaughtStatus(server);
-                }
+                    "BFBC2" => BuildOnslaughtStatus(server),
+                    // "AO3" => BuildAO3Status(server),
+                    // "MERCS2" => BuildMercs2Status(server),
+                    _ => throw new($"No game status builder for '{server.PartitionId}'")
+                };
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "Failed to build server status embedding, game skipped!");
+                _logger.LogError(e, "Failed to build server status embedding: {Message}", e.Message);
             }
         }
 
