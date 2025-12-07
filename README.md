@@ -1,6 +1,6 @@
 # Arcadia
 
-Arcadia is a server emulator for [the sunsetted EA Plasma](http://web.archive.org/web/20240506160521/https://www.ea.com/games/battlefield/legacy-sunset) game backend services. *Primarily* targeting games for Playstation 3.
+Arcadia is a server emulator for [the sunsetted EA Plasma](http://web.archive.org/web/20240506160521/https://www.ea.com/games/battlefield/legacy-sunset) game backend services. *Primarily* targeting games on Playstation 3.
 
 Not affiliated, associated, authorized, endorsed by, or in any way officially connected with Electronic Arts Inc. or any of its subsidiaries or affiliates. The use of any trademarks, logos, or brand names is for identification purposes only and does not imply endorsement or affiliation.
 
@@ -15,6 +15,7 @@ Both PSN and RPCN clients are supported and can play in the same server.
 Game             |   Status      | Live status
 -----------------| ----------    | ----- 
 Bad Company 2    | COOP Only     | **Requires Onslaught DLC**, only player hosted servers. No servers for regular multiplayer.
+Mercenaries 2    | Online/Patch  | Requires SSL bypass patch, available in RPCS3
 Battlefield 1943 | Tutorial Only | Can connect. No servers.
 
 ## RPCS3 Configuration
@@ -23,7 +24,7 @@ Battlefield 1943 | Tutorial Only | Can connect. No servers.
 1. Enable UPNP
 1. Set `IP/Hosts switches` to the following:
 
-> `theater.ps3.arcadia=152.53.15.83&&bfbc2-ps3.fesl.ea.com=152.53.15.83&&beach-ps3.fesl.ea.com=152.53.15.83`
+> `theater.ps3.arcadia=152.53.15.83&&bfbc2-ps3.fesl.ea.com=152.53.15.83&&beach-ps3.fesl.ea.com=152.53.15.83&&mercs2-ps3.fesl.ea.com=152.53.15.83`
 
 ## PS3 Configuration
 
