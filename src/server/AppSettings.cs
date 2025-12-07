@@ -13,6 +13,7 @@ public record ArcadiaSettings
         (int)FeslGamePort.RomePS3,
         (int)FeslGamePort.BeachPS3,
         (int)FeslGamePort.ArmyOfTwo2PS3,
+        (int)FeslGamePort.Mercenaries2,
     ];
 
     public int MessengerPort { get; init; } = 0;
