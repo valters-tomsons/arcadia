@@ -314,6 +314,7 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
                     "BFBC2" => BuildOnslaughtStatus(server),
                     // "AO3" => BuildAO3Status(server),
                     "MERCS2" => BuildMercs2Status(server),
+                    "LOTR" => BuildLOTRStatus(server),
                     _ => throw new($"No game status builder for '{server.PartitionId}'")
                 };
             }
@@ -390,6 +391,16 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
         {
             eb.AddField("Mission", mission);
         }
+
+        return (server.GID, eb.Build());
+    }
+
+    private static (long GID, Embed Embed) BuildLOTRStatus(GameServerListing server)
+    {
+        var eb = new EmbedBuilder()
+            .WithTitle($"Lord of the Rings: Conquest")
+            .AddField("Players", GetPlayerCountString(server))
+            .WithTimestamp(server.StartedAt);
 
         return (server.GID, eb.Build());
     }
