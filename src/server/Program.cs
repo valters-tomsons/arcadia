@@ -33,6 +33,7 @@ var host = Host.CreateDefaultBuilder()
             .Configure<HostOptions>(x => x.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore);
 
         services
+            .AddSingleton<Rc4TlsCrypto>()
             .AddSingleton<ProtoSSL>()
             .AddSingleton<SharedCounters>()
             .AddSingleton<ConnectionManager>()
@@ -45,7 +46,6 @@ var host = Host.CreateDefaultBuilder()
             .AddActivatedSingleton<Database>();
 
         services
-            .AddScoped<Rc4TlsCrypto>()
             .AddScoped<IEAConnection, EAConnection>()
             .AddScoped<FeslHandler>()
             .AddScoped<TheaterHandler>()

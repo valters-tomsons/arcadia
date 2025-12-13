@@ -136,7 +136,7 @@ public class PlasmaHostedService : IHostedService
 
             try
             {
-                if (_debugSettings.ForcePlaintext || connectionPort == (int)FeslGamePort.LotrConquest)
+                if (_debugSettings.ForcePlaintext)
                 {
                     _logger.LogInformation("Connecting Fesl client without SSL encryption!");
                     plasma = await clientHandler.HandleClientConnection(networkStream, remoteEndpoint, localEndpoint, cts.Token);

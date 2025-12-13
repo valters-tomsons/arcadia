@@ -27,6 +27,7 @@
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <EmbeddedResource Include="fesl-pub.der" />
   </ItemGroup>
 
   <ItemGroup>
