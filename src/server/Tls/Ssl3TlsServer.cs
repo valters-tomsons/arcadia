@@ -12,7 +12,8 @@ public class Ssl3TlsServer(BcTlsCrypto crypto, Certificate serverCertificate, As
 
     private static readonly int[] _cipherSuites =
     [
-        CipherSuite.TLS_RSA_WITH_RC4_128_SHA
+        CipherSuite.TLS_RSA_WITH_RC4_128_SHA,
+        CipherSuite.TLS_RSA_WITH_RC4_128_MD5
     ];
 
     private static readonly ProtocolVersion[] _supportedVersions =
