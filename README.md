@@ -14,8 +14,8 @@ Both PSN and RPCN clients are supported and can play in the same server.
 
 Game             |   Status      | Live status
 -----------------| ----------    | ----- 
+Mercenaries 2    | Online        | No leaderboards.
 Bad Company 2    | COOP Only     | **Requires Onslaught DLC**, only player hosted servers. No servers for regular multiplayer.
-Mercenaries 2    | Online/Patch  | Requires SSL bypass patch, available in RPCS3
 Battlefield 1943 | Tutorial Only | Can connect. No servers.
 
 ## RPCS3 Configuration
