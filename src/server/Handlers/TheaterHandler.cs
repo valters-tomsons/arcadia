@@ -281,6 +281,8 @@ public class TheaterHandler
             ["JP"] = $"{game.JoiningPlayers.Count}",
             ["PL"] = game.Platform,
             ["PW"] = "0",
+            ["JP"] = "0",
+            ["QP"] = "0",
             ["TYPE"] = $"{serverInfo["TYPE"]}",
             ["J"] = $"{serverInfo["JOIN"]}",
             ["B-version"] = $"{serverInfo["B-version"]}",
