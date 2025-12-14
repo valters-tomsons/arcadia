@@ -15,7 +15,8 @@ public enum FeslGamePort : int
     LotrConquest = 18870,
     Mercenaries2 = 18720,
     SimpsonsGame = 18550,
-    Godfather2 = 18990
+    Godfather2 = 18990,
+    MoHAirborne = 18260
 }
 
 public enum TheaterGamePort : int

@@ -87,6 +87,9 @@ public class FeslHandler
             ["rank/ReportMetrics"] = AcknowledgeRequest,
             ["pnow/ReportMetrics"] = AcknowledgeRequest,
             ["pnow/Cancel"] = AcknowledgeRequest,
+            ["achi/GetAchievementGroupDefinitions"] = AcknowledgeRequest,
+            ["achi/GetAchievementDefinitionsByGroup"] = AcknowledgeRequest,
+            ["achi/GetOwnerAchievementsByGroup"] = AcknowledgeRequest,
         }.ToImmutableDictionary();
     }
 
