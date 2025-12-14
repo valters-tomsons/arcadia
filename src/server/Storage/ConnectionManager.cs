@@ -164,7 +164,12 @@ public class ConnectionManager(ILogger<ConnectionManager> logger, SharedCounters
         return _gameServers.Where(x => x.PartitionId == partitionId).ToImmutableArray();
     }
 
-    public ImmutableArray<GameServerListing> GetAllServers()
+    public int GetPartitionPlayerCount(string partitionId)
+    {
+        return _connections.Count(x => x.PartitionId == partitionId);
+    }
+
+    public ImmutableArray<GameServerListing> GetAllServersInternal()
     {
         return [.. _gameServers];
     }

@@ -358,11 +358,14 @@ public class TheaterHandler
 
     private async Task HandleLLST(Packet request)
     {
+        if (_plasma is null) throw new NotImplementedException();
+
         var lobbyList = new Dictionary<string, string>
         {
             ["TID"] = $"{request["TID"]}",
             ["NUM-LOBBIES"] = $"{1}"
         };
+
         await _conn.SendPacket(new Packet("LLST", TheaterTransmissionType.OkResponse, 0, lobbyList));
 
         var lobbyData = new Dictionary<string, string>
@@ -370,13 +373,14 @@ public class TheaterHandler
             ["TID"] = $"{request["TID"]}",
             ["LID"] = $"{request["LID"]}",
             ["PASSING"] = $"{1}",
-            ["NAME"] = $"{"bfbc2_01"}",
+            ["NAME"] = _plasma.PartitionId.Split('/', StringSplitOptions.TrimEntries).LastOrDefault()?.ToLower() ?? "arcadia",
             ["LOCALE"] = $"{"en_US"}",
             ["MAX-GAMES"] = $"{1000}",
             ["FAVORITE-GAMES"] = $"{0}",
             ["FAVORITE-PLAYERS"] = $"{0}",
-            ["NUM-GAMES"] = $"{1}"
+            ["NUM-GAMES"] = $"{_sharedCache.GetPartitionServers(_plasma.PartitionId).Length}"
         };
+        
         await _conn.SendPacket(new Packet("LDAT", TheaterTransmissionType.OkResponse, 0, lobbyData));
     }
 
@@ -611,11 +615,13 @@ public class TheaterHandler
 
     private async Task HandlePCNT(Packet request)
     {
+        if (_plasma is null) throw new NotImplementedException();
+
         var response = new Dictionary<string, string>
         {
             ["TID"] = request["TID"],
             ["LID"] = request["LID"],
-            ["COUNT"] = "1"
+            ["COUNT"] = $"{_sharedCache.GetPartitionPlayerCount(_plasma.PartitionId)}"
         };
 
         var packet = new Packet("PCNT", TheaterTransmissionType.OkResponse, 0, response);
