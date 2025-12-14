@@ -47,7 +47,8 @@ public class TheaterHandler
             ["RGAM"] = HandleRGAM,
             ["PLVT"] = HandlePLVT,
             ["UGDE"] = HandleUGDE,
-            ["PING"] = HandlePING
+            ["PING"] = HandlePING,
+            ["PCNT"] = HandlePCNT
         }.ToImmutableDictionary();
     }
 
@@ -605,6 +606,19 @@ public class TheaterHandler
         };
 
         var packet = new Packet("PLVT", TheaterTransmissionType.OkResponse, 0, response);
+        await _conn.SendPacket(packet);
+    }
+
+    private async Task HandlePCNT(Packet request)
+    {
+        var response = new Dictionary<string, string>
+        {
+            ["TID"] = request["TID"],
+            ["LID"] = request["LID"],
+            ["COUNT"] = "1"
+        };
+
+        var packet = new Packet("PCNT", TheaterTransmissionType.OkResponse, 0, response);
         await _conn.SendPacket(packet);
     }
 
