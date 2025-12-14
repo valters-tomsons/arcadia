@@ -159,7 +159,7 @@ public class TheaterHandler
             }
         }
 
-        if (game.UID != _plasma.UID)
+        if (game.UID != _plasma.UID && game.Data.GetValueOrDefault("FAKE") != "1")
         {
             var canJoin = await AwaitOpenGame(game);
             if (!canJoin)
@@ -180,7 +180,30 @@ public class TheaterHandler
         await _conn.SendPacket(clientPacket);
 
         _plasma.PID = game.ConnectedPlayers.Count + game.JoiningPlayers.Count + 1;
-        await SendEGRQ_ToGameHost(request, _plasma, game);
+        if (game.Data.GetValueOrDefault("FAKE") != "1")
+        {
+            await SendEGRQ_ToGameHost(request, _plasma, game);
+        }
+        else
+        {
+            var egeg = new Dictionary<string, string>
+            {
+                ["PL"] = game.Data["PL"],
+                ["TICKET"] = $"{game.Data["TICKET"]}",
+                ["PID"] = $"{request["PID"]}",
+                ["P"] = $"{game.Data["PORT"]}",
+                ["HUID"] = $"{game.UID}",
+                ["INT-PORT"] = $"{game.Data["INT-PORT"]}",
+                ["EKEY"] = $"{game.EKEY}",
+                ["INT-IP"] = $"{game.Data["INT-IP"]}",
+                ["UGID"] = $"{game.UGID}",
+                ["I"] = game.Data["I"],
+                ["LID"] = $"{game.LID}",
+                ["GID"] = $"{game.GID}"
+            };
+            var egegPacket = new Packet("EGEG", TheaterTransmissionType.OkResponse, 0, egeg);
+            await _conn.SendPacket(egegPacket);
+        }
     }
 
     private async Task SendError(Packet request)
@@ -259,7 +282,7 @@ public class TheaterHandler
         var serverGid = string.IsNullOrWhiteSpace(reqGid) ? 0 : int.Parse(reqGid);
         var game = _sharedCache.GetGameByGid(_plasma!.PartitionId, serverGid);
 
-        if (game is null || game.TheaterConnection is null)
+        if (game is null || game.TheaterConnection is null && game.Data.GetValueOrDefault("FAKE") != "1")
         {
             await SendError(request);
             return;
@@ -273,7 +296,7 @@ public class TheaterHandler
             ["GID"] = $"{game.GID}",
             ["HU"] = $"{game.UID}",
             ["HN"] = $"{game.NAME}",
-            ["I"] = game.TheaterConnection.RemoteAddress,
+            ["I"] = game.TheaterConnection?.RemoteAddress ?? game.Data["I"],
             ["P"] = $"{serverInfo["PORT"]}",
             ["N"] = $"{game.NAME}",
             ["AP"] = "0",
@@ -282,7 +305,7 @@ public class TheaterHandler
             ["PL"] = game.Platform,
             ["PW"] = "0",
             ["TYPE"] = $"{serverInfo["TYPE"]}",
-            ["J"] = $"{serverInfo["JOIN"]}",
+            ["J"] = "O",
             ["B-version"] = $"{serverInfo["B-version"]}",
             ["B-numObservers"] = $"{serverInfo["B-numObservers"]}",
             ["B-maxObservers"] = $"{serverInfo["B-maxObservers"]}"

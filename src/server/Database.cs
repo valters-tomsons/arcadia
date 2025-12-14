@@ -1,6 +1,8 @@
 using System.Data;
+using Arcadia.EA;
 using Arcadia.Storage;
 using Dapper;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -16,7 +18,7 @@ public sealed class Database : IDisposable
     private readonly ReaderWriterLockSlim _lock = new();
     private readonly bool _initialized;
 
-    public Database(ILogger<Database> logger, IServiceProvider serviceProvider, IOptions<DebugSettings> options)
+    public Database(ILogger<Database> logger, IServiceProvider serviceProvider, IOptions<DebugSettings> options, ConnectionManager cm, IConfiguration config, SharedCounters counters)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
@@ -69,6 +71,63 @@ public sealed class Database : IDisposable
         {
             _lock.ExitWriteLock();
         }
+
+        var section = config.GetSection("FakeListing");
+        if (string.IsNullOrWhiteSpace(section["IP"])) return;
+
+        var uid = counters.GetNextUserId();
+        var gid = counters.GetNextGameId();
+        var game = new GameServerListing()
+        {
+            Platform = section["PL"],
+            PartitionId = section["PartitionId"],
+            UID = uid,
+            GID = gid,
+            LID = 257,
+            UGID = "NOGUID",
+            EKEY = "NOENCYRPTIONKEY",
+            SECRET = "NOSECRET",
+            NAME = section["NAME"],
+            CanJoin = true,
+            Data = new()
+            {
+                ["TICKET"] = $"{counters.GetNextTicket()}",
+                ["JP"] = "1",
+                ["B-U-Rating"] = "-2147483648",
+                ["HN"] = "tf2username",
+                ["B-U-Duration"] = "High",
+                ["N"] = section["Name"],
+                ["I"] = section["IP"],
+                ["INT-IP"] = section["IP"],
+                ["J"] = "O",
+                ["HU"] = $"{uid}",
+                ["B-U-FlagCapture"] = "3",
+                ["V"] = "6.0",
+                ["PORT"] = section["PORT"],
+                ["INT-PORT"] = section["PORT"],
+                // ["B-U-Location"] = "ec-ip",
+                ["B-numObservers"] = "0",
+                ["B-U-MapName"] = section["MapName"],
+                ["TYPE"] = "G",
+                ["LID"] = "257",
+                ["B-U-IsRanked"] = section["IsRanked"],
+                ["B-version"] = "6.0",
+                ["QP"] = "0",
+                ["MP"] = "16",
+                ["MAX-PLAYERS"] = "16",
+                ["GID"] = $"{gid}",
+                ["PL"] = section["PL"],
+                ["B-maxObservers"] = "0",
+                ["PW"] = "0",
+                ["B-U-NumRounds"] = "3",
+                ["B-U-MaxGameTime"] = "15",
+                ["B-U-ServerPop"] = "Unbalanced",
+                ["B-U-AutoBalance"] = "Yes",
+                ["AP"] = "11"
+            }
+        };
+
+        cm.AddFakeListing(game);
     }
 
     public void RecordStartup()
