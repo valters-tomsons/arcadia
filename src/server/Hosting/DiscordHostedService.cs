@@ -315,6 +315,7 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
                     // "AO3" => BuildAO3Status(server),
                     "MERCS2" => BuildMercs2Status(server),
                     "LOTR" => BuildLOTRStatus(server),
+                    // "GODFATHER2" =>
                     _ => throw new($"No game status builder for '{server.PartitionId}'")
                 };
             }

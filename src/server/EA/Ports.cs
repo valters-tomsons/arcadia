@@ -13,7 +13,9 @@ public enum FeslGamePort : int
     NfsCarbon = 18230,
     TeamFortress2 = 18450,
     LotrConquest = 18870,
-    Mercenaries2 = 18720
+    Mercenaries2 = 18720,
+    SimpsonsGame = 18550,
+    Godfather2 = 18990
 }
 
 public enum TheaterGamePort : int
