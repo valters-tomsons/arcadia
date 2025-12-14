@@ -58,23 +58,23 @@ Please refer to the documentation of each NuGet package for their specific licen
 
 ## Domain Name Reference Table
 
-Game             | FESL Prefix (`*.fesl.ea.com`) | Vulnerable SSL
----------------- | ----------------- | --------------
-Bad Company 2    | bfbc2-ps3         | yes
-Battlefield 1943 | beach-ps3         | yes
-Army of Two 2010 | ao3-ps3           | yes
-NFS Shift        | nfsps2-ps3        | yes
-Bad Company 1    | bfbc-ps3          | no
-Army of Two 2008 | ao2-ps3           | no
-The Simpsons     | simpsons-ps3      | no
-MoH Airborne     | mohair-ps3        | no
-NFS ProStreet    | nfsps-ps3         | no
-NFS Carbon       | nfs-ps3           | no
-NFS Undercover   | nfsmw2-ps3        | no
-Team Fortress 2  | hl2-ps3           | no
-LOTR Conquest    | lotr-pandemic-ps3 | no
-Mercenaries 2    | mercs2-ps3        | no
-Godfather 2      | godfather2-ps3    | no
+Game             | FESL Prefix (`*.fesl.ea.com`)
+---------------- | -----------------
+Bad Company 2    | bfbc2-ps3
+Battlefield 1943 | beach-ps3
+Army of Two 2010 | ao3-ps3
+NFS Shift        | nfsps2-ps3
+Bad Company 1    | bfbc-ps3
+Army of Two 2008 | ao2-ps3
+The Simpsons     | simpsons-ps3
+MoH Airborne     | mohair-ps3
+NFS ProStreet    | nfsps-ps3
+NFS Carbon       | nfs-ps3
+NFS Undercover   | nfsmw2-ps3
+Team Fortress 2  | hl2-ps3
+LOTR Conquest    | lotr-pandemic-ps3
+Mercenaries 2    | mercs2-ps3
+Godfather 2      | godfather2-ps3
 
 * See [`Ports.cs`](/src/server/EA/Ports.cs) for default fesl client ports
 * Theater address and port in PS3 games is controlled by Fesl's Hello message
