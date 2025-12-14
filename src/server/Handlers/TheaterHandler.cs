@@ -413,7 +413,8 @@ public class TheaterHandler
                 ["PW"] = "0",
                 ["B-version"] = game.Data["B-version"],
                 ["B-numObservers"] = game.Data["B-numObservers"],
-                ["B-maxObservers"] = game.Data["B-maxObservers"]
+                ["B-maxObservers"] = game.Data["B-maxObservers"],
+                ["AP"] = $"{game.ConnectedPlayers.Count}"
             };
 
             await _conn.SendPacket(new Packet("GDAT", TheaterTransmissionType.OkResponse, 0, gameData));
