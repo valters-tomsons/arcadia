@@ -276,7 +276,7 @@ public class TheaterHandler
             ["I"] = game.TheaterConnection.RemoteAddress,
             ["P"] = $"{serverInfo["PORT"]}",
             ["N"] = $"{game.NAME}",
-            ["AP"] = "0",
+            ["AP"] = $"{game.ConnectedPlayers.Count}",
             ["MP"] = $"{serverInfo["MAX-PLAYERS"]}",
             ["JP"] = $"{game.JoiningPlayers.Count}",
             ["PL"] = game.Platform,
