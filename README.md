@@ -25,7 +25,7 @@ Battlefield 1943        | Tutorial Only | Can connect. No servers.
 1. Enable UPNP
 1. Set `IP/Hosts switches` to the following:
 
-> `theater.ps3.arcadia=152.53.15.83&&bfbc2-ps3.fesl.ea.com=152.53.15.83&&beach-ps3.fesl.ea.com=152.53.15.83&&mercs2-ps3.fesl.ea.com=152.53.15.83`
+> `theater.ps3.arcadia=152.53.15.83&&bfbc2-ps3.fesl.ea.com=152.53.15.83&&beach-ps3.fesl.ea.com=152.53.15.83&&mercs2-ps3.fesl.ea.com=152.53.15.83&&mohair-ps3.fesl.ea.com=152.53.15.83`
 
 ## PS3 Configuration
 
