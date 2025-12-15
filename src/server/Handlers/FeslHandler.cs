@@ -214,6 +214,12 @@ public class FeslHandler
                 pnowResult.Add($"props.{{games}}.{i}.lid", $"{servers[i].LID}");
             }
         }
+        else if (_plasma?.PartitionId.EndsWith("MOHAIR") == true)
+        {
+            // Prevent infinite lookup loop
+            await SendError(request, 101, "No servers");
+            return;
+        }
         else
         {
             pnowResult.Add("props.{}", "1");
