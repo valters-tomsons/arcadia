@@ -316,6 +316,7 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
                     "MERCS2" => BuildMercs2Status(server),
                     "LOTR" => BuildLOTRStatus(server),
                     // "GODFATHER2" =>
+                    "MOHAIR" => BuildMOHStatus(server),
                     _ => throw new($"No game status builder for '{server.PartitionId}'")
                 };
             }
@@ -401,6 +402,18 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
         var eb = new EmbedBuilder()
             .WithTitle($"Lord of the Rings: Conquest")
             .AddField("Players", GetPlayerCountString(server))
+            .WithTimestamp(server.StartedAt);
+
+        return (server.GID, eb.Build());
+    }
+
+    private static (long GID, Embed Embed) BuildMOHStatus(GameServerListing server)
+    {
+        var eb = new EmbedBuilder()
+            .WithTitle($"Medal of Honor: Airborne")
+            .AddField("Players", GetPlayerCountString(server))
+            .AddField("Map", server.Data["B-U-Map"])
+            .AddField("Gamemode", server.Data["B-U-GameType"])
             .WithTimestamp(server.StartedAt);
 
         return (server.GID, eb.Build());
