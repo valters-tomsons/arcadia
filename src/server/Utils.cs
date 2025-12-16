@@ -112,4 +112,11 @@ public static class Utils
 
         response.Add("entitlements.[]", $"{entitlements.Length}");
     }
+
+    public static string? GetOnlinePlatformName(string signature) => signature switch
+    {
+        "RPCN" => "RPCN",
+        "8-�" => "PSN",
+        _ => null
+    };
 }

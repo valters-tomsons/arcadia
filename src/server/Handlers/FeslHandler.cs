@@ -596,9 +596,11 @@ public class FeslHandler
 
         if (string.IsNullOrWhiteSpace(onlineId)) throw new NotImplementedException();
 
-        _db.RecordLoginMetric(ticket);
-
         _plasma = await _sharedCache.CreatePlasmaConnection(_conn, onlineId, clientString, partitionId);
+        _plasma.OnlinePlatformId = Utils.GetOnlinePlatformName(ticket.SignatureIdentifier);
+
+        _db.RecordLoginMetric(ticket, _plasma.OnlinePlatformId ?? string.Empty);
+
         var loginResponseData = new Dictionary<string, string>
         {
             { "TXN", request.TXN },
@@ -639,9 +641,11 @@ public class FeslHandler
             return;
         }
 
-        _db.RecordLoginMetric(ticket);
-
         _plasma = await _sharedCache.CreatePlasmaConnection(_conn, onlineId, clientString, partitionId);
+        _plasma.OnlinePlatformId = Utils.GetOnlinePlatformName(ticket.SignatureIdentifier);
+
+        _db.RecordLoginMetric(ticket, _plasma.OnlinePlatformId ?? string.Empty);
+
         var loginResponseData = new Dictionary<string, string>
         {
             { "TXN", "NuPS3Login" },

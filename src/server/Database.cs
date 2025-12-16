@@ -52,9 +52,11 @@ public sealed class Database : IDisposable
                 Username TEXT NOT NULL,
                 Platform TEXT NOT NULL,
                 GameID TEXT NOT NULL,
+
                 FirstLoginDate DATETIME DEFAULT CURRENT_TIMESTAMP,
                 LastLoginDate DATETIME DEFAULT CURRENT_TIMESTAMP,
                 LoginCount INTEGER DEFAULT 1,
+
                 UNIQUE(Username, Platform, GameID)
             )
             """);
@@ -131,16 +133,10 @@ public sealed class Database : IDisposable
         }
     }
 
-    public void RecordLoginMetric(Ticket ticket)
+    public void RecordLoginMetric(Ticket ticket, string platformName)
     {
         if (!_initialized) return;
 
-        static string GetPlatform(string signature) => signature switch
-        {
-            "RPCN" => "RPCN",
-            "8-�" => "PSN",
-            _ => string.Empty
-        };
 
         try
         {
@@ -159,7 +155,7 @@ public sealed class Database : IDisposable
             new
             {
                 ticket.Username,
-                Platform = GetPlatform(ticket.SignatureIdentifier),
+                Platform = platformName,
                 GameID = ticket.TitleId
             });
         }
