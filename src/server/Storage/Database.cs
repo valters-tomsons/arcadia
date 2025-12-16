@@ -73,7 +73,7 @@ public sealed class Database : IDisposable
                 Value TEXT NOT NULL,
 
                 PRIMARY KEY (Username, Platform, Subdomain, Key)
-            )
+            ) WITHOUT ROWID
             """);
 
             _initialized = true;
