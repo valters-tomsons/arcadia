@@ -218,9 +218,8 @@ public class FeslHandler
         }
         else if (_plasma?.PartitionId.EndsWith("MOHAIR") == true)
         {
-            // Prevent infinite lookup loop
-            await SendError(request, 101, "No servers");
-            return;
+            pnowResult.Add("props.{}", "1");
+            pnowResult.Add("props.{resultType}", PlayNowResultType.NOMATCH);
         }
         else
         {
