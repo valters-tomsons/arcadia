@@ -307,11 +307,43 @@ public class FeslHandler
 
     private async Task HandleGetRankedStats(Packet request)
     {
+        if (_plasma is null) throw new NotImplementedException();
+
         var responseData = new Dictionary<string, string>
         {
             { "TXN", request.TXN },
-            { "stats.[]", "0" },
+            { "rankedStats.[]", "1" }, // request.DataDict["owners.[]"];
+            { "rankedStats.0.ownerId", request["owners.0.ownerId"] },
+            { "rankedStats.0.ownerType", "1" },
         };
+
+        var keysStr = request.DataDict["keys.[]"] ?? "0";
+        responseData.Add("rankedStats.0.rankedStats.[]", keysStr);
+
+        var keyCount = int.Parse(keysStr, CultureInfo.InvariantCulture);
+        if (keyCount > 200)
+        {
+            throw new($"Too many stat keys '{keyCount}' in a request!");
+        }
+
+        var keys = new string[keyCount];
+        var values = new string[keyCount];
+
+        for (var i = 0; i < keyCount; i++)
+        {
+            keys[i] = request.DataDict[$"keys.{i}"];
+            values[i] = string.Empty;
+        }
+
+        var keyResults = _db.GetStatsBySession(_plasma, keys);
+        for (var i = 0; i < keyCount; i++)
+        {
+            var key = keys[i];
+
+            responseData.Add($"stats.{i}.key", key);
+            responseData.Add($"stats.{i}.value", keyResults.GetValueOrDefault(key) ?? string.Empty);
+            responseData.Add($"stats.{i}.rank", "1");
+        }
 
         var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
         await _conn.SendPacket(packet);
