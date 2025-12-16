@@ -1,14 +1,13 @@
 using System.Collections.Immutable;
 using System.Data;
 using Arcadia.EA;
-using Arcadia.Storage;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NPTicket;
 
-namespace Arcadia;
+namespace Arcadia.Storage;
 
 public sealed class Database : IDisposable
 {
