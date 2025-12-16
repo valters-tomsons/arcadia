@@ -68,6 +68,7 @@ public class FeslHandler
             ["acct/NuLookupUserInfo"] = HandleNuLookupUserInfo,
             ["acct/NuGetEntitlements"] = HandleNuGetEntitlements,
             ["acct/GetEntitlementByBundle"] = HandleGetEntitlementByBundle,
+            ["subs/GetEntitlementByBundle"] = HandleGetEntitlementByBundle,
             ["acct/GetLockerURL"] = HandleGetLockerUrl,
             ["recp/GetRecord"] = HandleGetRecord,
             ["recp/GetRecordAsMap"] = HandleGetRecordAsMap,
