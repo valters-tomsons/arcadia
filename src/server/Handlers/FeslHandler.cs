@@ -342,7 +342,7 @@ public class FeslHandler
 
             responseData.Add($"stats.{i}.key", key);
             responseData.Add($"stats.{i}.value", keyResults.GetValueOrDefault(key) ?? string.Empty);
-            responseData.Add($"stats.{i}.rank", "1");
+            responseData.Add($"stats.{i}.rank", "-1");
         }
 
         var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
@@ -777,7 +777,7 @@ public class FeslHandler
             var value = request.DataDict[$"u.0.s.{i}.v"];
             stats.Add(key, value);
 
-            // Discord notification BFBC2 Onslaught map completions
+            // Discord notification for BFBC2 Onslaught map completions
             if (key.StartsWith("time_mp") && key.EndsWith("_c") && clientString.Equals("BFBC2-PS3", StringComparison.InvariantCultureIgnoreCase))
             {
                 onslaughtStats ??= [];
