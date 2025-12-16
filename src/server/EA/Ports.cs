@@ -29,7 +29,8 @@ public enum TheaterGamePort : int
 
 public enum FeslServerPort : int
 {
-    RomePC = 19021
+    RomePC = 19021,
+    MohAirbornePC = 18240
 }
 
 public enum TheaterServerPort : int
