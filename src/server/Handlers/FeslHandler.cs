@@ -67,6 +67,7 @@ public class FeslHandler
             ["acct/LookupUserInfo"] = HandleLookupUserInfo,
             ["acct/NuLookupUserInfo"] = HandleNuLookupUserInfo,
             ["acct/NuGetEntitlements"] = HandleNuGetEntitlements,
+            ["acct/GetEntitlementByBundle"] = HandleGetEntitlementByBundle,
             ["acct/GetLockerURL"] = HandleGetLockerUrl,
             ["recp/GetRecord"] = HandleGetRecord,
             ["recp/GetRecordAsMap"] = HandleGetRecordAsMap,
@@ -556,6 +557,18 @@ public class FeslHandler
                 response.Add("entitlements.[]", "0");
                 break;
         }
+
+        var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, response);
+        await _conn.SendPacket(packet);
+    }
+
+    private async Task HandleGetEntitlementByBundle(Packet request)
+    {
+        var response = new Dictionary<string, string>()
+        {
+            { "TXN", request.TXN },
+            { "entitlements.[]", "0" },
+        };
 
         var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, response);
         await _conn.SendPacket(packet);
