@@ -258,34 +258,47 @@ public class FeslHandler
 
     private async Task HandleGetStats(Packet request)
     {
-        // TODO: Implement multi-packet responses 
+        // Override BF1943 minimum player count requirement
+        // if (request["keys.1"] == "pm_minplayers")
+        // {
+        //     responseData.Add("stats.[]", "1");
+        //     responseData.Add("stats.0.key", "pm_minplayers");
+        //     responseData.Add("stats.0.value", "1.0");
+        // }
+
+        if (_plasma is null) throw new NotImplementedException();
+
         var responseData = new Dictionary<string, string>
         {
             { "TXN", "GetStats" },
         };
 
-        // Override BF1943 minimum player count requirement
-        if (request["keys.1"] == "pm_minplayers")
+        var keysStr = request.DataDict["keys.[]"] ?? "0";
+        responseData.Add("stats.[]", keysStr);
+
+        var keyCount = int.Parse(keysStr, CultureInfo.InvariantCulture);
+        if (keyCount > 200)
         {
-            responseData.Add("stats.[]", "1");
-            responseData.Add("stats.0.key", "pm_minplayers");
-            responseData.Add("stats.0.value", "1.0");
-        }
-        else
-        {
-            responseData.Add("stats.[]", "0");
+            throw new($"Too many stat keys '{keyCount}' in a request!");
         }
 
-        // TODO: Add some stats
-        // var keysStr = request.DataDict["keys.[]"] as string ?? string.Empty;
-        // var reqKeys = int.Parse(keysStr, CultureInfo.InvariantCulture);
-        // for (var i = 0; i < reqKeys; i++)
-        // {
-        //     var key = request.DataDict[$"keys.{i}"];
+        var keys = new string[keyCount];
+        var values = new string[keyCount];
 
-        //     responseData.Add($"stats.{i}.key", key);
-        //     responseData.Add($"stats.{i}.value", 0.0);
-        // }
+        for (var i = 0; i < keyCount; i++)
+        {
+            keys[i] = request.DataDict[$"keys.{i}"];
+            values[i] = string.Empty;
+        }
+
+        var keyResults = _db.GetStatsBySession(_plasma, keys);
+        for (var i = 0; i < keyCount; i++)
+        {
+            var key = keys[i];
+
+            responseData.Add($"stats.{i}.key", key);
+            responseData.Add($"stats.{i}.value", keyResults.GetValueOrDefault(key) ?? string.Empty);
+        }
 
         var packet = new Packet("rank", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
         await _conn.SendPacket(packet);
@@ -712,66 +725,53 @@ public class FeslHandler
 
     private async Task HandleUpdateStats(Packet request)
     {
+        if (_plasma is null) throw new NotImplementedException();
+
         if (!int.TryParse(request["u.0.s.[]"], out var statsCount) || statsCount < 1)
         {
             await AcknowledgeRequest(request);
             return;
         }
 
-        _logger.LogTrace("Client submitted {statsCount} stats!", statsCount);
+        _logger.LogTrace("Client submitting {statsCount} stats!", statsCount);
 
-        var onslaughtStats = new List<OnslaughtLevelCompleteMessage>();
+        var stats = new Dictionary<string, string>();
+        List<OnslaughtLevelCompleteMessage>? onslaughtStats = null;
 
         for (var i = 0; i < statsCount; i++)
         {
-            var statKey = request[$"u.0.s.{i}.k"];
-            _logger.LogTrace("Processing stat {index}: {statKey}", i, statKey);
+            var key = request.DataDict[$"u.0.s.{i}.k"];
+            var value = request.DataDict[$"u.0.s.{i}.v"];
+            stats.Add(key, value);
 
-            if (statKey.StartsWith("time_mp") && statKey.EndsWith("_c") && clientString.Equals("BFBC2-PS3", StringComparison.InvariantCultureIgnoreCase))
+            // Discord notification BFBC2 Onslaught map completions
+            if (key.StartsWith("time_mp") && key.EndsWith("_c") && clientString.Equals("BFBC2-PS3", StringComparison.InvariantCultureIgnoreCase))
             {
-                _logger.LogInformation("Trying to update Onslaught map stats...");
+                onslaughtStats ??= [];
 
-                try
+                var uid = long.Parse(request["u.0.o"]);
+                var player = _sharedCache.FindSessionByUID(uid) ?? throw new Exception("Player not online?");
+                var server = _sharedCache.FindGameWithPlayerByUid(partitionId, uid) ?? throw new Exception("Player not in server?");
+                var playtime = Math.Abs(double.Parse(request[$"u.0.s.{i}.v"]));
+                var onslaughtMessage = new OnslaughtLevelCompleteMessage
                 {
-                    var uid = long.Parse(request["u.0.o"]);
-                    var player = _sharedCache.FindSessionByUID(uid) ?? throw new Exception("Player not online?");
-                    var server = _sharedCache.FindGameWithPlayerByUid(partitionId, uid) ?? throw new Exception("Player not in server?");
+                    PlayerName = player.NAME,
+                    MapKey = key.Replace("time_mp", string.Empty).Replace("_c", string.Empty),
+                    Difficulty = server.Data["B-U-difficulty"],
+                    GameTime = TimeSpan.FromSeconds(playtime)
+                };
 
-                    if (_plasma is null)
-                    {
-                        throw new Exception("Denying update from client!");
-                    }
-
-                    if (server.UID != _plasma.UID)
-                    {
-                        _logger.LogWarning("Non-server request stats update");
-                    }
-
-                    if (uid != _plasma.UID)
-                    {
-                        _logger.LogWarning("Non-self stats update");
-                    }
-
-                    var playtime = Math.Abs(double.Parse(request[$"u.0.s.{i}.v"]));
-                    var onslaughtMessage = new OnslaughtLevelCompleteMessage
-                    {
-                        PlayerName = player.NAME,
-                        MapKey = statKey.Replace("time_mp", string.Empty).Replace("_c", string.Empty),
-                        Difficulty = server.Data["B-U-difficulty"],
-                        GameTime = TimeSpan.FromSeconds(playtime)
-                    };
-
-                    _logger.LogTrace("Posting Onslaught stats message: {Message}", onslaughtMessage);
-                    onslaughtStats.Add(onslaughtMessage);
-                }
-                catch (Exception e)
-                {
-                    _logger.LogError(e, "Failed to process onslaught stats update!");
-                }
+                _logger.LogTrace("Posting Onslaught stats message: {Message}", onslaughtMessage);
+                onslaughtStats.Add(onslaughtMessage);
             }
         }
 
-        _stats.PostLevelComplete([.. onslaughtStats]);
+        _db.SetStatsBySession(_plasma, stats);
+
+        if (onslaughtStats is not null)
+        {
+            _stats.PostLevelComplete([.. onslaughtStats]);
+        }
 
         await AcknowledgeRequest(request);
     }
