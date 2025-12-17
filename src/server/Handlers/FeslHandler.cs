@@ -205,8 +205,10 @@ public class FeslHandler
         var servers = _sharedCache.GetPartitionServers(partitionId).Where(x => x.CanJoin).ToArray();
         if (servers.Length > 0)
         {
+            var listGames = request["players.0.props.{sessionType}"] == "listServers";
+
             pnowResult.Add("props.{}", "3");
-            pnowResult.Add("props.{resultType}", PlayNowResultType.JOIN);
+            pnowResult.Add("props.{resultType}", listGames ? PlayNowResultType.LIST : PlayNowResultType.JOIN);
             pnowResult.Add("props.{avgFit}", "1.0");
             pnowResult.Add("props.{games}.[]", $"{servers.Length}");
 
