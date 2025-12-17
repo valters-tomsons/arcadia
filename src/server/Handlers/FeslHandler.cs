@@ -409,27 +409,26 @@ public class FeslHandler
 
     private async Task HandleLookupUserInfo(Packet request)
     {
-        var queryCount = int.Parse(request["userInfo.[]"]);
-        var users = Enumerable.Range(0, queryCount)
-            .Select(i => request[$"userInfo.{i}.userName"])
-            .Select(query => new
-            {
-                query,
-                user = _sharedCache.FindPartitionSessionByUser(partitionId, query)
-            })
-            .Where(x => x.user is not null)
-            .ToArray();
-
         var responseData = new Dictionary<string, string>
         {
             { "TXN", "LookupUserInfo" },
-            { "userInfo.[]", users.Length.ToString() }
+            { "userInfo.[]", request["userInfo.[]"] }
         };
 
-        for (var i = 0; i < users.Length; i++)
+        var queryCount = int.Parse(request["userInfo.[]"]);
+        for (var i = 0; i < queryCount; i++)
         {
-            var result = users[i];
-            responseData.Add($"userInfo.{i}.userName", result.user!.NAME);
+            var query = request[$"userInfo.{i}.userName"];
+            responseData.Add($"userInfo.{i}.userName", query);
+
+            var result = _sharedCache.FindPartitionSessionByUser(partitionId, query);
+            if (result is not null)
+            {
+                responseData.Add($"userInfo.{i}.userId", result.UID.ToString());
+                responseData.Add($"userInfo.{i}.xuid", result.UID.ToString());
+                responseData.Add($"userInfo.{i}.masterUserId", result.UID.ToString());
+                responseData.Add($"userInfo.{i}.namespace", result.PartitionId.Split('/', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty);
+            }
         }
 
         var packet = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
