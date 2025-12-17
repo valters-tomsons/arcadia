@@ -50,7 +50,11 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
             };
         }
 
-        _logger.LogInformation("Starting Discord status bot...");
+        _client.Ready += () =>
+        {
+            _logger.LogInformation("Discord bot connected & ready!");
+            return Task.CompletedTask;
+        };
 
         await _client.LoginAsync(TokenType.Bot, _config.Value.BotToken);
         await _client.StartAsync();
