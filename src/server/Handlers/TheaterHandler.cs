@@ -292,6 +292,15 @@ public class TheaterHandler
             ["B-maxObservers"] = $"{serverInfo["B-maxObservers"]}"
         };
 
+        if (_plasma!.PartitionId.EndsWith("MERCS2"))
+        {
+            response.Add("B-U-Oil", game.Data["B-U-Oil"] ?? "0");
+            response.Add("B-U-Money", game.Data["B-U-Money"] ?? "0");
+            response.Add("B-U-Duration", game.Data["B-U-Duration"] ?? "0");
+            response.Add("B-U-Character", game.Data["B-U-Character"] ?? "0");
+            response.Add("B-U-Mission", game.Data["B-U-Mission"] ?? string.Empty);
+        }
+
         var packet = new Packet("GDAT", TheaterTransmissionType.OkResponse, 0, response);
         await _conn.SendPacket(packet);
 
@@ -434,6 +443,12 @@ public class TheaterHandler
     {
         if (_plasma is null) throw new NotImplementedException();
         if (_platform is null) throw new Exception("Cannot create game with null platform!");
+
+        // Game defaults to 'hostname' but expects backend to replace it with host's username
+        if (_plasma!.PartitionId.EndsWith("MERCS2"))
+        {
+            request["NAME"] = _plasma.NAME;
+        }
 
         var game = new GameServerListing()
         {
