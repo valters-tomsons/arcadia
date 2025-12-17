@@ -65,7 +65,7 @@ public class FeslHandler
             ["acct/GetTos"] = HandleGetTos,
             ["acct/NuPS3AddAccount"] = HandleAddAccount,
             ["acct/LookupUserInfo"] = HandleLookupUserInfo,
-            ["acct/NuLookupUserInfo"] = HandleNuLookupUserInfo,
+            ["acct/NuLookupUserInfo"] = HandleLookupUserInfo,
             ["acct/NuGetEntitlements"] = HandleNuGetEntitlements,
             ["acct/GetEntitlementByBundle"] = HandleGetEntitlementByBundle,
             ["subs/GetEntitlementByBundle"] = HandleGetEntitlementByBundle,
@@ -413,7 +413,7 @@ public class FeslHandler
     {
         var responseData = new Dictionary<string, string>
         {
-            { "TXN", "LookupUserInfo" },
+            { "TXN", request.TXN },
             { "userInfo.[]", request["userInfo.[]"] }
         };
 
@@ -427,35 +427,6 @@ public class FeslHandler
             if (result is null) continue;
 
             responseData.Add($"userInfo.{i}.userId", result.UID.ToString());
-        }
-
-        var packet = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
-        await _conn.SendPacket(packet);
-    }
-
-    private async Task HandleNuLookupUserInfo(Packet request)
-    {
-        var queryCount = int.Parse(request["userInfo.[]"]);
-        var users = Enumerable.Range(0, queryCount)
-            .Select(i => request[$"userInfo.{i}.userName"])
-            .Select(query => new
-            {
-                query,
-                user = _sharedCache.FindPartitionSessionByUser(partitionId, query)
-            })
-            .Where(x => x.user is not null)
-            .ToArray();
-
-        var responseData = new Dictionary<string, string>
-        {
-            { "TXN", "NuLookupUserInfo" },
-            { "userInfo.[]", users.Length.ToString() }
-        };
-
-        for (var i = 0; i < users.Length; i++)
-        {
-            var result = users[i];
-            responseData.Add($"userInfo.{i}.userName", result.user!.NAME);
         }
 
         var packet = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
