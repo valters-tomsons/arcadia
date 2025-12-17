@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Text;
 using Arcadia.EA;
 using Arcadia.Storage;
@@ -13,7 +14,10 @@ namespace Arcadia.Hosting;
 public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHostedService> logger, ConnectionManager sharedCache, IOptions<DiscordSettings> config, StatsStorage stats) : BackgroundService
 {
     private const string messageIdFile = "./messageId";
+    private const string assetsUrlBase = "https://raw.githubusercontent.com/valters-tomsons/arcadia/refs/heads/main/src/server/static/assets/";
+
     private static readonly TimeSpan PeriodicUpdateInterval = TimeSpan.FromSeconds(10);
+    private static readonly StringBuilder PlayersStringBuilder = new();
 
     private readonly DiscordSocketClient _client = client;
     private readonly ILogger<DiscordHostedService> _logger = logger;
@@ -83,7 +87,7 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
                         continue;
                     }
 
-                    await ProcessNewStats();
+                    await ProcessOnslaughtStats();
 
                     await UpdateGameStatus();
                     await Task.Delay(PeriodicUpdateInterval, stoppingToken);
@@ -172,11 +176,32 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
 
         if (flushCache)
         {
-            await CacheStatusMessageIds(cachedIds);
+            await File.WriteAllLinesAsync(messageIdFile, cachedIds.Select(x => $"{x.Key}:{x.Value}"));
         }
     }
 
-    private async Task ProcessNewStats()
+    private async Task<Dictionary<ulong, ulong>> GetCachedStatusMessageIds()
+    {
+        try
+        {
+            var text = await File.ReadAllLinesAsync(messageIdFile);
+            var dict = new Dictionary<ulong, ulong>(text.Length);
+            foreach (var line in text)
+            {
+                var parts = line.Split(':');
+                dict.Add(ulong.Parse(parts[0]), ulong.Parse(parts[1]));
+            }
+
+            return dict;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Failed to read messageId cache file.");
+            return [];
+        }
+    }
+
+    private async Task ProcessOnslaughtStats()
     {
         var eb = new EmbedBuilder().WithTitle("Onslaught finished!");
 
@@ -191,10 +216,15 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
                 break;
             }
 
-            var level = $"Levels/ONS_MP_{msg.MapKey}";
-            var levelName = LevelDisplayName(level);
+            var mapInfo = _onslaughtAssets.GetValueOrDefault($"Levels/ONS_MP_{msg.MapKey}");
+            if (!mapInfo.HasValue)
+            {
+                _logger.LogError("Unknown onslaught map key '{MapKey}', not submitting stat {BatchIdx}!", msg.MapKey, i);
+                continue;
+            }
+
             var gt = msg.GameTime;
-            var message = $"Finished {levelName} on {msg.Difficulty} in {gt.Hours} hours, {gt.Minutes} minutes and {gt.Seconds} seconds".Replace(" 0 hours, ", " ");
+            var message = $"Finished {mapInfo?.Display} on {msg.Difficulty} in {gt.Hours} hours, {gt.Minutes} minutes and {gt.Seconds} seconds".Replace(" 0 hours, ", " ");
 
             eb.AddField(msg.PlayerName, message);
         }
@@ -311,7 +341,7 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
 
                 gidEmbeds[i] = partitionId switch
                 {
-                    "BFBC2" => BuildOnslaughtStatus(server),
+                    "BFBC2" => BuildBFBC2Status(server),
                     // "AO3" => BuildAO3Status(server),
                     "MERCS2" => BuildMercs2Status(server),
                     "LOTR" => BuildLOTRStatus(server),
@@ -336,24 +366,60 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
         return (statusMsg, embeds);
     }
 
-    private static (long GID, Embed Embed) BuildOnslaughtStatus(GameServerListing server)
+    private static string GetPlayerCountString(GameServerListing server)
+    {
+        var maxPlayers = server.Data["MAX-PLAYERS"];
+
+        if (server.ConnectedPlayers.IsEmpty)
+        {
+            return $"0/{maxPlayers}";
+        }
+
+        PlayersStringBuilder.Clear();
+        PlayersStringBuilder
+            .Append(server.ConnectedPlayers.Count)
+            .Append('/')
+            .Append(maxPlayers)
+            .Append(" | ")
+            .AppendJoin(", ", server.ConnectedPlayers.Select(x => x.Value.NAME));
+
+        return PlayersStringBuilder.ToString();
+    }
+
+    private static readonly FrozenDictionary<string, (string Display, string Asset)?> _onslaughtAssets = new Dictionary<string, (string Display, string Asset)?>
+    {
+        { "Levels/ONS_MP_002", ("Valparaiso", "BC2_Valparaiso.jpg") },
+        { "Levels/ONS_MP_004", ("Isla Inocentes", "BC2_Isla_Inocentes.jpg") },
+        { "Levels/ONS_MP_005", ("Atacama Desert", "BC2_Atacama_Desert.jpg") },
+        { "Levels/ONS_MP_008", ("Nelson Bay", "BC2_Nelson_Bay.jpg") },
+    }.ToFrozenDictionary();
+
+    private static (long GID, Embed Embed) BuildBFBC2Status(GameServerListing server)
     {
         var serverName = $"**{server.NAME.Replace("P2P-", string.Empty)}**";
-
-        var level = server.Data.GetValueOrDefault("B-U-level");
-        var levelName = LevelDisplayName(level);
-        var levelImageUrl = LevelImageUrl(level);
-
-        var difficulty = server.Data.GetValueOrDefault("B-U-difficulty") ?? "`N/A`";
         var gamemode = server.Data.GetValueOrDefault("B-U-gamemode") ?? "`N/A`";
 
         var eb = new EmbedBuilder()
             .WithTitle($"{serverName} ({gamemode})")
-            .WithImageUrl(levelImageUrl)
-            .AddField("Level", levelName)
-            .AddField("Difficulty", difficulty)
             .AddField("Players", GetPlayerCountString(server))
             .WithTimestamp(server.StartedAt);
+
+        var difficulty = server.Data.GetValueOrDefault("B-U-difficulty");
+        if (!string.IsNullOrWhiteSpace(difficulty))
+        {
+            eb.AddField("Difficulty", difficulty);
+        }
+
+        var levelName = server.Data.GetValueOrDefault("B-U-level");
+        if (!string.IsNullOrWhiteSpace(levelName))
+        {
+            var mapInfo = _onslaughtAssets.GetValueOrDefault(levelName);
+            if (mapInfo.HasValue)
+            {
+                eb.AddField("Level", mapInfo?.Display);
+                eb.WithImageUrl(string.Concat(assetsUrlBase, mapInfo?.Asset));
+            }
+        }
 
         return (server.GID, eb.Build());
     }
@@ -417,83 +483,5 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
             .WithTimestamp(server.StartedAt);
 
         return (server.GID, eb.Build());
-    }
-
-    private static readonly StringBuilder _playersStringBuilder = new();
-    private static string GetPlayerCountString(GameServerListing server)
-    {
-        var maxPlayers = server.Data["MAX-PLAYERS"];
-
-        if (server.ConnectedPlayers.IsEmpty)
-        {
-            return $"0/{maxPlayers}";
-        }
-
-        _playersStringBuilder.Clear();
-        _playersStringBuilder
-            .Append(server.ConnectedPlayers.Count)
-            .Append('/')
-            .Append(maxPlayers)
-            .Append(" | ")
-            .AppendJoin(", ", server.ConnectedPlayers.Select(x => x.Value.NAME));
-
-        return _playersStringBuilder.ToString();
-    }
-
-    private async Task<Dictionary<ulong, ulong>> GetCachedStatusMessageIds()
-    {
-        try
-        {
-            var text = await File.ReadAllLinesAsync(messageIdFile);
-            var dict = new Dictionary<ulong, ulong>(text.Length);
-            foreach (var line in text)
-            {
-                var parts = line.Split(':');
-                dict.Add(ulong.Parse(parts[0]), ulong.Parse(parts[1]));
-            }
-
-            return dict;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "Failed to read messageId cache file.");
-            return [];
-        }
-    }
-
-    private static Task CacheStatusMessageIds(IDictionary<ulong, ulong> channelMessages)
-    {
-        return File.WriteAllLinesAsync(messageIdFile, channelMessages.Select(x => $"{x.Key}:{x.Value}"));
-    }
-
-    private static string LevelDisplayName(string? levelName)
-    {
-        return levelName switch
-        {
-            "Levels/ONS_MP_002" => "Valparaiso",
-            "Levels/ONS_MP_004" => "Isla Inocentes",
-            "Levels/ONS_MP_005" => "Atacama Desert",
-            "Levels/ONS_MP_008" => "Nelson Bay",
-            "levels/wake_island_s" => "Wake Island",
-            null => "`N/A`",
-            _ => levelName,
-        };
-    }
-
-    private static string LevelImageUrl(string? levelName)
-    {
-        const string hostBase = "https://raw.githubusercontent.com/valters-tomsons/arcadia/refs/heads/main/src/server/static/assets/";
-
-        var fileName = levelName switch
-        {
-            "Levels/ONS_MP_002" => "BC2_Valparaiso.jpg",
-            "Levels/ONS_MP_004" => "BC2_Isla_Inocentes.jpg",
-            "Levels/ONS_MP_005" => "BC2_Atacama_Desert.jpg",
-            "Levels/ONS_MP_008" => "BC2_Nelson_Bay.jpg",
-            "levels/wake_island_s" => "BC1943_Wake_Island.jpg",
-            _ => string.Empty,
-        };
-
-        return string.Concat(hostBase, fileName);
     }
 }
