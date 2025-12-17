@@ -424,13 +424,9 @@ public class FeslHandler
             responseData.Add($"userInfo.{i}.userName", query);
 
             var result = _sharedCache.FindPartitionSessionByUser(partitionId, query);
-            if (result is not null)
-            {
-                responseData.Add($"userInfo.{i}.userId", result.UID.ToString());
-                responseData.Add($"userInfo.{i}.xuid", result.UID.ToString());
-                responseData.Add($"userInfo.{i}.masterUserId", result.UID.ToString());
-                responseData.Add($"userInfo.{i}.namespace", result.PartitionId.Split('/', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty);
-            }
+            if (result is null) continue;
+
+            responseData.Add($"userInfo.{i}.userId", result.UID.ToString());
         }
 
         var packet = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
