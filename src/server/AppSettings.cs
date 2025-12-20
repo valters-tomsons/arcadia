@@ -12,7 +12,6 @@ public record ArcadiaSettings
         (int)TheaterGamePort.RomePS3,
         (int)FeslGamePort.RomePS3,
         (int)FeslGamePort.BeachPS3,
-        (int)FeslGamePort.ArmyOfTwo2PS3,
         (int)FeslGamePort.Mercenaries2,
         (int)FeslGamePort.MoHAirborne,
     ];
