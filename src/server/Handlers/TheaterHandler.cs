@@ -301,6 +301,22 @@ public class TheaterHandler
             response.Add("B-U-Mission", game.Data["B-U-Mission"] ?? string.Empty);
         }
 
+        if (_plasma!.PartitionId.EndsWith("GODFATHER2"))
+        {
+            response.Add("B-U-DonFlow", game.Data["B-U-DonFlow"] ?? "0");
+            response.Add("B-U-DonMode", game.Data["B-U-DonMode"] ?? "0");
+            response.Add("B-U-DonWager", game.Data["B-U-DonWager"] ?? "0");
+            response.Add("B-U-IsStrictNAT", game.Data["B-U-IsStrictNAT"] ?? "0");
+            response.Add("B-U-MapHash", game.Data["B-U-MapHash"] ?? "0");
+            response.Add("B-U-MatchTypeIndex", game.Data["B-U-MatchTypeIndex"] ?? "0");
+            response.Add("B-U-ModeIdx", game.Data["B-U-ModeIdx"] ?? "0");
+            response.Add("B-U-ModeRequested", game.Data["B-U-ModeRequested"] ?? "0");
+            response.Add("B-U-PackedAttributes", game.Data["B-U-PackedAttributes"] ?? "0");
+            response.Add("B-U-RoundScore", game.Data["B-U-RoundScore"] ?? "0");
+            response.Add("B-U-ScoreLimit", game.Data["B-U-ScoreLimit"] ?? "0");
+            response.Add("B-U-WeaponIdx", game.Data["B-U-WeaponIdx"] ?? "0");
+        }
+
         var packet = new Packet("GDAT", TheaterTransmissionType.OkResponse, 0, response);
         await _conn.SendPacket(packet);
 
@@ -445,7 +461,7 @@ public class TheaterHandler
         if (_platform is null) throw new Exception("Cannot create game with null platform!");
 
         // Game defaults to 'hostname' but expects backend to replace it with host's username
-        if (_plasma!.PartitionId.EndsWith("MERCS2"))
+        if (_plasma!.PartitionId.EndsWith("MERCS2") || _plasma.PartitionId.EndsWith("GODFATHER2"))
         {
             request["NAME"] = _plasma.NAME;
         }
