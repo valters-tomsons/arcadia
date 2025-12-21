@@ -279,7 +279,7 @@ public class FeslHandler
         responseData.Add("stats.[]", keysStr);
 
         var keyCount = int.Parse(keysStr, CultureInfo.InvariantCulture);
-        if (keyCount > 200)
+        if (keyCount > 201)
         {
             throw new($"Too many stat keys '{keyCount}' in a request!");
         }
@@ -322,7 +322,7 @@ public class FeslHandler
         responseData.Add("rankedStats.0.rankedStats.[]", keysStr);
 
         var keyCount = int.Parse(keysStr, CultureInfo.InvariantCulture);
-        if (keyCount > 200)
+        if (keyCount > 201)
         {
             throw new($"Too many stat keys '{keyCount}' in a request!");
         }
