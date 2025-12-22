@@ -13,6 +13,7 @@ using Discord.WebSocket;
 using Arcadia.Handlers;
 using Microsoft.Data.Sqlite;
 using System.Data;
+using Arcadia.Discord;
 
 var host = Host.CreateDefaultBuilder()
     .ConfigureAppConfiguration((_, config) => config
@@ -38,8 +39,10 @@ var host = Host.CreateDefaultBuilder()
             .AddSingleton<SharedCounters>()
             .AddSingleton<ConnectionManager>()
             .AddSingleton<StatsStorage>()
+
             .AddSingleton<DiscordSocketConfig>(x => new() { GatewayIntents = Discord.GatewayIntents.Guilds | Discord.GatewayIntents.GuildMessages })
-            .AddSingleton<DiscordSocketClient>();
+            .AddSingleton<DiscordSocketClient>()
+            .AddSingleton<StatusService>();
 
         services
             .AddTransient<IDbConnection>(x => new SqliteConnection("Data Source=arcadia.db"))
