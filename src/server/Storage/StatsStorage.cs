@@ -15,6 +15,8 @@ public class StatsStorage(Database db)
     private readonly Database _db = db;
     private readonly ConcurrentQueue<OnslaughtLevelCompleteMessage> _onslaughtStats = new();
 
+    public int QueueCount => _onslaughtStats.Count;
+
     public void PostLevelComplete(OnslaughtLevelCompleteMessage[] messages)
     {
         _db.RecordOnslaughtCompletion(messages);

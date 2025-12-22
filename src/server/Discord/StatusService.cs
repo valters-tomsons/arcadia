@@ -15,7 +15,6 @@ public class StatusService(ILogger<StatusService> logger, ConnectionManager shar
     private const string messageIdFile = "./messageId";
     private const string assetsUrlBase = "https://raw.githubusercontent.com/valters-tomsons/arcadia/refs/heads/main/src/server/static/assets/";
 
-    private static readonly TimeSpan PeriodicUpdateInterval = TimeSpan.FromSeconds(10);
     private static readonly StringBuilder PlayersStringBuilder = new();
 
     private readonly ILogger<StatusService> _logger = logger;
@@ -26,36 +25,10 @@ public class StatusService(ILogger<StatusService> logger, ConnectionManager shar
     private readonly List<(IMessageChannel Channel, ulong StatusId)> _channelStatus = [];
     private readonly Dictionary<ulong, List<(long GID, ulong MessageId)>> _channelsGameMessage = [];
 
-    public async Task Execute(DiscordSocketClient client, CancellationToken ct)
+    public async Task Execute(DiscordSocketClient client)
     {
-        while (client.ConnectionState != ConnectionState.Connected)
-        {
-            await Task.Delay(1000, ct);
-        }
-
-        await InitializeChannels(client);
-
-        while (!ct.IsCancellationRequested)
-        {
-            try
-            {
-                if (client.ConnectionState != ConnectionState.Connected)
-                {
-                    _logger.LogWarning("Discord connection lost, delaying status update!");
-                    await Task.Delay(5000, ct);
-                    continue;
-                }
-
-                await ProcessOnslaughtStats(client);
-
-                await UpdateGameStatus();
-                await Task.Delay(PeriodicUpdateInterval, ct);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "Failed to update status!");
-            }
-        }
+        await ProcessOnslaughtStats(client);
+        await UpdateGameStatus();
     }
 
     public async Task Shutdown()
@@ -88,7 +61,7 @@ public class StatusService(ILogger<StatusService> logger, ConnectionManager shar
         _channelsGameMessage.Clear();
     }
 
-    private async Task InitializeChannels(DiscordSocketClient client)
+    public async Task Initialize(DiscordSocketClient client)
     {
         var channels = _config.Value.Channels;
         var cachedIds = await GetCachedStatusMessageIds();
@@ -167,6 +140,8 @@ public class StatusService(ILogger<StatusService> logger, ConnectionManager shar
 
     private async Task ProcessOnslaughtStats(DiscordSocketClient client)
     {
+        if (_stats.QueueCount == 0) return;
+
         var eb = new EmbedBuilder().WithTitle("Onslaught finished!");
 
         const int batchSize = 8;

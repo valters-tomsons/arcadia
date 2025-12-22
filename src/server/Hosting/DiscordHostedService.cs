@@ -9,10 +9,12 @@ namespace Arcadia.Hosting;
 
 public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHostedService> logger, IOptions<DiscordSettings> config, StatusService statusService) : BackgroundService
 {
+    private static readonly TimeSpan PeriodicUpdateInterval = TimeSpan.FromSeconds(10);
 
     private readonly DiscordSocketClient _client = client;
     private readonly ILogger<DiscordHostedService> _logger = logger;
     private readonly IOptions<DiscordSettings> _config = config;
+
     private readonly StatusService _statusService = statusService;
 
     public override async Task StartAsync(CancellationToken cancellationToken)
@@ -57,8 +59,37 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
         await base.StopAsync(cancellationToken);
     }
 
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        return Task.Run(async () => _statusService.Execute(_client, stoppingToken), stoppingToken);
+        while (_client.ConnectionState != ConnectionState.Connected)
+        {
+            await Task.Delay(1000, stoppingToken);
+        }
+
+        await _statusService.Initialize(_client);
+
+        await Task.Run(async () =>
+        {
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                try
+                {
+                    if (_client.ConnectionState != ConnectionState.Connected)
+                    {
+                        _logger.LogWarning("Discord connection lost, delaying execution!");
+                        await Task.Delay(5000, stoppingToken);
+                        continue;
+                    }
+
+                    await _statusService.Execute(_client);
+
+                    await Task.Delay(PeriodicUpdateInterval, stoppingToken);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, "Failed to update status!");
+                }
+            }
+        }, stoppingToken);
     }
 }
