@@ -7,7 +7,7 @@ using Microsoft.Extensions.Options;
 
 namespace Arcadia.Hosting;
 
-public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHostedService> logger, IOptions<DiscordSettings> config, StatusService statusService) : BackgroundService
+public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHostedService> logger, IOptions<DiscordSettings> config, StatusService statusService, ModerationService moderationService) : BackgroundService
 {
     private static readonly TimeSpan PeriodicUpdateInterval = TimeSpan.FromSeconds(10);
 
@@ -16,6 +16,7 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
     private readonly IOptions<DiscordSettings> _config = config;
 
     private readonly StatusService _statusService = statusService;
+    private readonly ModerationService _moderationService = moderationService;
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -43,6 +44,16 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
         {
             _logger.LogInformation("Discord bot connected & ready!");
             return Task.CompletedTask;
+        };
+
+        _client.MessageReceived += async (msg) =>
+        {
+            if (msg is SocketUserMessage usrMsg) await _moderationService.OnMessageReceived(usrMsg);
+        };
+
+        _client.MessageUpdated += async (cache, msg, channel) =>
+        {
+            if (msg is SocketUserMessage usrMsg) await _moderationService.OnMessageReceived(usrMsg);
         };
 
         await _client.LoginAsync(TokenType.Bot, _config.Value.BotToken);

@@ -40,9 +40,13 @@ var host = Host.CreateDefaultBuilder()
             .AddSingleton<ConnectionManager>()
             .AddSingleton<StatsStorage>()
 
-            .AddSingleton<DiscordSocketConfig>(x => new() { GatewayIntents = Discord.GatewayIntents.Guilds | Discord.GatewayIntents.GuildMessages })
+            .AddSingleton<DiscordSocketConfig>(x => new()
+            {
+                GatewayIntents = Discord.GatewayIntents.Guilds | Discord.GatewayIntents.GuildMessages | Discord.GatewayIntents.MessageContent
+            })
             .AddSingleton<DiscordSocketClient>()
-            .AddSingleton<StatusService>();
+            .AddSingleton<StatusService>()
+            .AddSingleton<ModerationService>();
 
         services
             .AddTransient<IDbConnection>(x => new SqliteConnection("Data Source=arcadia.db"))
