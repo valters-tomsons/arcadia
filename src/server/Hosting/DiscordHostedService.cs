@@ -20,14 +20,16 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
-        if (!_config.Value.EnableBot)
+        var config = _config.Value;
+
+        if (!config.EnableBot)
         {
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(_config.Value.BotToken))
+        if (string.IsNullOrWhiteSpace(config.BotToken))
         {
-            _logger.LogWarning("Discord bot not configured!");
+            _logger.LogWarning("Discord bot token not configured, not starting.");
             return;
         }
 
@@ -46,17 +48,22 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
             return Task.CompletedTask;
         };
 
-        _client.MessageReceived += async (msg) =>
+        if (config.PerformModeration)
         {
-            if (msg is SocketUserMessage usrMsg) await _moderationService.OnMessageReceived(usrMsg);
-        };
+            _client.MessageReceived += async (msg) =>
+            {
+                if (msg is SocketUserMessage usrMsg) await _moderationService.OnMessageReceived(usrMsg);
+            };
 
-        _client.MessageUpdated += async (cache, msg, channel) =>
-        {
-            if (msg is SocketUserMessage usrMsg) await _moderationService.OnMessageReceived(usrMsg);
-        };
+            _client.MessageUpdated += async (cache, msg, channel) =>
+            {
+                if (msg is SocketUserMessage usrMsg) await _moderationService.OnMessageReceived(usrMsg);
+            };
 
-        await _client.LoginAsync(TokenType.Bot, _config.Value.BotToken);
+            _logger.LogInformation("Discord moderation enabled!");
+        }
+
+        await _client.LoginAsync(TokenType.Bot, config.BotToken);
         await _client.StartAsync();
 
         await base.StartAsync(cancellationToken);

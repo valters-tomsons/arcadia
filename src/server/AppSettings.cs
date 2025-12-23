@@ -39,6 +39,7 @@ public record DiscordSettings
     public string BotToken { get; init; } = string.Empty;
     public ulong[] Channels { get; init; } = [];
     public ulong OnslaughtStatsChannel { get; init; }
+    public bool PerformModeration { get; init; }
 }
 
 public record DebugSettings
