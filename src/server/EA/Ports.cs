@@ -11,6 +11,7 @@ public enum FeslGamePort : int
     ArmyOfTwo2PS3 = 18141,
     NfsShift = 18221,
     NfsCarbon = 18230,
+    NfsUndercover = 18930,
     TeamFortress2 = 18450,
     LotrConquest = 18870,
     Mercenaries2 = 18720,
