@@ -12,6 +12,7 @@ public enum FeslGamePort : int
     NfsShift = 18221,
     NfsCarbon = 18230,
     NfsUndercover = 18930,
+    NfsProStreet = 18600,
     TeamFortress2 = 18450,
     LotrConquest = 18870,
     Mercenaries2 = 18720,
