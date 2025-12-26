@@ -427,10 +427,11 @@ public class FeslHandler
             var query = request[$"userInfo.{i}.userName"];
             responseData.Add($"userInfo.{i}.userName", query);
 
-            var result = _sharedCache.FindPartitionSessionByUser(partitionId, query);
-            if (result is null) continue;
+            var userId = _db.FindUserById(query, _plasma!.OnlinePlatformId);
+            if (!userId.HasValue) continue;
 
-            responseData.Add($"userInfo.{i}.userId", result.UID.ToString());
+            responseData.Add($"userInfo.{i}.userId", $"{userId.Value}");
+            responseData.Add($"userInfo.{i}.namespace", "PS3_SUB");
         }
 
         var packet = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);

@@ -286,4 +286,25 @@ public sealed class Database
             """,
         new { Username = username, Platform = platformName });
     }
+
+    public long? FindUserById(string username, string prefferedPlatform)
+    {
+        if (!_initialized) return null;
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(username);
+        ArgumentException.ThrowIfNullOrWhiteSpace(prefferedPlatform);
+
+        using var conn = _serviceProvider.GetRequiredService<IDbConnection>();
+
+        return conn.ExecuteScalar<long?>(
+        """
+            SELECT UserId FROM users 
+            WHERE Username = @Username
+            ORDER BY 
+                CASE WHEN Platform = @Platform THEN 0 ELSE 1 END,
+                Platform
+            LIMIT 1
+            """,
+        new { Username = username, Platform = prefferedPlatform });
+    }
 }
