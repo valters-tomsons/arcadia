@@ -5,6 +5,9 @@ using Microsoft.Extensions.Options;
 
 namespace Arcadia.Hosting;
 
+/// <summary>
+/// easo.ea.com
+/// </summary>
 public class StaticFileHostedService(IOptions<FileServerSettings> settings, ILogger<StaticFileHostedService> logger) : IHostedService
 {
     private readonly ILogger<StaticFileHostedService> _logger = logger;
@@ -38,7 +41,7 @@ public class StaticFileHostedService(IOptions<FileServerSettings> settings, ILog
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "CDN host failed to start: {}", e.Message);
+            _logger.LogError(e, "CDN host failed to start: {Message}", e.Message);
         }
 
         return Task.CompletedTask;
@@ -64,21 +67,20 @@ public class StaticFileHostedService(IOptions<FileServerSettings> settings, ILog
         }
 
         var filePath = GetFullPath(requestPath);
-        var contentType = GetContentType(filePath);
-
-        if (filePath is not null && contentType is not null)
+        if (filePath is not null)
         {
+            _logger.LogTrace("Serving content of '{filePath}'", filePath);
+
             byte[] fileBytes = await File.ReadAllBytesAsync(filePath);
-            context.Response.ContentType = contentType;
             context.Response.ContentLength64 = fileBytes.Length;
             await context.Response.OutputStream.WriteAsync(fileBytes);
         }
         else
         {
-            _logger.LogTrace("Returning 404 for request: {reqPath}", requestPath);
             context.Response.StatusCode = (int)HttpStatusCode.NotFound;
         }
 
+        _logger.LogInformation("Returning HTTP {statusCode} for '{reqPath}'", context.Response.StatusCode, requestPath);
         context.Response.Close();
     }
 
@@ -87,21 +89,6 @@ public class StaticFileHostedService(IOptions<FileServerSettings> settings, ILog
         var filePath = Path.GetFullPath(Path.Combine(_absoluteRootPath, requestPath));
         var isValid = filePath.StartsWith(_absoluteRootPath, StringComparison.OrdinalIgnoreCase);
         return isValid ? filePath : null;
-    }
-
-    private static string? GetContentType(string? path)
-    {
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return null;
-        }
-
-        var extension = Path.GetExtension(path).ToLowerInvariant();
-        return extension switch
-        {
-            ".xml" => "application/xml",
-            _ => null
-        };
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
