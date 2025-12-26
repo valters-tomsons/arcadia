@@ -16,7 +16,7 @@ public class PlasmaSession
     public required string ClientString { get; init; }
     public required string PartitionId { get; init; }
 
-    public string? OnlinePlatformId { get; set; }
+    public required string OnlinePlatformId { get; set; }
 }
 
 public class GameServerListing

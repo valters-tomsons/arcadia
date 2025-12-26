@@ -132,7 +132,8 @@ public class FeslHandler
             NAME = string.Empty,
             LKEY = string.Empty,
             ClientString = string.Empty,
-            PartitionId = string.Empty
+            PartitionId = string.Empty,
+            OnlinePlatformId = string.Empty
         };
     }
 
@@ -503,7 +504,7 @@ public class FeslHandler
             nuid = nuid.Split('@')[0];
         }
 
-        _plasma = await _sharedCache.CreatePlasmaConnection(_conn, nuid, clientString, partitionId);
+        _plasma = await _sharedCache.CreatePlasmaConnection(_conn, nuid, clientString, partitionId, "PC");
 
         var loginResponseData = new Dictionary<string, string>
         {
@@ -609,12 +610,12 @@ public class FeslHandler
         var ticket = Ticket.ReadFromBytes(ticketBytes);
         var onlineId = ticket.Username;
 
-        if (string.IsNullOrWhiteSpace(onlineId)) throw new NotImplementedException();
+        ArgumentException.ThrowIfNullOrWhiteSpace(onlineId);
 
-        _plasma = await _sharedCache.CreatePlasmaConnection(_conn, onlineId, clientString, partitionId);
-        _plasma.OnlinePlatformId = Utils.GetOnlinePlatformName(ticket.SignatureIdentifier);
+        var platform = Utils.GetOnlinePlatformName(ticket.SignatureIdentifier) ?? throw new("Cannot create PS3 login without online platform!");
+        _plasma = await _sharedCache.CreatePlasmaConnection(_conn, onlineId, clientString, partitionId, platform);
 
-        _db.RecordLoginMetric(ticket, _plasma.OnlinePlatformId ?? string.Empty);
+        _db.RecordLoginMetric(ticket, _plasma.OnlinePlatformId);
 
         var loginResponseData = new Dictionary<string, string>
         {
@@ -656,10 +657,10 @@ public class FeslHandler
             return;
         }
 
-        _plasma = await _sharedCache.CreatePlasmaConnection(_conn, onlineId, clientString, partitionId);
-        _plasma.OnlinePlatformId = Utils.GetOnlinePlatformName(ticket.SignatureIdentifier);
+        var platform = Utils.GetOnlinePlatformName(ticket.SignatureIdentifier) ?? throw new("Cannot create PS3 login without online platform!");
+        _plasma = await _sharedCache.CreatePlasmaConnection(_conn, onlineId, clientString, partitionId, platform);
 
-        _db.RecordLoginMetric(ticket, _plasma.OnlinePlatformId ?? string.Empty);
+        _db.RecordLoginMetric(ticket, _plasma.OnlinePlatformId);
 
         var loginResponseData = new Dictionary<string, string>
         {

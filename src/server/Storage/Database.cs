@@ -16,6 +16,7 @@ public sealed class Database : IDisposable
 
     private readonly ReaderWriterLockSlim _lock = new();
     private readonly bool _initialized;
+    private long _defaultUserId = 1000000000000;
 
     public Database(ILogger<Database> logger, IServiceProvider serviceProvider, IOptions<DebugSettings> options)
     {
@@ -74,6 +75,21 @@ public sealed class Database : IDisposable
 
                 PRIMARY KEY (Username, Platform, Subdomain, Key)
             ) WITHOUT ROWID
+            """);
+
+            conn.Execute(
+            """
+            CREATE TABLE IF NOT EXISTS users (
+                UserId INTEGER PRIMARY KEY AUTOINCREMENT,
+                Username TEXT NOT NULL,
+                Platform TEXT NOT NULL,
+
+                UNIQUE(Username, Platform)
+            );
+
+            INSERT OR IGNORE INTO sqlite_sequence (name, seq) 
+            SELECT 'users', 1000000000000 
+            WHERE NOT EXISTS (SELECT 1 FROM sqlite_sequence WHERE name = 'users');
             """);
 
             _initialized = true;
@@ -275,8 +291,35 @@ public sealed class Database : IDisposable
         }
     }
 
-    public void Dispose()
+    public long GetOrCreateUserId(string username, string platformName)
     {
-        _lock.Dispose();
+        if (!_initialized)
+        {
+            // Matchmaking must work, database should not be a hard requirement!
+            return Interlocked.Increment(ref _defaultUserId);
+        }
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(username);
+        ArgumentException.ThrowIfNullOrWhiteSpace(platformName);
+
+            using var conn = _serviceProvider.GetRequiredService<IDbConnection>();
+
+        var userId = conn.ExecuteScalar<long>(
+        """
+            SELECT UserId FROM users 
+            WHERE Username = @Username AND Platform = @Platform;
+            """,
+        new { Username = username, Platform = platformName });
+
+        if (userId != 0)
+            return userId;
+
+            return conn.ExecuteScalar<long>(
+            """
+                INSERT INTO users (Username, Platform) 
+                VALUES (@Username, @Platform)
+                RETURNING UserId;
+            """,
+            new { Username = username, Platform = platformName });
     }
 }

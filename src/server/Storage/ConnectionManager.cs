@@ -4,28 +4,31 @@ using Microsoft.Extensions.Logging;
 
 namespace Arcadia.Storage;
 
-public class ConnectionManager(ILogger<ConnectionManager> logger, SharedCounters counters)
+public class ConnectionManager(ILogger<ConnectionManager> logger, Database db)
 {
     private static readonly ImmutableArray<string> DataKeyBlacklist = ["TID", "PID"];
 
     private readonly ILogger<ConnectionManager> _logger = logger;
-    private readonly SharedCounters _counters = counters;
+    private readonly Database _db = db;
 
     private readonly List<GameServerListing> _gameServers = [];
     private readonly List<PlasmaSession> _connections = [];
 
     private readonly SemaphoreSlim _semaphore = new(1);
 
-    public async Task<PlasmaSession> CreatePlasmaConnection(IEAConnection fesl, string onlineId, string clientString, string partitionId)
+    public async Task<PlasmaSession> CreatePlasmaConnection(IEAConnection fesl, string onlineId, string clientString, string partitionId, string platform)
     {
+        var userId = _db.GetOrCreateUserId(onlineId, platform);
+
         PlasmaSession result = new()
         {
             FeslConnection = fesl,
-            UID = _counters.GetNextUserId(),
+            UID = userId,
             LKEY = SharedCounters.GenerateLKey(),
             NAME = onlineId,
             ClientString = clientString,
-            PartitionId = partitionId
+            PartitionId = partitionId,
+            OnlinePlatformId = platform
         };
 
         await _semaphore.WaitAsync();
