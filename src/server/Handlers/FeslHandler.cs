@@ -75,6 +75,7 @@ public class FeslHandler
             ["asso/GetAssociations"] = HandleGetAssociations,
             ["pres/PresenceSubscribe"] = HandlePresenceSubscribe,
             ["rank/GetStats"] = HandleGetStats,
+            ["rank/GetStatsForOwners"] = HandleGetStats,
             ["rank/GetTopNAndStats"] = HandleGetTopNAndStats,
             ["rank/GetRankedStats"] = HandleGetRankedStats,
             ["rank/GetRankedStatsForOwners"] = HandleGetRankedStatsForOwners,
@@ -93,6 +94,7 @@ public class FeslHandler
             ["achi/GetAchievementDefinitionsByGroup"] = AcknowledgeRequest,
             ["achi/GetOwnerAchievementsByGroup"] = AcknowledgeRequest,
             ["achi/SynchAchievements"] = AcknowledgeRequest,
+            ["achi/GetOwnerAchievements"] = AcknowledgeRequest,
         }.ToImmutableDictionary();
     }
 
