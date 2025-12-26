@@ -96,6 +96,7 @@ public class FeslHandler
             ["achi/GetOwnerAchievementsByGroup"] = AcknowledgeRequest,
             ["achi/SynchAchievements"] = AcknowledgeRequest,
             ["achi/GetOwnerAchievements"] = AcknowledgeRequest,
+            ["asso/AddAssociations"] = AcknowledgeRequest
         }.ToImmutableDictionary();
     }
 
