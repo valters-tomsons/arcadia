@@ -23,7 +23,7 @@ public class FeslHandler
     private readonly StatsStorage _stats;
     private readonly Database _db;
 
-    private PlasmaSession? _plasma;
+    private PlasmaSession? _session;
     private string clientString = string.Empty;
     private string partitionId = string.Empty;
     private string subDomain = string.Empty;
@@ -119,22 +119,25 @@ public class FeslHandler
             await DisposeTimers();
         }
 
-        if (_plasma is not null)
+        if (_session is not null)
         {
-            await _sharedCache.RemovePlasmaSession(_plasma);
+            await _sharedCache.RemovePlasmaSession(_session);
         }
 
-        _logger.LogInformation("Closing FESL connection: {clientEndpoint} | {name}", clientEndpoint, _plasma?.NAME);
+        _logger.LogInformation("Closing FESL connection: {clientEndpoint} | {name}", clientEndpoint, _session?.User.Username);
 
-        return _plasma ?? new()
+        return _session ?? new()
         {
             FeslConnection = _conn,
-            UID = 0,
-            NAME = string.Empty,
+            User = new()
+            {
+                UserId = 0,
+                Username = string.Empty,
+                Platform = string.Empty
+            },
             LKEY = string.Empty,
             ClientString = string.Empty,
-            PartitionId = string.Empty,
-            PlatformName = string.Empty
+            PartitionId = string.Empty
         };
     }
 
@@ -222,7 +225,7 @@ public class FeslHandler
                 pnowResult.Add($"props.{{games}}.{i}.lid", $"{servers[i].LID}");
             }
         }
-        else if (_plasma?.PartitionId.EndsWith("MOHAIR") == true)
+        else if (_session?.PartitionId.EndsWith("MOHAIR") == true)
         {
             pnowResult.Add("props.{}", "1");
             pnowResult.Add("props.{resultType}", PlayNowResultType.NOMATCH);
@@ -272,7 +275,7 @@ public class FeslHandler
         //     responseData.Add("stats.0.value", "1.0");
         // }
 
-        if (_plasma is null) throw new NotImplementedException();
+        if (_session is null) throw new NotImplementedException();
 
         var responseData = new Dictionary<string, string>
         {
@@ -297,7 +300,7 @@ public class FeslHandler
             values[i] = string.Empty;
         }
 
-        var keyResults = _db.GetStatsBySession(_plasma, keys);
+        var keyResults = _db.GetStatsBySession(_session, keys);
         for (var i = 0; i < keyCount; i++)
         {
             var key = keys[i];
@@ -312,7 +315,7 @@ public class FeslHandler
 
     private async Task HandleGetRankedStats(Packet request)
     {
-        if (_plasma is null) throw new NotImplementedException();
+        if (_session is null) throw new NotImplementedException();
 
         var responseData = new Dictionary<string, string>
         {
@@ -340,7 +343,7 @@ public class FeslHandler
             values[i] = string.Empty;
         }
 
-        var keyResults = _db.GetStatsBySession(_plasma, keys);
+        var keyResults = _db.GetStatsBySession(_session, keys);
         for (var i = 0; i < keyCount; i++)
         {
             var key = keys[i];
@@ -398,7 +401,7 @@ public class FeslHandler
 
     private async Task HandlePresenceSubscribe(Packet request)
     {
-        if (_plasma is null) throw new NotImplementedException();
+        if (_session is null) throw new NotImplementedException();
 
         var responseData = new Dictionary<string, string>
         {
@@ -406,7 +409,7 @@ public class FeslHandler
             { "responses.0.outcome", "0" },
             { "responses.[]", "1" },
             { "responses.0.owner.type", "1" },
-            { "responses.0.owner.id", _plasma.UID.ToString() },
+            { "responses.0.owner.id", $"{_session.User.UserId}" },
         };
 
         var packet = new Packet("pres", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
@@ -415,6 +418,8 @@ public class FeslHandler
 
     private async Task HandleLookupUserInfo(Packet request)
     {
+        if (_session is null) throw new NotImplementedException();
+
         var responseData = new Dictionary<string, string>
         {
             { "TXN", request.TXN },
@@ -427,11 +432,14 @@ public class FeslHandler
             var query = request[$"userInfo.{i}.userName"];
             responseData.Add($"userInfo.{i}.userName", query);
 
-            var userId = _db.FindUserById(query, _plasma!.PlatformName);
-            if (!userId.HasValue) continue;
+            var user = _db.FindUserById(query, _session.User.Platform);
+            if (user is null) continue;
 
-            responseData.Add($"userInfo.{i}.userId", $"{userId.Value}");
+            responseData.Add($"userInfo.{i}.userId", $"{user.UserId}");
             responseData.Add($"userInfo.{i}.namespace", "PS3_SUB");
+
+            if (user.PlatformId is null || user.PlatformId == 0) continue;
+            responseData.Add($"userInfo.{i}.xuid", $"{user.PlatformId}");
         }
 
         var packet = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
@@ -440,7 +448,7 @@ public class FeslHandler
 
     private async Task HandleGetAssociations(Packet request)
     {
-        if (_plasma is null) throw new NotImplementedException();
+        if (_session is null) throw new NotImplementedException();
 
         var assoType = request.DataDict["type"] as string ?? string.Empty;
         var responseData = new Dictionary<string, string>
@@ -448,10 +456,10 @@ public class FeslHandler
             { "TXN", "GetAssociations" },
             { "domainPartition.domain", request.DataDict["domainPartition.domain"] },
             { "domainPartition.subDomain", request.DataDict["domainPartition.subDomain"] },
-            { "owner.id", _plasma.UID.ToString() },
+            { "owner.id", $"{_session.User.UserId}" },
             { "owner.type", "1" },
             { "type", assoType },
-            { "owner.name", _plasma.NAME },
+            { "owner.name", _session.User.Username },
             { "maxListSize", "100" },
             { "members.[]", "0" },
         };
@@ -497,7 +505,7 @@ public class FeslHandler
             nuid = nuid.Split('@')[0];
         }
 
-        _plasma = await _sharedCache.CreatePlasmaConnection(_conn, nuid, clientString, partitionId, "PC");
+        _session = await _sharedCache.CreatePlasmaConnection(_conn, nuid, clientString, partitionId, "PC", null);
 
         var loginResponseData = new Dictionary<string, string>
         {
@@ -513,13 +521,13 @@ public class FeslHandler
 
     private async Task HandleNuGetPersonas(Packet request)
     {
-        if (_plasma is null) throw new NotImplementedException();
+        if (_session is null) throw new NotImplementedException();
 
         var loginResponseData = new Dictionary<string, string>
         {
             { "TXN", request.TXN },
             { "personas.[]", "1" },
-            { "personas.0", _plasma.NAME },
+            { "personas.0", _session.User.Username },
         };
 
         var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
@@ -531,9 +539,9 @@ public class FeslHandler
         var loginResponseData = new Dictionary<string, string>
         {
             { "TXN", request.TXN },
-            { "lkey", _plasma!.LKEY },
-            { "profileId", _plasma.UID.ToString() },
-            { "userId", _plasma.UID.ToString() }
+            { "lkey", _session!.LKEY },
+            { "profileId", $"{_session.User.UserId}" },
+            { "userId", $"{_session.User.UserId}" }
         };
 
         var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
@@ -542,6 +550,8 @@ public class FeslHandler
 
     private async Task HandleNuGetEntitlements(Packet request)
     {
+        if (_session is null) throw new NotImplementedException();
+
         var response = new Dictionary<string, string>()
         {
             { "TXN", request.TXN },
@@ -551,14 +561,14 @@ public class FeslHandler
         switch(groupName)
         {
             case "BFBC2PS3":
-                response.AddEntitlements(_plasma!.UID, [
+                response.AddEntitlements(_session.User.UserId, [
                     (groupName, 1111100001, "BFBC2:PS3:ONSLAUGHT_PDLC"),
                     (groupName, 1111100002, "BFBC2:PS3:CIAB"),
                     (groupName, 1111100003, "BFBC2:PS3:VIP_PDLC")
                 ]);
                 break;
             case "BattlefieldBadCompany2":
-                response.AddEntitlements(_plasma!.UID, [
+                response.AddEntitlements(_session.User.UserId, [
                     (groupName, 1100000001, "BFBC2:COMMON:GAMESTOP")
                 ]);
                 break;
@@ -606,16 +616,16 @@ public class FeslHandler
         ArgumentException.ThrowIfNullOrWhiteSpace(onlineId);
 
         var platform = Utils.GetOnlinePlatformName(ticket.SignatureIdentifier) ?? throw new("Cannot create PS3 login without online platform!");
-        _plasma = await _sharedCache.CreatePlasmaConnection(_conn, onlineId, clientString, partitionId, platform);
+        _session = await _sharedCache.CreatePlasmaConnection(_conn, onlineId, clientString, partitionId, platform, ticket.UserId);
 
-        _db.RecordLoginMetric(ticket, _plasma.PlatformName);
+        _db.RecordLoginMetric(ticket, _session.User.Platform);
 
         var loginResponseData = new Dictionary<string, string>
         {
             { "TXN", request.TXN },
-            { "lkey", _plasma.LKEY },
-            { "userId", _plasma.UID.ToString() },
-            { "screenName", _plasma.NAME }
+            { "lkey", _session.LKEY },
+            { "userId", $"{_session.User.UserId}" },
+            { "screenName", _session.User.Username }
         };
 
         var loginPacket = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
@@ -651,16 +661,16 @@ public class FeslHandler
         }
 
         var platform = Utils.GetOnlinePlatformName(ticket.SignatureIdentifier) ?? throw new("Cannot create PS3 login without online platform!");
-        _plasma = await _sharedCache.CreatePlasmaConnection(_conn, onlineId, clientString, partitionId, platform);
+        _session = await _sharedCache.CreatePlasmaConnection(_conn, onlineId, clientString, partitionId, platform, ticket.UserId);
 
-        _db.RecordLoginMetric(ticket, _plasma.PlatformName);
+        _db.RecordLoginMetric(ticket, _session.User.Platform);
 
         var loginResponseData = new Dictionary<string, string>
         {
             { "TXN", "NuPS3Login" },
-            { "lkey", _plasma.LKEY },
-            { "userId", _plasma.UID.ToString() },
-            { "personaName", _plasma.NAME }
+            { "lkey", _session.LKEY },
+            { "userId", $"{_session.User.UserId}" },
+            { "personaName", _session.User.Username }
         };
 
         var loginPacket = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, loginResponseData);
@@ -721,7 +731,7 @@ public class FeslHandler
 
     private async Task HandleUpdateStats(Packet request)
     {
-        if (_plasma is null) throw new NotImplementedException();
+        if (_session is null) throw new NotImplementedException();
 
         if (!int.TryParse(request["u.0.s.[]"], out var statsCount) || statsCount < 1)
         {
@@ -745,13 +755,13 @@ public class FeslHandler
             {
                 onslaughtStats ??= [];
 
-                var uid = long.Parse(request["u.0.o"]);
+                var uid = ulong.Parse(request["u.0.o"]);
                 var player = _sharedCache.FindSessionByUID(uid) ?? throw new Exception("Player not online?");
                 var server = _sharedCache.FindGameWithPlayerByUid(partitionId, uid) ?? throw new Exception("Player not in server?");
                 var playtime = Math.Abs(double.Parse(request[$"u.0.s.{i}.v"]));
                 var onslaughtMessage = new OnslaughtLevelCompleteMessage
                 {
-                    PlayerName = player.NAME,
+                    PlayerName = player.User.Username,
                     MapKey = key.Replace("time_mp", string.Empty).Replace("_c", string.Empty),
                     Difficulty = server.Data["B-U-difficulty"],
                     GameTime = TimeSpan.FromSeconds(playtime)
@@ -762,7 +772,7 @@ public class FeslHandler
             }
         }
 
-        _db.SetStatsBySession(_plasma, stats);
+        _db.SetStatsBySession(_session, stats);
 
         if (onslaughtStats is not null)
         {
@@ -855,7 +865,7 @@ public class FeslHandler
 
     private async Task SendPing()
     {
-        if (_plasma?.FeslConnection?.NetworkStream?.CanWrite != true || _plasma.TheaterConnection?.NetworkStream?.CanWrite != true)
+        if (_session?.FeslConnection?.NetworkStream?.CanWrite != true || _session.TheaterConnection?.NetworkStream?.CanWrite != true)
         {
             return;
         }
@@ -866,7 +876,7 @@ public class FeslHandler
         try
         {
             await _conn.SendPacket(feslPing);
-            await _plasma.TheaterConnection.SendPacket(theaterPing);
+            await _session.TheaterConnection.SendPacket(theaterPing);
         }
         catch
         {

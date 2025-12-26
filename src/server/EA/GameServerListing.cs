@@ -10,7 +10,7 @@ public class GameServerListing
     public required string PartitionId { get; init; }
     public required string Platform { get; init; }
 
-    public long UID { get; init; }
+    public ulong UID { get; init; }
     public long GID { get; init; }
     public int LID { get; init; }
 
@@ -20,7 +20,7 @@ public class GameServerListing
     public string NAME { get; init; } = string.Empty;
 
     public ConcurrentQueue<PlasmaSession> JoiningPlayers { get; init; } = [];
-    public ConcurrentDictionary<long, PlasmaSession> ConnectedPlayers { get; init; } = [];
+    public ConcurrentDictionary<ulong, PlasmaSession> ConnectedPlayers { get; init; } = [];
 
     public bool CanJoin { get; set; }
 

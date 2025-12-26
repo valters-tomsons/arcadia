@@ -320,7 +320,7 @@ public class StatusService(ILogger<StatusService> logger, ConnectionManager shar
             .Append('/')
             .Append(maxPlayers)
             .Append(" | ")
-            .AppendJoin(", ", server.ConnectedPlayers.Select(x => x.Value.NAME));
+            .AppendJoin(", ", server.ConnectedPlayers.Select(x => x.Value.User.Username));
 
         return PlayersStringBuilder.ToString();
     }

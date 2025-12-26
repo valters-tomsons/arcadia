@@ -15,7 +15,7 @@ public sealed class Database
     private readonly IServiceProvider _serviceProvider;
 
     private readonly bool _initialized;
-    private long _defaultUserId = 1000000000000;
+    private ulong _defaultUserId = 1000000000000;
 
     public Database(ILogger<Database> logger, IServiceProvider serviceProvider, IOptions<DebugSettings> options)
     {
@@ -80,6 +80,7 @@ public sealed class Database
                 UserId INTEGER PRIMARY KEY AUTOINCREMENT,
                 Username TEXT NOT NULL,
                 Platform TEXT NOT NULL,
+                PlatformId INTEGER NULL,
 
                 UNIQUE(Username, Platform)
             );
@@ -178,8 +179,8 @@ public sealed class Database
     {
         if (!_initialized ||
             keys.Length == 0 ||
-            string.IsNullOrWhiteSpace(session.NAME) ||
-            string.IsNullOrWhiteSpace(session.PlatformName)
+            string.IsNullOrWhiteSpace(session.User.Username) ||
+            string.IsNullOrWhiteSpace(session.User.Platform)
         ) return ImmutableDictionary<string, string>.Empty;
 
         var subdomain = session.PartitionId.Split('/').LastOrDefault();
@@ -201,8 +202,8 @@ public sealed class Database
             """,
             new
             {
-                Username = session.NAME,
-                Platform = session.PlatformName,
+                Username = session.User.Username,
+                Platform = session.User.Platform,
                 Subdomain = subdomain,
                 Keys = keys
             })?.ToDictionary(
@@ -223,8 +224,8 @@ public sealed class Database
     {
         if (!_initialized ||
             stats.Count == 0 ||
-            string.IsNullOrWhiteSpace(session.NAME) ||
-            string.IsNullOrWhiteSpace(session.PlatformName)
+            string.IsNullOrWhiteSpace(session.User.Username) ||
+            string.IsNullOrWhiteSpace(session.User.Platform)
         ) return;
 
         var subdomain = session.PartitionId.Split('/').LastOrDefault();
@@ -234,8 +235,8 @@ public sealed class Database
         {
             var updates = stats.Select(x => new
             {
-                Username = session.NAME,
-                Platform = session.PlatformName,
+                Username = session.User.Username,
+                Platform = session.User.Platform,
                 Subdomain = subdomain,
                 x.Key,
                 x.Value
@@ -255,12 +256,16 @@ public sealed class Database
         }
     }
 
-    public long GetOrCreateUserId(string username, string platformName)
+    public PlasmaUser GetOrCreateUser(string username, string platformName, ulong? platformId)
     {
         if (!_initialized)
         {
-            // Matchmaking must work, database should not be a hard requirement!
-            return Interlocked.Increment(ref _defaultUserId);
+            return new()
+            {
+                UserId = Interlocked.Increment(ref _defaultUserId),
+                Platform = platformName,
+                Username = username
+            };
         }
 
         ArgumentException.ThrowIfNullOrWhiteSpace(username);
@@ -268,26 +273,33 @@ public sealed class Database
 
         using var conn = _serviceProvider.GetRequiredService<IDbConnection>();
 
-        var userId = conn.ExecuteScalar<long>(
+        var user = conn.QueryFirstOrDefault<PlasmaUser?>(
         """
-            SELECT UserId FROM users 
+            SELECT * FROM users 
             WHERE Username = @Username AND Platform = @Platform;
             """,
         new { Username = username, Platform = platformName });
 
-        if (userId != 0)
-            return userId;
+        if (user is not null) return user;
 
-        return conn.ExecuteScalar<long>(
+        var userId = conn.ExecuteScalar<ulong>(
         """
-            INSERT INTO users (Username, Platform) 
-            VALUES (@Username, @Platform)
+            INSERT INTO users (Username, Platform, PlatformId) 
+            VALUES (@Username, @Platform, @PlatformId)
             RETURNING UserId;
             """,
-        new { Username = username, Platform = platformName });
+        new { Username = username, Platform = platformName, PlatformId = platformId });
+
+        return new()
+        {
+            UserId = userId,
+            Username = username,
+            Platform = platformName,
+            PlatformId = platformId
+        };
     }
 
-    public long? FindUserById(string username, string prefferedPlatform)
+    public PlasmaUser? FindUserById(string username, string prefferedPlatform)
     {
         if (!_initialized) return null;
 
@@ -296,14 +308,13 @@ public sealed class Database
 
         using var conn = _serviceProvider.GetRequiredService<IDbConnection>();
 
-        return conn.ExecuteScalar<long?>(
+        return conn.QueryFirstOrDefault<PlasmaUser?>(
         """
-            SELECT UserId FROM users 
+            SELECT * FROM users 
             WHERE Username = @Username
             ORDER BY 
                 CASE WHEN Platform = @Platform THEN 0 ELSE 1 END,
                 Platform
-            LIMIT 1
             """,
         new { Username = username, Platform = prefferedPlatform });
     }

@@ -16,19 +16,17 @@ public class ConnectionManager(ILogger<ConnectionManager> logger, Database db)
 
     private readonly SemaphoreSlim _semaphore = new(1);
 
-    public async Task<PlasmaSession> CreatePlasmaConnection(IEAConnection fesl, string onlineId, string clientString, string partitionId, string platform)
+    public async Task<PlasmaSession> CreatePlasmaConnection(IEAConnection fesl, string onlineId, string clientString, string partitionId, string platform, ulong? platformId)
     {
-        var userId = _db.GetOrCreateUserId(onlineId, platform);
+        var user = _db.GetOrCreateUser(onlineId, platform, platformId);
 
         PlasmaSession result = new()
         {
             FeslConnection = fesl,
-            UID = userId,
+            User = user,
             LKEY = SharedCounters.GenerateLKey(),
-            NAME = onlineId,
             ClientString = clientString,
             PartitionId = partitionId,
-            PlatformName = platform
         };
 
         await _semaphore.WaitAsync();
@@ -52,9 +50,9 @@ public class ConnectionManager(ILogger<ConnectionManager> logger, Database db)
         return plasma;
     }
 
-    public async Task RemovePlasmaSession(PlasmaSession plasma)
+    public async Task RemovePlasmaSession(PlasmaSession session)
     {
-        if (!_connections.Contains(plasma))
+        if (!_connections.Contains(session))
         {
             return;
         }
@@ -63,12 +61,12 @@ public class ConnectionManager(ILogger<ConnectionManager> logger, Database db)
 
         try
         {
-            _gameServers.RemoveAll(x => x.UID == plasma.UID && x.PartitionId == plasma.PartitionId);
+            _gameServers.RemoveAll(x => x.UID == session.User.UserId && x.PartitionId == session.PartitionId);
 
-            var sessionInGame = FindGameWithPlayerByUid(plasma.PartitionId, plasma.UID);
-            sessionInGame?.ConnectedPlayers.Remove(plasma.UID, out var _);
+            var sessionInGame = FindGameWithPlayerByUid(session.PartitionId, session.User.UserId);
+            sessionInGame?.ConnectedPlayers.Remove(session.User.UserId, out var _);
 
-            _connections.Remove(plasma);
+            _connections.Remove(session);
         }
         finally
         {
@@ -112,7 +110,7 @@ public class ConnectionManager(ILogger<ConnectionManager> logger, Database db)
 
     public PlasmaSession? FindPartitionSessionByUser(string partitionId, string playerName)
     {
-        return _connections.SingleOrDefault(x => x.PartitionId == partitionId && x.NAME == playerName);
+        return _connections.SingleOrDefault(x => x.PartitionId == partitionId && x.User.Username == playerName);
     }
 
     public PlasmaSession? FindSessionByLkey(string lkey)
@@ -120,9 +118,9 @@ public class ConnectionManager(ILogger<ConnectionManager> logger, Database db)
         return _connections.SingleOrDefault(x => x.LKEY == lkey);
     }
 
-    public PlasmaSession? FindSessionByUID(long uid)
+    public PlasmaSession? FindSessionByUID(ulong uid)
     {
-        return _connections.SingleOrDefault(x => x.UID == uid);
+        return _connections.SingleOrDefault(x => x.User.UserId == uid);
     }
 
     public void UpsertGameServerDataByGid(long serverGid, IDictionary<string, string> data)
@@ -148,10 +146,10 @@ public class ConnectionManager(ILogger<ConnectionManager> logger, Database db)
 
     public GameServerListing? FindGameWithPlayer(string partitionId, string playerName)
     {
-        return _gameServers.FirstOrDefault(x => x.ConnectedPlayers.Values.Any(y => y.PartitionId == partitionId && y.NAME.Equals(playerName)));
+        return _gameServers.FirstOrDefault(x => x.ConnectedPlayers.Values.Any(y => y.PartitionId == partitionId && y.User.Username.Equals(playerName)));
     }
 
-    public GameServerListing? FindGameWithPlayerByUid(string partitionId, long uid)
+    public GameServerListing? FindGameWithPlayerByUid(string partitionId, ulong uid)
     {
         return _gameServers.FirstOrDefault(x => x.ConnectedPlayers.Any(x => x.Key == uid && x.Value.PartitionId == partitionId));
     }
