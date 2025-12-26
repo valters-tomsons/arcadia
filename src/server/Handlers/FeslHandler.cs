@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Globalization;
+using System.Text;
 using Arcadia.EA;
 using Arcadia.EA.Constants;
 using Arcadia.EA.Ports;
@@ -81,10 +82,10 @@ public class FeslHandler
             ["rank/GetRankedStatsForOwners"] = HandleGetRankedStatsForOwners,
             ["rank/UpdateStats"] = HandleUpdateStats,
             ["xmsg/GetMessages"] = HandleGetMessages,
+            ["acct/GetTelemetryToken"] = HandleGetTelemetryToken,
 
             ["pres/SetPresenceStatus"] = AcknowledgeRequest,
             ["acct/NuGrantEntitlement"] = AcknowledgeRequest,
-            ["acct/GetTelemetryToken"] = AcknowledgeRequest,
             ["xmsg/ModifySettings"] = AcknowledgeRequest,
             ["mtrx/ReportMetrics"] = AcknowledgeRequest,
             ["rank/ReportMetrics"] = AcknowledgeRequest,
@@ -460,7 +461,6 @@ public class FeslHandler
 
     private async Task HandleGetPingSites(Packet request)
     {
-        var serverIp = _plasma!.FeslConnection!.LocalAddress;
         var responseData = new Dictionary<string, string>
         {
             { "TXN", "GetPingSites" },
@@ -769,6 +769,38 @@ public class FeslHandler
         }
 
         await AcknowledgeRequest(request);
+    }
+
+    private async Task HandleGetTelemetryToken(Packet request)
+    {
+        const string ip = "127.0.0.1";
+        const int port = 9946;
+        const string locale = "enUS";
+
+        byte[] payload = Convert.FromBase64String(
+            "9LuVt72Urfg87tntysq2jviQiKu2jt2v5+Sl48btl7L13IXjwoSMmLLo4KGmrI2Y5OaI48KEjJiw4MCB06yYmrfm5Mnjxpia"
+        );
+
+        string tokenPrefix = $"{ip},{port},{locale},";
+        byte[] prefixBytes = Encoding.ASCII.GetBytes(tokenPrefix);
+
+        byte[] tokenBytes = new byte[prefixBytes.Length + payload.Length];
+        Buffer.BlockCopy(prefixBytes, 0, tokenBytes, 0, prefixBytes.Length);
+        Buffer.BlockCopy(payload, 0, tokenBytes, prefixBytes.Length, payload.Length);
+
+        string base64Token = Convert.ToBase64String(tokenBytes);
+
+        var response = new Dictionary<string, string>
+        {
+            { "TXN", request.TXN },
+            { "filters", string.Empty },
+            { "enabled", string.Empty },
+            { "disabled", string.Empty },
+            { "telemetryToken", base64Token }
+        };
+
+        var packet = new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, response);
+        await _conn.SendPacket(packet);
     }
 
     private async Task AcknowledgeRequest(Packet request)
