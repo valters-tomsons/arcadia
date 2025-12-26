@@ -134,7 +134,7 @@ public class FeslHandler
             LKEY = string.Empty,
             ClientString = string.Empty,
             PartitionId = string.Empty,
-            OnlinePlatformId = string.Empty
+            PlatformName = string.Empty
         };
     }
 
@@ -427,7 +427,7 @@ public class FeslHandler
             var query = request[$"userInfo.{i}.userName"];
             responseData.Add($"userInfo.{i}.userName", query);
 
-            var userId = _db.FindUserById(query, _plasma!.OnlinePlatformId);
+            var userId = _db.FindUserById(query, _plasma!.PlatformName);
             if (!userId.HasValue) continue;
 
             responseData.Add($"userInfo.{i}.userId", $"{userId.Value}");
@@ -608,7 +608,7 @@ public class FeslHandler
         var platform = Utils.GetOnlinePlatformName(ticket.SignatureIdentifier) ?? throw new("Cannot create PS3 login without online platform!");
         _plasma = await _sharedCache.CreatePlasmaConnection(_conn, onlineId, clientString, partitionId, platform);
 
-        _db.RecordLoginMetric(ticket, _plasma.OnlinePlatformId);
+        _db.RecordLoginMetric(ticket, _plasma.PlatformName);
 
         var loginResponseData = new Dictionary<string, string>
         {
@@ -653,7 +653,7 @@ public class FeslHandler
         var platform = Utils.GetOnlinePlatformName(ticket.SignatureIdentifier) ?? throw new("Cannot create PS3 login without online platform!");
         _plasma = await _sharedCache.CreatePlasmaConnection(_conn, onlineId, clientString, partitionId, platform);
 
-        _db.RecordLoginMetric(ticket, _plasma.OnlinePlatformId);
+        _db.RecordLoginMetric(ticket, _plasma.PlatformName);
 
         var loginResponseData = new Dictionary<string, string>
         {

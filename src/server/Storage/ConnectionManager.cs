@@ -28,7 +28,7 @@ public class ConnectionManager(ILogger<ConnectionManager> logger, Database db)
             NAME = onlineId,
             ClientString = clientString,
             PartitionId = partitionId,
-            OnlinePlatformId = platform
+            PlatformName = platform
         };
 
         await _semaphore.WaitAsync();

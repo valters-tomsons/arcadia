@@ -179,7 +179,7 @@ public sealed class Database
         if (!_initialized ||
             keys.Length == 0 ||
             string.IsNullOrWhiteSpace(session.NAME) ||
-            string.IsNullOrWhiteSpace(session.OnlinePlatformId)
+            string.IsNullOrWhiteSpace(session.PlatformName)
         ) return ImmutableDictionary<string, string>.Empty;
 
         var subdomain = session.PartitionId.Split('/').LastOrDefault();
@@ -202,7 +202,7 @@ public sealed class Database
             new
             {
                 Username = session.NAME,
-                Platform = session.OnlinePlatformId,
+                Platform = session.PlatformName,
                 Subdomain = subdomain,
                 Keys = keys
             })?.ToDictionary(
@@ -224,7 +224,7 @@ public sealed class Database
         if (!_initialized ||
             stats.Count == 0 ||
             string.IsNullOrWhiteSpace(session.NAME) ||
-            string.IsNullOrWhiteSpace(session.OnlinePlatformId)
+            string.IsNullOrWhiteSpace(session.PlatformName)
         ) return;
 
         var subdomain = session.PartitionId.Split('/').LastOrDefault();
@@ -235,7 +235,7 @@ public sealed class Database
             var updates = stats.Select(x => new
             {
                 Username = session.NAME,
-                Platform = session.OnlinePlatformId,
+                Platform = session.PlatformName,
                 Subdomain = subdomain,
                 x.Key,
                 x.Value
