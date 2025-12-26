@@ -449,18 +449,10 @@ public class FeslHandler
             { "owner.id", _plasma.UID.ToString() },
             { "owner.type", "1" },
             { "type", assoType },
+            { "owner.name", _plasma.NAME },
+            { "maxListSize", "100" },
             { "members.[]", "0" },
         };
-
-        if (assoType == "PlasmaMute")
-        {
-            responseData.Add("maxListSize", "100");
-            responseData.Add("owner.name", _plasma.NAME);
-        }
-        else
-        {
-            _logger.LogWarning("Unknown association type: {assoType}", assoType);
-        }
 
         var packet = new Packet("asso", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
         await _conn.SendPacket(packet);
