@@ -9,12 +9,11 @@ using NPTicket;
 
 namespace Arcadia.Storage;
 
-public sealed class Database : IDisposable
+public sealed class Database
 {
     private readonly ILogger _logger;
     private readonly IServiceProvider _serviceProvider;
 
-    private readonly ReaderWriterLockSlim _lock = new();
     private readonly bool _initialized;
     private long _defaultUserId = 1000000000000;
 
@@ -27,8 +26,6 @@ public sealed class Database : IDisposable
 
         try
         {
-            _lock.EnterWriteLock();
-
             using var conn = _serviceProvider.GetRequiredService<IDbConnection>();
 
             conn.Execute("PRAGMA journal_mode=WAL;");
@@ -98,26 +95,14 @@ public sealed class Database : IDisposable
         {
             _logger.LogCritical(e, "Failed to initialize database, it will not be used!");
         }
-        finally
-        {
-            _lock.ExitWriteLock();
-        }
     }
 
     public void RecordStartup()
     {
         if (!_initialized) return;
 
-        try
-        {
-            _lock.EnterWriteLock();
             using var conn = _serviceProvider.GetRequiredService<IDbConnection>();
             conn.Execute("INSERT INTO server_startup DEFAULT VALUES");
-        }
-        finally
-        {
-            _lock.ExitWriteLock();
-        }
     }
 
     public void RecordOnslaughtCompletion(OnslaughtLevelCompleteMessage[] messages)
@@ -126,7 +111,6 @@ public sealed class Database : IDisposable
 
         try
         {
-            _lock.EnterWriteLock();
             using var conn = _serviceProvider.GetRequiredService<IDbConnection>();
 
             foreach (var msg in messages)
@@ -158,20 +142,14 @@ public sealed class Database : IDisposable
         {
             _logger.LogCritical(e, "Failed to record onslaught stats!");
         }
-        finally
-        {
-            _lock.ExitWriteLock();
-        }
     }
 
     public void RecordLoginMetric(Ticket ticket, string platformName)
     {
         if (!_initialized) return;
 
-
         try
         {
-            _lock.EnterWriteLock();
             using var conn = _serviceProvider.GetRequiredService<IDbConnection>();
 
             conn.Execute(
@@ -194,10 +172,6 @@ public sealed class Database : IDisposable
         {
             _logger.LogCritical(e, "Failed to record login metric!");
         }
-        finally
-        {
-            _lock.ExitWriteLock();
-        }
     }
 
     public ImmutableDictionary<string, string> GetStatsBySession(PlasmaSession session, string[] keys)
@@ -213,7 +187,6 @@ public sealed class Database : IDisposable
 
         try
         {
-            _lock.EnterReadLock();
             using var conn = _serviceProvider.GetRequiredService<IDbConnection>();
 
             var results = conn.Query(
@@ -244,10 +217,6 @@ public sealed class Database : IDisposable
             _logger.LogError(e, "Failed to get stats: {Message}", e.Message);
             return ImmutableDictionary<string, string>.Empty;
         }
-        finally
-        {
-            _lock.ExitReadLock();
-        }
     }
 
     public void SetStatsBySession(PlasmaSession session, IDictionary<string, string> stats)
@@ -272,7 +241,6 @@ public sealed class Database : IDisposable
                 x.Value
             });
 
-            _lock.EnterWriteLock();
             using var conn = _serviceProvider.GetRequiredService<IDbConnection>();
 
             conn.Execute(
@@ -284,10 +252,6 @@ public sealed class Database : IDisposable
         catch (Exception e)
         {
             _logger.LogError(e, "Failed to get stats: {Message}", e.Message);
-        }
-        finally
-        {
-            _lock.ExitWriteLock();
         }
     }
 
@@ -302,7 +266,7 @@ public sealed class Database : IDisposable
         ArgumentException.ThrowIfNullOrWhiteSpace(username);
         ArgumentException.ThrowIfNullOrWhiteSpace(platformName);
 
-            using var conn = _serviceProvider.GetRequiredService<IDbConnection>();
+        using var conn = _serviceProvider.GetRequiredService<IDbConnection>();
 
         var userId = conn.ExecuteScalar<long>(
         """
@@ -314,12 +278,12 @@ public sealed class Database : IDisposable
         if (userId != 0)
             return userId;
 
-            return conn.ExecuteScalar<long>(
-            """
-                INSERT INTO users (Username, Platform) 
-                VALUES (@Username, @Platform)
-                RETURNING UserId;
+        return conn.ExecuteScalar<long>(
+        """
+            INSERT INTO users (Username, Platform) 
+            VALUES (@Username, @Platform)
+            RETURNING UserId;
             """,
-            new { Username = username, Platform = platformName });
+        new { Username = username, Platform = platformName });
     }
 }
