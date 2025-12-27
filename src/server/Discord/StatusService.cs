@@ -388,8 +388,7 @@ public class StatusService(ILogger<StatusService> logger, ConnectionManager shar
             .AddField("Players", GetPlayerCountString(server))
             .WithTimestamp(server.StartedAt);
 
-        var friendlyFire = server.Data["B-U-FriendlyFire"];
-        if (!string.IsNullOrWhiteSpace(friendlyFire))
+        if (server.Data.TryGetValue("B-U-FriendlyFire", out var friendlyFire) && friendlyFire == "1")
         {
             eb.AddField("Friendly Fire", friendlyFire == "1" ? "Yes" : "No");
         }
