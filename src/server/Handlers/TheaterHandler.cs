@@ -249,8 +249,15 @@ public class TheaterHandler
 
     private async Task HandleGDAT(Packet request)
     {
-        var reqGid = request["GID"];
-        var serverGid = string.IsNullOrWhiteSpace(reqGid) ? 0 : int.Parse(reqGid);
+        if (!long.TryParse(request["GID"], out var serverGid))
+        {
+            if (request["TYPE"] == "G")
+            {
+                await HandleGLST(request);
+                return;
+            }
+        }
+
         var game = _sharedCache.GetGameByGid(_session!.PartitionId, serverGid);
 
         if (game is null || game.TheaterConnection is null)

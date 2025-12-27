@@ -299,7 +299,7 @@ public sealed class Database
         };
     }
 
-    public PlasmaUser? FindUserById(string username, string prefferedPlatform)
+    public PlasmaUser? FindUserByName(string username, string prefferedPlatform)
     {
         if (!_initialized) return null;
 
@@ -317,5 +317,21 @@ public sealed class Database
                 Platform
             """,
         new { Username = username, Platform = prefferedPlatform });
+    }
+
+    public PlasmaUser? FindUserById(ulong userId)
+    {
+        if (!_initialized) return null;
+
+        ArgumentOutOfRangeException.ThrowIfZero(userId);
+
+        using var conn = _serviceProvider.GetRequiredService<IDbConnection>();
+
+        return conn.QueryFirstOrDefault<PlasmaUser?>(
+        """
+            SELECT * FROM users 
+            WHERE UserId = @UserId
+            """,
+        new { UserId = userId });
     }
 }

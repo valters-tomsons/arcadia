@@ -430,13 +430,25 @@ public class FeslHandler
         var queryCount = int.Parse(request["userInfo.[]"]);
         for (var i = 0; i < queryCount; i++)
         {
-            var query = request[$"userInfo.{i}.userName"];
-            responseData.Add($"userInfo.{i}.userName", query);
+            var username = request[$"userInfo.{i}.userName"];
+            var userId = request[$"userInfo.{i}.userId"];
 
-            var user = _db.FindUserById(query, _session.User.Platform);
+            PlasmaUser? user = null;
+            if (!string.IsNullOrWhiteSpace(username))
+            {
+                responseData.Add($"userInfo.{i}.userName", username);
+                user = _db.FindUserByName(username, _session.User.Platform);
+            }
+            else if (!string.IsNullOrWhiteSpace(userId))
+            {
+                responseData.Add($"userInfo.{i}.userId", userId);
+                user = _db.FindUserById(ulong.Parse(userId));
+            }
+
             if (user is null) continue;
 
-            responseData.Add($"userInfo.{i}.userId", $"{user.UserId}");
+            responseData.TryAdd($"userInfo.{i}.userId", $"{user.UserId}");
+            responseData.TryAdd($"userInfo.{i}.userName", user.Username);
             responseData.Add($"userInfo.{i}.namespace", "PS3_SUB");
 
             if (user.PlatformId is null || user.PlatformId == 0) continue;
