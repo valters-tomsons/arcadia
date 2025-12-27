@@ -45,6 +45,15 @@ public class ModerationService(ILogger<ModerationService> logger)
         "which modes work",
         "tutorial only?",
     ];
+    
+    private readonly string[] piracyPhrases =
+    [
+        "pkgi",
+        "where to find pkg",
+        "where to get pkg",
+        "where to download game",
+        "how to download game",
+    ];
 
     public async Task OnMessageReceived(SocketUserMessage msg)
     {
@@ -71,6 +80,15 @@ public class ModerationService(ILogger<ModerationService> logger)
                 return;
             }
         }
+
+        foreach(var phrase in piracyPhrases)
+        {
+            if (content.Contains(phrase, StringComparison.InvariantCultureIgnoreCase))
+            {
+                await DeletePiracy(msg);
+                return;
+            }
+        }
     }
 
     private static async Task DeleteNonEnglish(SocketUserMessage msg)
@@ -92,6 +110,16 @@ public class ModerationService(ILogger<ModerationService> logger)
         try
         {
             await msg.ReplyAsync($"Read <#{infoChannelId}> in its entirety, it's already explained!");
+            await msg.DeleteAsync();
+        }
+        catch { }
+    }
+
+    private static async Task DeletePiracy(SocketUserMessage msg)
+    {
+        try
+        {
+            await msg.ReplyAsync($"Read Rule #2, no discussion of piracy!");
             await msg.DeleteAsync();
         }
         catch { }
