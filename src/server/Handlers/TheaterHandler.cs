@@ -424,9 +424,19 @@ public class TheaterHandler
 
     public async Task HandleGLST(Packet request)
     {
-        var games = _sharedCache.GetPartitionServers(_session!.PartitionId).Where(x => x.CanJoin).ToList();
+        if (_session is null) throw new NotImplementedException();
 
-        var gameList = new Dictionary<string,string>
+        var games = _sharedCache
+                .GetPartitionServers(_session.PartitionId)
+                .Where(x => x.CanJoin)
+                .ToList();
+
+        if (_session.PartitionId.EndsWith("LOTR"))
+        {
+            games = [.. games.Where(x => x.Data["B-U-FriendsOnly"] == request["FILTER-ATTR-U-FriendsOnly"])];
+        }
+
+        await _conn.SendPacket(new("GLST", TheaterTransmissionType.OkResponse, 0)
         {
             ["TID"] = request["TID"],
             ["LID"] = request["LID"],
@@ -435,12 +445,11 @@ public class TheaterHandler
             ["FAVORITE-GAMES"] = "0",
             ["FAVORITE-PLAYERS"] = "0",
             ["NUM-GAMES"] = $"{games.Count}"
-        };
-        await _conn.SendPacket(new Packet("GLST", TheaterTransmissionType.OkResponse, 0, gameList));
+        });
 
         foreach (var game in games)
         {
-            var gameData = new Dictionary<string, string>
+            await _conn.SendPacket(new("GDAT", TheaterTransmissionType.OkResponse, 0)
             {
                 ["TID"] = request["TID"],
                 ["LID"] = request["LID"],
@@ -460,9 +469,7 @@ public class TheaterHandler
                 ["B-numObservers"] = game.Data["B-numObservers"],
                 ["B-maxObservers"] = game.Data["B-maxObservers"],
                 ["AP"] = $"{game.ConnectedPlayers.Count}"
-            };
-
-            await _conn.SendPacket(new Packet("GDAT", TheaterTransmissionType.OkResponse, 0, gameData));
+            });
         }
     }
 
