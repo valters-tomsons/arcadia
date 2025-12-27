@@ -1,4 +1,5 @@
 using System.Collections.Frozen;
+using System.Globalization;
 using System.Text;
 using Arcadia.EA;
 using Arcadia.Storage;
@@ -391,6 +392,11 @@ public class StatusService(ILogger<StatusService> logger, ConnectionManager shar
         if (!string.IsNullOrWhiteSpace(friendlyFire))
         {
             eb.AddField("Friendly Fire", friendlyFire == "1" ? "Yes" : "No");
+        }
+
+        if (long.TryParse(server.Data["B-U-Money"], out var money) && money > 0)
+        {
+            eb.AddField("Money", $"${money:N0}");
         }
 
         var mission = server.Data["B-U-Mission"];
