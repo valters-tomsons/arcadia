@@ -87,8 +87,11 @@ public class StaticFileHostedService(IOptions<FileServerSettings> settings, ILog
     private string? GetFullPath(string requestPath)
     {
         var filePath = Path.GetFullPath(Path.Combine(_absoluteRootPath, requestPath));
-        var isValid = filePath.StartsWith(_absoluteRootPath, StringComparison.OrdinalIgnoreCase);
-        return isValid ? filePath : null;
+
+        var pathIsBounded = filePath.StartsWith(_absoluteRootPath, StringComparison.OrdinalIgnoreCase);
+        var pathIsFile = File.Exists(filePath) && !Directory.Exists(filePath);
+        
+        return pathIsBounded && pathIsFile ? filePath : null;
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
