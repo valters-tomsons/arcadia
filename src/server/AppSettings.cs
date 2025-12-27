@@ -14,6 +14,7 @@ public record ArcadiaSettings
         (int)FeslGamePort.BeachPS3,
         (int)FeslGamePort.Mercenaries2,
         (int)FeslGamePort.MoHAirborne,
+        (int)FeslGamePort.LotrConquest,
     ];
 
     public int MessengerPort { get; init; } = 42069;
