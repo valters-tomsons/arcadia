@@ -21,6 +21,7 @@ public class TheaterHandler
 
     private PlasmaSession? _session;
     private string? _platform;
+    private long? _UBRA_TID = null;
 
     public TheaterHandler(IEAConnection conn, ILogger<TheaterHandler> logger, SharedCounters sharedCounters, ConnectionManager sharedCache, IOptions<DebugSettings> dbgOptions)
     {
@@ -563,26 +564,27 @@ public class TheaterHandler
         await FinishPlayerEnterGameRequest(request, gid);
     }
 
-    private int _brackets = 0;
     private async Task HandleUBRA(Packet request)
     {
+        var tid = long.Parse(request["TID"]);
+
         if (request["START"] == "1")
         {
-            _brackets += 2;
+            _UBRA_TID = tid;
         }
         else
         {
-            var reqTid = int.Parse(request["TID"]);
-            var originalTid = reqTid - _brackets / 2;
+            if (1 > _UBRA_TID) throw new NotImplementedException("Tried to UBRA without START");
 
-            for (var packet = 0; packet < _brackets; packet++)
+            for (var i = _UBRA_TID; i < tid + 1; i++)
             {
-                var response = new Packet(request.Type, TheaterTransmissionType.OkResponse, 0);
-                response["TID"] = $"{originalTid + packet}";
-
-                await _conn.SendPacket(response);
-                _brackets--;
+                await _conn.SendPacket(new(request.Type, TheaterTransmissionType.OkResponse, 0)
+                {
+                    ["TID"] = $"{i}"
+                });
             }
+
+            _UBRA_TID = null;
         }
     }
 
