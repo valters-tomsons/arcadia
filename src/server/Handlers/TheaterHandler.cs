@@ -171,17 +171,10 @@ public class TheaterHandler
             }
         }
 
-        var response = new Dictionary<string, string>
-        {
-            ["TID"] = $"{request["TID"]}",
-            ["LID"] = $"{game.LID}",
-            ["GID"] = $"{game.GID}",
-        };
+        game.JoiningPlayers.Enqueue(_session);
+        _session.PID = game.ConnectedPlayers.Count + game.JoiningPlayers.Count;
+        _session.EGAM_TID = long.Parse(request["TID"]);
 
-        var clientPacket = new Packet("EGAM", TheaterTransmissionType.OkResponse, 0, response);
-        await _conn.SendPacket(clientPacket);
-
-        _session.PID = game.ConnectedPlayers.Count + game.JoiningPlayers.Count + 1;
         await SendEGRQ_ToGameHost(request, _session, game);
     }
 
@@ -229,9 +222,9 @@ public class TheaterHandler
         return true;
     }
 
-    private static async Task SendEGRQ_ToGameHost(Packet request, PlasmaSession session, GameServerListing server)
+    private static async Task SendEGRQ_ToGameHost(Packet request, PlasmaSession player, GameServerListing server)
     {
-        if (session.TheaterConnection is null) throw new NotImplementedException();
+        if (player.TheaterConnection is null) throw new NotImplementedException();
         if (server.TheaterConnection is null) throw new NotImplementedException();
 
         var gameId = server.GID;
@@ -240,19 +233,18 @@ public class TheaterHandler
             ["R-INT-PORT"] = $"{request["R-INT-PORT"]}",
             ["R-INT-IP"] = $"{request["R-INT-IP"]}",
             ["PORT"] = $"{request["PORT"]}",
-            ["NAME"] = session.User.Username,
+            ["NAME"] = player.User.Username,
             ["PTYPE"] = $"{request["PTYPE"]}",
             ["TICKET"] = $"{server.Data["TICKET"]}",
-            ["PID"] = $"{session.PID}",
-            ["UID"] = $"{session.User.UserId}",
+            ["PID"] = $"{player.PID}",
+            ["UID"] = $"{player.User.UserId}",
             ["LID"] = $"{server.LID}",
             ["GID"] = $"{gameId}",
-            ["IP"] = session.TheaterConnection.RemoteAddress
+            ["IP"] = player.TheaterConnection.RemoteAddress
         };
 
         var enterGameRequestPacket = new Packet("EGRQ", TheaterTransmissionType.OkResponse, 0, response);
         await server.TheaterConnection.SendPacket(enterGameRequestPacket);
-        server.JoiningPlayers.Enqueue(session);
     }
 
     private async Task HandleGDAT(Packet request)
@@ -346,40 +338,52 @@ public class TheaterHandler
         await _conn.SendPacket(packet);
     }
 
-    private async Task SendEGEG_ToPlayerInQueue(Packet request, int gid)
+    private async Task FinishPlayerEnterGameRequest(Packet serverResponse, int gid)
     {
-        var game = _sharedCache.GetGameByGid(_session!.PartitionId, gid) ?? throw new NotImplementedException();
-        var joining = game.JoiningPlayers.TryDequeue(out var player);
+        var server = _sharedCache.GetGameByGid(_session!.PartitionId, gid) ?? throw new NotImplementedException();
+        if (server.TheaterConnection is null) throw new NotImplementedException();
 
-        if (request["ALLOWED"] != "1" || joining != true)
+        var joining = server.JoiningPlayers.TryDequeue(out var player);
+        if (!joining || player?.TheaterConnection is null) return;
+
+        var egamResp = new Dictionary<string, string>
         {
-            _logger.LogWarning("Host disallowed player join!");
-            return;
-        }
-
-        if (game.TheaterConnection is null) throw new NotImplementedException();
-        if (player?.TheaterConnection is null) throw new NotImplementedException();
-
-        var serverData = game.Data;
-        var response = new Dictionary<string, string>
-        {
-            ["PL"] = game.Platform,
-            ["TICKET"] = $"{serverData["TICKET"]}",
-            ["PID"] = $"{request["PID"]}",
-            ["P"] = $"{serverData["PORT"]}",
-            ["HUID"] = $"{game.UID}",
-            ["INT-PORT"] = $"{serverData["INT-PORT"]}",
-            ["EKEY"] = $"{game.EKEY}",
-            ["INT-IP"] = $"{serverData["INT-IP"]}",
-            ["UGID"] = $"{game.UGID}",
-            ["I"] = game.TheaterConnection.RemoteAddress,
-            ["LID"] = $"{game.LID}",
-            ["GID"] = $"{game.GID}"
+            ["TID"] = $"{player.EGAM_TID}",
+            ["LID"] = $"{server.LID}",
+            ["GID"] = $"{server.GID}",
+            ["ALLOWED"] = serverResponse["ALLOWED"]
         };
 
-        var packet = new Packet("EGEG", TheaterTransmissionType.OkResponse, 0, response);
-        game.ConnectedPlayers.TryAdd(player.User.UserId, player);
-        await player.TheaterConnection.SendPacket(packet);
+        await player.TheaterConnection.SendPacket(new("EGAM", TheaterTransmissionType.OkResponse, 0, egamResp));
+
+        if (serverResponse["ALLOWED"] != "1")
+        {
+            _logger.LogWarning("Host disallowed player join!");
+            egamResp.Add("REASON", serverResponse["REASON"]);
+
+            // Send it anyway...
+        }
+
+        server.ConnectedPlayers.TryAdd(player.User.UserId, player);
+
+        var serverData = server.Data;
+        var egegResp = new Dictionary<string, string>
+        {
+            ["PL"] = server.Platform,
+            ["TICKET"] = $"{serverData["TICKET"]}",
+            ["PID"] = $"{serverResponse["PID"]}",
+            ["P"] = $"{serverData["PORT"]}",
+            ["HUID"] = $"{server.UID}",
+            ["INT-PORT"] = $"{serverData["INT-PORT"]}",
+            ["EKEY"] = $"{server.EKEY}",
+            ["INT-IP"] = $"{serverData["INT-IP"]}",
+            ["UGID"] = $"{server.UGID}",
+            ["I"] = server.TheaterConnection.RemoteAddress,
+            ["LID"] = $"{server.LID}",
+            ["GID"] = $"{server.GID}"
+        };
+
+        await player.TheaterConnection.SendPacket(new("EGEG", TheaterTransmissionType.OkResponse, 0, egegResp));
     }
 
     private async Task HandleLLST(Packet request)
@@ -549,7 +553,7 @@ public class TheaterHandler
         await _conn.SendPacket(packet);
 
         var gid = int.Parse(request["GID"]);
-        await SendEGEG_ToPlayerInQueue(request, gid);
+        await FinishPlayerEnterGameRequest(request, gid);
     }
 
     private int _brackets = 0;

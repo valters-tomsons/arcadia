@@ -12,4 +12,5 @@ public class PlasmaSession
     public required string PartitionId { get; init; }
 
     public int PID { get; set; }
+    public long EGAM_TID { get; set; }
 }
