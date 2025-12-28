@@ -1,5 +1,5 @@
 using System.Collections.Frozen;
-using System.Globalization;
+using System.Collections.Immutable;
 using System.Text;
 using Arcadia.EA;
 using Arcadia.Storage;
@@ -334,8 +334,14 @@ public class StatusService(ILogger<StatusService> logger, ConnectionManager shar
         { "Levels/ONS_MP_008", ("Nelson Bay", "BC2_Nelson_Bay.jpg") },
     }.ToFrozenDictionary();
 
-    private static (long GID, Embed Embed) BuildBFBC2Status(GameServerListing server)
+    private static (long GID, Embed Embed)? BuildBFBC2Status(GameServerListing server)
     {
+        var levelName = server.Data.GetValueOrDefault("B-U-level");
+        if (string.IsNullOrWhiteSpace(levelName))
+        {
+            return null;
+        }
+
         var serverName = $"**{server.NAME.Replace("P2P-", string.Empty)}**";
         var gamemode = server.Data.GetValueOrDefault("B-U-gamemode") ?? "`N/A`";
 
@@ -350,7 +356,6 @@ public class StatusService(ILogger<StatusService> logger, ConnectionManager shar
             eb.AddField("Difficulty", difficulty);
         }
 
-        var levelName = server.Data.GetValueOrDefault("B-U-level");
         if (!string.IsNullOrWhiteSpace(levelName))
         {
             var mapInfo = _onslaughtAssets.GetValueOrDefault(levelName);
