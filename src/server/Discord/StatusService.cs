@@ -414,7 +414,7 @@ public class StatusService(ILogger<StatusService> logger, ConnectionManager shar
 
     private static (long GID, Embed Embed)? BuildLOTRStatus(GameServerListing server)
     {
-        if (server.Data["B-U-FriendsOnly"] == "1")
+        if (server.Data.TryGetValue("B-U-FriendsOnly", out var friendsOnly) && friendsOnly == "1")
         {
             return null;
         }
@@ -424,8 +424,7 @@ public class StatusService(ILogger<StatusService> logger, ConnectionManager shar
             .AddField("Players", GetPlayerCountString(server))
             .WithTimestamp(server.StartedAt);
 
-        // Host user isn't in the server, must be a dedicated server...
-        if (!server.ConnectedPlayers.ContainsKey(server.UID))
+        if (server.Data.TryGetValue("B-U-PCDedicated", out var isDedicated) && isDedicated == "1")
         {
             eb.AddField("Name", server.NAME);
         }
