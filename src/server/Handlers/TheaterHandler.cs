@@ -267,59 +267,7 @@ public class TheaterHandler
             return;
         }
 
-        var serverInfo = game.Data;
-        var response = new Dictionary<string, string>
-        {
-            ["TID"] = $"{request["TID"]}",
-            ["LID"] = $"{game.LID}",
-            ["GID"] = $"{game.GID}",
-            ["HU"] = $"{game.UID}",
-            ["HN"] = $"{game.NAME}",
-            ["I"] = game.TheaterConnection.RemoteAddress,
-            ["P"] = $"{serverInfo["PORT"]}",
-            ["N"] = $"{game.NAME}",
-            ["AP"] = $"{game.ConnectedPlayers.Count}",
-            ["MP"] = $"{serverInfo["MAX-PLAYERS"]}",
-            ["JP"] = $"{game.JoiningPlayers.Count}",
-            ["PL"] = game.Platform,
-            ["PW"] = "0",
-            ["JP"] = "0",
-            ["QP"] = "0",
-            ["TYPE"] = $"{serverInfo["TYPE"]}",
-            ["J"] = $"{serverInfo["JOIN"]}",
-            ["B-version"] = $"{serverInfo["B-version"]}",
-            ["B-numObservers"] = $"{serverInfo["B-numObservers"]}",
-            ["B-maxObservers"] = $"{serverInfo["B-maxObservers"]}"
-        };
-
-        if (_session!.PartitionId.EndsWith("MERCS2"))
-        {
-            response.Add("B-U-Oil", game.Data["B-U-Oil"] ?? "0");
-            response.Add("B-U-Money", game.Data["B-U-Money"] ?? "0");
-            response.Add("B-U-Duration", game.Data["B-U-Duration"] ?? "0");
-            response.Add("B-U-Character", game.Data["B-U-Character"] ?? "0");
-            response.Add("B-U-Mission", game.Data["B-U-Mission"] ?? string.Empty);
-        }
-
-        if (_session!.PartitionId.EndsWith("GODFATHER2"))
-        {
-            response.Add("B-U-DonFlow", game.Data["B-U-DonFlow"] ?? "0");
-            response.Add("B-U-DonMode", game.Data["B-U-DonMode"] ?? "0");
-            response.Add("B-U-DonWager", game.Data["B-U-DonWager"] ?? "0");
-            response.Add("B-U-IsStrictNAT", game.Data["B-U-IsStrictNAT"] ?? "0");
-            response.Add("B-U-MapHash", game.Data["B-U-MapHash"] ?? "0");
-            response.Add("B-U-MatchTypeIndex", game.Data["B-U-MatchTypeIndex"] ?? "0");
-            response.Add("B-U-ModeIdx", game.Data["B-U-ModeIdx"] ?? "0");
-            response.Add("B-U-ModeRequested", game.Data["B-U-ModeRequested"] ?? "0");
-            response.Add("B-U-PackedAttributes", game.Data["B-U-PackedAttributes"] ?? "0");
-            response.Add("B-U-RoundScore", game.Data["B-U-RoundScore"] ?? "0");
-            response.Add("B-U-ScoreLimit", game.Data["B-U-ScoreLimit"] ?? "0");
-            response.Add("B-U-WeaponIdx", game.Data["B-U-WeaponIdx"] ?? "0");
-        }
-
-        var packet = new Packet("GDAT", TheaterTransmissionType.OkResponse, 0, response);
-        await _conn.SendPacket(packet);
-
+        await SendGameData(request, game);
         await SendGDET(request, game);
     }
 
@@ -449,28 +397,73 @@ public class TheaterHandler
 
         foreach (var game in games)
         {
-            await _conn.SendPacket(new("GDAT", TheaterTransmissionType.OkResponse, 0)
-            {
-                ["TID"] = request["TID"],
-                ["LID"] = request["LID"],
-                ["GID"] = $"{game.GID}",
-                ["HN"] = game.NAME,
-                ["HU"] = $"{game.UID}",
-                ["N"] = game.NAME,
-                ["I"] = game.TheaterConnection?.RemoteAddress ?? throw new NotImplementedException(),
-                ["P"] = game.Data["PORT"],
-                ["MP"] = game.Data["MAX-PLAYERS"],
-                ["F"] = "0",
-                ["NF"] = "0",
-                ["J"] = game.Data["JOIN"],
-                ["TYPE"] = game.Data["TYPE"],
-                ["PW"] = "0",
-                ["B-version"] = game.Data["B-version"],
-                ["B-numObservers"] = game.Data["B-numObservers"],
-                ["B-maxObservers"] = game.Data["B-maxObservers"],
-                ["AP"] = $"{game.ConnectedPlayers.Count}"
-            });
+            await SendGameData(request, game);
         }
+    }
+
+    private async Task SendGameData(Packet request, GameServerListing game)
+    {
+        if (game.TheaterConnection is null) return;
+        if (_session is null) return;
+
+        var response = new Dictionary<string, string>
+        {
+            ["TID"] = request["TID"],
+            ["LID"] = request["game.LID"],
+            ["GID"] = $"{game.GID}",
+            ["HU"] = $"{game.UID}",
+            ["HN"] = game.NAME,
+            ["I"] = game.TheaterConnection.RemoteAddress,
+            ["P"] = $"{game.Data["PORT"]}",
+            ["N"] = game.NAME.Replace("\"", string.Empty),
+            ["AP"] = $"{game.ConnectedPlayers.Count}",
+            ["MP"] = $"{game.Data["MAX-PLAYERS"]}",
+            ["JP"] = $"{game.JoiningPlayers.Count}",
+            ["PL"] = game.Platform,
+            ["PW"] = "0",
+            ["QP"] = "0",
+            ["TYPE"] = $"{game.Data["TYPE"]}",
+            ["J"] = $"{game.Data["JOIN"]}",
+            ["B-version"] = $"{game.Data["B-version"]}",
+            ["B-numObservers"] = $"{game.Data["B-numObservers"]}",
+            ["B-maxObservers"] = $"{game.Data["B-maxObservers"]}",
+            ["F"] = "0",
+            ["NF"] = "0",
+        };
+
+        var subdomain = game.PartitionId.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Last();
+        switch (subdomain)
+        {
+            case "MERCS2":
+                response.Add("B-U-Oil", game.Data["B-U-Oil"] ?? "0");
+                response.Add("B-U-Money", game.Data["B-U-Money"] ?? "0");
+                response.Add("B-U-Duration", game.Data["B-U-Duration"] ?? "0");
+                response.Add("B-U-Character", game.Data["B-U-Character"] ?? "0");
+                response.Add("B-U-Mission", game.Data["B-U-Mission"] ?? string.Empty);
+                break;
+            case "GODFATHER2":
+                response.Add("B-U-DonFlow", game.Data["B-U-DonFlow"] ?? "0");
+                response.Add("B-U-DonMode", game.Data["B-U-DonMode"] ?? "0");
+                response.Add("B-U-DonWager", game.Data["B-U-DonWager"] ?? "0");
+                response.Add("B-U-IsStrictNAT", game.Data["B-U-IsStrictNAT"] ?? "0");
+                response.Add("B-U-MapHash", game.Data["B-U-MapHash"] ?? "0");
+                response.Add("B-U-MatchTypeIndex", game.Data["B-U-MatchTypeIndex"] ?? "0");
+                response.Add("B-U-ModeIdx", game.Data["B-U-ModeIdx"] ?? "0");
+                response.Add("B-U-ModeRequested", game.Data["B-U-ModeRequested"] ?? "0");
+                response.Add("B-U-PackedAttributes", game.Data["B-U-PackedAttributes"] ?? "0");
+                response.Add("B-U-RoundScore", game.Data["B-U-RoundScore"] ?? "0");
+                response.Add("B-U-ScoreLimit", game.Data["B-U-ScoreLimit"] ?? "0");
+                response.Add("B-U-WeaponIdx", game.Data["B-U-WeaponIdx"] ?? "0");
+                break;
+            case "LOTR":
+                response.Add("B-U-LevelKey", game.Data["B-U-LevelKey"]);
+                response.Add("B-U-LevelName", game.Data["B-U-LevelName"]);
+                response.Add("B-U-Mode", game.Data["B-U-Mode"]);
+                break;
+        }
+
+        var packet = new Packet("GDAT", TheaterTransmissionType.OkResponse, 0, response);
+        await _conn.SendPacket(packet);
     }
 
     // CreateGame
