@@ -12,12 +12,13 @@ Discord: https://discord.gg/9WbQFYEt8B
 
 Both PSN and RPCN clients are supported and can play in the same server.
 
-Game                    |   Status      | Live status
-------------------------| ----------    | ----- 
-Mercenaries 2           | Online        | No leaderboards.
-Medal of Honor Airborne | Online        | Opening stats menu will soft-lock the game.
-Bad Company 2           | COOP Only     | **Requires Onslaught DLC**, only player hosted servers. No servers for regular multiplayer.
-Battlefield 1943        | Tutorial Only | Can connect. No servers.
+Game                       |   Status      | Live status
+-------------------------- | ----------    | ----- 
+Mercenaries 2              | Online        | No leaderboards.
+Medal of Honor Airborne    | Online        | Opening stats menu will soft-lock the game.
+Lord of the Rings Conquest | Online*       | *Requires patch to host public servers. 
+Bad Company 2              | COOP Only     | **Requires Onslaught DLC**, only player hosted servers. No servers for regular multiplayer.
+Battlefield 1943           | Tutorial Only | Can connect. No servers.
 
 ## RPCS3 Configuration
 
