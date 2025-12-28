@@ -264,13 +264,12 @@ public class StatusService(ILogger<StatusService> logger, ConnectionManager shar
     {
         var hosts = _sharedCache.GetAllServersInternal();
 
-        var gidEmbeds = new (long GID, Embed Embed)[hosts.Length];
+        var embeds = new List<(long GID, Embed Embed)>(hosts.Length);
         for (var i = 0; i < hosts.Length; i++)
         {
             var server = hosts[i];
             if (!server.CanJoin)
             {
-                gidEmbeds[i].GID = 0;
                 continue;
             }
 
@@ -279,7 +278,7 @@ public class StatusService(ILogger<StatusService> logger, ConnectionManager shar
                 var partitionId = server.PartitionId.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).LastOrDefault()?.ToUpperInvariant()
                     ?? throw new("Cannot find PartitionId");
 
-                gidEmbeds[i] = partitionId switch
+                var serverEmbed = partitionId switch
                 {
                     "BFBC2" => BuildBFBC2Status(server),
                     // "AO3" => BuildAO3Status(server),
@@ -289,6 +288,9 @@ public class StatusService(ILogger<StatusService> logger, ConnectionManager shar
                     "MOHAIR" => BuildMOHStatus(server),
                     _ => throw new($"No game status builder for '{server.PartitionId}'")
                 };
+
+                if (serverEmbed is null) continue;
+                embeds.Add(serverEmbed.Value);
             }
             catch (Exception e)
             {
@@ -296,14 +298,12 @@ public class StatusService(ILogger<StatusService> logger, ConnectionManager shar
             }
         }
 
-        var embeds = gidEmbeds.Where(x => x.GID != 0).ToArray();
-
         const string statusFormat = "**{0}** ongoing game{1}";
-        var gameCount = embeds.Length;
-        var statusEnd = gameCount == 0 ? "s. 😞" : gameCount > 1 ? "s! 🔥" : "! ⭐";
-        var statusMsg = string.Format(statusFormat, gameCount, statusEnd);
 
-        return (statusMsg, embeds);
+        var statusEnd = embeds.Count == 0 ? "s. 😞" : embeds.Count > 1 ? "s! 🔥" : "! ⭐";
+        var statusMsg = string.Format(statusFormat, embeds.Count, statusEnd);
+
+        return (statusMsg, embeds.ToArray());
     }
 
     private static string GetPlayerCountString(GameServerListing server)
