@@ -460,6 +460,27 @@ public class TheaterHandler
                 response.Add("B-U-LevelName", game.Data["B-U-LevelName"]);
                 response.Add("B-U-Mode", game.Data["B-U-Mode"]);
                 break;
+            case "AO3":
+                response.Add("B-U-BucketSessionCalibre", game.Data["B-U-BucketSessionCalibre"]);
+                response.Add("B-U-ChangeList", game.Data["B-U-ChangeList"]);
+                response.Add("B-U-DLC", game.Data["B-U-DLC"]);
+                response.Add("B-U-FirewallStrict", game.Data["B-U-FirewallStrict"]);
+                response.Add("B-U-GameType", game.Data["B-U-GameType"]);
+                response.Add("B-U-Map", game.Data["B-U-Map"]);
+                response.Add("B-U-MapPlaylist", game.Data["B-U-MapPlaylist"]);
+                response.Add("B-U-MaxPlayers", game.Data["B-U-MaxPlayers"]);
+                response.Add("B-U-MinPlayers", game.Data["B-U-MinPlayers"]);
+                response.Add("B-U-Mode", game.Data["B-U-Mode"]);
+                response.Add("B-U-NAT", game.Data["B-U-NAT"]);
+                response.Add("B-U-PlayerCount", game.Data["B-U-PlayerCount"]);
+                response.Add("B-U-Private", game.Data["B-U-Private"]);
+                response.Add("B-U-RB", game.Data["B-U-RB"]);
+                response.Add("B-U-RBHost", game.Data["B-U-RBHost"]);
+                response.Add("B-U-RBState", game.Data["B-U-RBState"]);
+                response.Add("B-U-RealSessionCalibre", game.Data["B-U-RealSessionCalibre"]);
+                response.Add("B-U-RoundLength", game.Data["B-U-RoundLength"]);
+                response.Add("B-U-ping_site", game.Data["B-U-ping_site"]);
+                break;
         }
 
         var packet = new Packet("GDAT", TheaterTransmissionType.OkResponse, 0, response);

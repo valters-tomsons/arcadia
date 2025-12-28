@@ -281,7 +281,7 @@ public class StatusService(ILogger<StatusService> logger, ConnectionManager shar
                 var serverEmbed = partitionId switch
                 {
                     "BFBC2" => BuildBFBC2Status(server),
-                    // "AO3" => BuildAO3Status(server),
+                    "AO3" => BuildAO3Status(server),
                     "MERCS2" => BuildMercs2Status(server),
                     "LOTR" => BuildLOTRStatus(server),
                     // "GODFATHER2" =>
