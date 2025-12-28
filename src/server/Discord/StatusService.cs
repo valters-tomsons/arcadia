@@ -424,6 +424,12 @@ public class StatusService(ILogger<StatusService> logger, ConnectionManager shar
             .AddField("Players", GetPlayerCountString(server))
             .WithTimestamp(server.StartedAt);
 
+        // Host user isn't in the server, must be a dedicated server...
+        if (!server.ConnectedPlayers.ContainsKey(server.UID))
+        {
+            eb.AddField("Name", server.NAME);
+        }
+
         return (server.GID, eb.Build());
     }
 
