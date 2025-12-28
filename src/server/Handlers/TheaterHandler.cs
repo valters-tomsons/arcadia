@@ -409,7 +409,7 @@ public class TheaterHandler
         var response = new Dictionary<string, string>
         {
             ["TID"] = request["TID"],
-            ["LID"] = request["game.LID"],
+            ["LID"] = request["LID"],
             ["GID"] = $"{game.GID}",
             ["HU"] = $"{game.UID}",
             ["HN"] = game.NAME,
