@@ -412,8 +412,13 @@ public class StatusService(ILogger<StatusService> logger, ConnectionManager shar
         return (server.GID, eb.Build());
     }
 
-    private static (long GID, Embed Embed) BuildLOTRStatus(GameServerListing server)
+    private static (long GID, Embed Embed)? BuildLOTRStatus(GameServerListing server)
     {
+        if (server.Data["B-U-FriendsOnly"] == "1")
+        {
+            return null;
+        }
+
         var eb = new EmbedBuilder()
             .WithTitle($"Lord of the Rings: Conquest")
             .AddField("Players", GetPlayerCountString(server))
