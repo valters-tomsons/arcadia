@@ -172,9 +172,9 @@ public class TheaterHandler
             }
         }
 
-        game.JoiningPlayers.Enqueue(_session);
-        _session.PID = game.ConnectedPlayers.Count + game.JoiningPlayers.Count;
         _session.EGAM_TID = long.Parse(request["TID"]);
+
+        game.EnqueuePlayer(_session);
 
         await SendEGRQ_ToGameHost(request, _session, game);
     }
@@ -299,8 +299,9 @@ public class TheaterHandler
         var server = _sharedCache.GetGameByGid(_session!.PartitionId, gid) ?? throw new NotImplementedException();
         if (server.TheaterConnection is null) throw new NotImplementedException();
 
-        var joining = server.JoiningPlayers.TryDequeue(out var player);
-        if (!joining || player?.TheaterConnection is null) return;
+        var pid = int.Parse(serverResponse["PID"]);
+        var player = server.DequeuePlayer(pid);
+        if (player?.TheaterConnection is null) return;
 
         var egamResp = new Dictionary<string, string>
         {
@@ -418,7 +419,7 @@ public class TheaterHandler
             ["N"] = game.NAME.Replace("\"", string.Empty),
             ["AP"] = $"{game.ConnectedPlayers.Count}",
             ["MP"] = $"{game.Data["MAX-PLAYERS"]}",
-            ["JP"] = $"{game.JoiningPlayers.Count}",
+            ["JP"] = "0",
             ["PL"] = game.Platform,
             ["PW"] = "0",
             ["QP"] = "0",

@@ -19,10 +19,25 @@ public class GameServerListing
     public string EKEY { get; init; } = string.Empty;
     public string NAME { get; init; } = string.Empty;
 
-    public ConcurrentQueue<PlasmaSession> JoiningPlayers { get; init; } = [];
+    public bool CanJoin { get; set; }
+    public DateTimeOffset StartedAt { get; init; } = DateTimeOffset.Now;
+
     public ConcurrentDictionary<ulong, PlasmaSession> ConnectedPlayers { get; init; } = [];
 
-    public bool CanJoin { get; set; }
+    private ConcurrentDictionary<long, PlasmaSession> _joinQueue { get; init; } = [];
+    private long _pid = 0;
 
-    public DateTimeOffset StartedAt { get; init; } = DateTimeOffset.Now;
+    public void EnqueuePlayer(PlasmaSession playerSession)
+    {
+        var pid = ++_pid;
+        playerSession.PID = pid;
+        _joinQueue[pid] = playerSession;
+    }
+
+    public PlasmaSession? DequeuePlayer(int pid)
+    {
+        if (1 > pid) return null;
+        if (!_joinQueue.TryRemove(pid, out var player)) return null;
+        return player;
+    }
 }
