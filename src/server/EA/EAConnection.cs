@@ -180,7 +180,68 @@ public sealed class EAConnection : IEAConnection
         }
 
         var packetBuffer = await packet.Serialize();
+        
+        if (packetBuffer.Length > 8064)
+        {
+            return await SendMultiPacket(packet, packetBuffer);
+        }
+
         return await SendBinary(packetBuffer);
+    }
+
+    private async Task<bool> SendMultiPacket(Packet originalPacket, byte[] fullPacketBuffer)
+    {
+        var dataPortion = fullPacketBuffer[Packet.HEADER_SIZE..];
+        
+        var rawChunks = new List<byte[]>();
+        for (int i = 0; i < dataPortion.Length; i += 6000)
+        {
+            var chunkLength = Math.Min(6000, dataPortion.Length - i);
+            var chunk = new byte[chunkLength];
+            Array.Copy(dataPortion, i, chunk, 0, chunkLength);
+            rawChunks.Add(chunk);
+        }
+        
+        var base64Chunks = new List<string>();
+        uint totalBase64Size = 0;
+        foreach (var rawChunk in rawChunks)
+        {
+            var base64Chunk = Convert.ToBase64String(rawChunk).Replace("=", "%3d");
+            base64Chunks.Add(base64Chunk);
+            totalBase64Size += (uint)base64Chunk.Length;
+        }
+        
+        _logger?.LogTrace("Sending multi-packet - ID: {id}, Total Base64 Size: {size}, Chunks: {chunks}", 
+            originalPacket.Id, totalBase64Size, base64Chunks.Count);
+        
+        for (int i = 0; i < base64Chunks.Count; i++)
+        {
+            var base64Chunk = base64Chunks[i];
+            var chunkData = new Dictionary<string, string>
+            {
+                ["data"] = base64Chunk,
+                ["size"] = totalBase64Size.ToString()
+            };
+            
+            var chunkPacket = new Packet(
+                originalPacket.Type,
+                FeslTransmissionType.MultiPacketResponse,
+                originalPacket.Id,
+                chunkData
+            );
+            
+            var chunkBuffer = await chunkPacket.Serialize();
+            
+            _logger?.LogTrace("Sending multi-packet part - ID: {id}, Base64 Chunk Size: {chunkSize}, Part: {part}/{total}, Packet Size: {packetSize}",
+                originalPacket.Id, base64Chunk.Length, i + 1, base64Chunks.Count, chunkBuffer.Length);
+            
+            if (!await SendBinary(chunkBuffer))
+            {
+                return false;
+            }
+        }
+        
+        return true;
     }
 
     private async Task<bool> SendBinary(byte[] buffer)
