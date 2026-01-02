@@ -98,6 +98,7 @@ public class FeslHandler
             ["achi/GetOwnerAchievements"] = AcknowledgeRequest,
             ["asso/AddAssociations"] = AcknowledgeRequest,
             ["blob/ListBlobInfo"] = AcknowledgeRequest,
+            ["subs/GetPricingSelectionsByCode"] = AcknowledgeRequest,
         }.ToImmutableDictionary();
     }
 
