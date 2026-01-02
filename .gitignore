@@ -11,8 +11,11 @@
 **/logs/
 **.log
 **/dumps/priv/*
-**/messageId
-**/arcadia.db*
 
 # dev settings
 **/dev.appsettings.json
+
+# runtime files
+**/messageId
+**/arcadia.db*
+ip-to-country.mmdb

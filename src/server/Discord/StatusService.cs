@@ -1,5 +1,6 @@
 using System.Collections.Frozen;
 using System.Collections.Immutable;
+using System.Net;
 using System.Text;
 using Arcadia.EA;
 using Arcadia.Storage;
@@ -11,10 +12,12 @@ using Microsoft.Extensions.Options;
 
 namespace Arcadia.Discord;
 
-public class StatusService(ILogger<StatusService> logger, ConnectionManager sharedCache, IOptions<DiscordSettings> config, StatsStorage stats)
+public sealed class StatusService(ILogger<StatusService> logger, ConnectionManager sharedCache, IOptions<DiscordSettings> config, StatsStorage stats) : IDisposable
 {
     private const string messageIdFile = "./messageId";
     private const string assetsUrlBase = "https://raw.githubusercontent.com/valters-tomsons/arcadia/refs/heads/main/src/server/static/assets/";
+
+    private const string geoDatabaseFile = "ip-to-country.mmdb";
 
     private static readonly StringBuilder PlayersStringBuilder = new();
 
@@ -25,6 +28,9 @@ public class StatusService(ILogger<StatusService> logger, ConnectionManager shar
 
     private readonly List<(IMessageChannel Channel, ulong StatusId)> _channelStatus = [];
     private readonly Dictionary<ulong, List<(long GID, ulong MessageId)>> _channelsGameMessage = [];
+
+    private static MaxMind.Db.Reader? _geoDb;
+    private static readonly Dictionary<IPAddress, string> _geoSymbolCache = [];
 
     public async Task Execute(DiscordSocketClient client)
     {
@@ -109,6 +115,19 @@ public class StatusService(ILogger<StatusService> logger, ConnectionManager shar
         if (flushCache)
         {
             await File.WriteAllLinesAsync(messageIdFile, cachedIds.Select(x => $"{x.Key}:{x.Value}"));
+        }
+
+        if (!File.Exists(geoDatabaseFile) || _geoDb is not null) return;
+        _logger.LogInformation("Loading GeoIP database from: {fileName}", geoDatabaseFile);
+
+        try
+        {
+            _geoDb = new MaxMind.Db.Reader(geoDatabaseFile);
+            _logger.LogInformation("GeoIP database loaded, build: {buildDate}", _geoDb.Metadata.BuildDate);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Failed to load GeoIP database");
         }
     }
 
@@ -431,9 +450,61 @@ public class StatusService(ILogger<StatusService> logger, ConnectionManager shar
         return (server.GID, eb.Build());
     }
 
-    private static EmbedBuilder StatusBuilder(GameServerListing server, string titleName) 
-        => new EmbedBuilder()
+    private static EmbedBuilder StatusBuilder(GameServerListing server, string titleName)
+    {
+        if (_geoDb is not null && IPAddress.TryParse(server.TheaterConnection?.RemoteAddress, out var address) && address is not null)
+        {
+            if (_geoSymbolCache.TryGetValue(address, out var cResult) && cResult is not null)
+            {
+                titleName += cResult;
+            }
+            else
+            {
+                var result = _geoDb.Find<GeoResult>(address);
+                var flag = " " + GetCountryFlag(result?.CountryCode);
+
+                _geoSymbolCache.Add(address, flag);
+                titleName += flag;
+            }
+        }
+
+        return new EmbedBuilder()
             .WithTitle(titleName)
             .AddField("Players", GetPlayerCountString(server))
             .WithTimestamp(server.StartedAt);
+    }
+
+    private static readonly HashSet<string> EUCountries = new(StringComparer.Ordinal)
+    {
+        "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR",
+        "DE", "GR", "HU", "IE", "IT", "LV", "LT", "LU", "MT", "NL",
+        "PL", "PT", "RO", "SK", "SI", "ES", "SE"
+    };
+
+    private static string GetCountryFlag(string? countryCode)
+    {
+        if (string.IsNullOrEmpty(countryCode) || countryCode.Length != 2)
+            return string.Empty;
+        
+        countryCode = countryCode.ToUpper();
+
+        if (EUCountries.Contains(countryCode)) return "🇪🇺";
+
+        // Convert each letter to Regional Indicator Symbol
+        int firstLetter = 0x1F1E6 + (countryCode[0] - 'A');
+        int secondLetter = 0x1F1E6 + (countryCode[1] - 'A');
+        
+        return char.ConvertFromUtf32(firstLetter) + char.ConvertFromUtf32(secondLetter);
+    }
+
+    public void Dispose()
+    {
+        if (_geoDb is null) return;
+        _geoDb.Dispose();
+    }
+
+    [method: MaxMind.Db.Constructor]
+    public record GeoResult(
+        [MaxMind.Db.Parameter("country_code")] string CountryCode
+    );
 }
