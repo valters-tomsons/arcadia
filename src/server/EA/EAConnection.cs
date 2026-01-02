@@ -210,10 +210,10 @@ public sealed class EAConnection : IEAConnection
             base64Chunks.Add(base64Chunk);
             totalBase64Size += (uint)base64Chunk.Length;
         }
-        
-        _logger?.LogTrace("Sending multi-packet - ID: {id}, Total Base64 Size: {size}, Chunks: {chunks}", 
-            originalPacket.Id, totalBase64Size, base64Chunks.Count);
-        
+
+        _logger?.LogTrace("Sending packet as multi-part - ID: {id}, Total Base64 Size: {size}, Chunks: {chunks}, Data:\n{Data}",
+            originalPacket.Id, totalBase64Size, base64Chunks.Count, Encoding.ASCII.GetString(fullPacketBuffer));
+
         for (int i = 0; i < base64Chunks.Count; i++)
         {
             var base64Chunk = base64Chunks[i];
