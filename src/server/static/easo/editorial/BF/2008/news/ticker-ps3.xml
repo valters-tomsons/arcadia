@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ticker>
+
+	<!--
+
+	Supported language IDs are: en-US, de-DE, fr-FR, es-ES, it-IT, jp-JP
+
+	Displayed text will be choosen depending on what locale the receiver has set.
+
+	HOWEVER! The newsticker is only to be fed with LATIN-1 characters, anything else
+	is not supported by the game, so any other characters like japanese kanji, hiragana
+	or katakana will not display correctly.
+
+	If there is no provided text for a locale, the newsticker will default to the en-US
+	version.
+
+	-->
+	
+	<lang id="en-US">
+		<item>Battlefield 3 is out in the US! Join the battle to find out why reviewers are raving about it! --- All BF3 expansion packs will appear 1 week early exclusively on PlayStation 3! --- </item>
+	</lang>
+	<lang id="de-DE">
+		<item>Battlefield 3 kommt! Bestelle jetzt die Limited Edition vor! www.battlefield.com --- </item>
+	</lang>
+	<lang id="fr-FR">
+		<item>Battlefield 3 arrive ! Pré-commandez l’Édition Limitée maintenant ! www.battlefield.com --- Retrouvez-nous sur facebook.com/Battlefield.fr --- </item>
+	</lang>
+	<lang id="es-ES">
+		<item>¡Battlefield 3 llegará muy pronto! ¡Reserva ya la Limited Edition! www.battlefield.com --- </item>
+	</lang>
+	<lang id="pl-PL">
+		<item>Battlefield 3 zapowiedziany! Zamów Edycję Limitowaną teraz! www.battlefield.com --- </item>
+	</lang>
+	<lang id="it-IT">
+		<item>Battlefield 3 sta arrivando! Pre-ordina ora la Limited Edition! www.battlefield.com --- </item>
+	</lang>
+	<lang id="jp-JP">
+		<item>Battlefield 3 is coming! Pre-order Limited Edition now! www.battlefield.com --- </item>
+	</lang>
+	<lang id="ru-RU">
+		<item>Battlefield 3 is coming! Pre-order now! www.battlefield.com --- </item>
+	</lang>
+</ticker>
