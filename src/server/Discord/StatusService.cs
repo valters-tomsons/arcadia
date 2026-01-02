@@ -345,10 +345,8 @@ public class StatusService(ILogger<StatusService> logger, ConnectionManager shar
         var serverName = $"**{server.NAME.Replace("P2P-", string.Empty)}**";
         var gamemode = server.Data.GetValueOrDefault("B-U-gamemode") ?? "`N/A`";
 
-        var eb = new EmbedBuilder()
-            .WithTitle($"{serverName} ({gamemode})")
-            .AddField("Players", GetPlayerCountString(server))
-            .WithTimestamp(server.StartedAt);
+        var eb = StatusBuilder(server, "Battlefield: Bad Company 2")
+            .AddField("Name", $"{serverName} ({gamemode}");
 
         var difficulty = server.Data.GetValueOrDefault("B-U-difficulty");
         if (!string.IsNullOrWhiteSpace(difficulty))
@@ -376,22 +374,17 @@ public class StatusService(ILogger<StatusService> logger, ConnectionManager shar
         var level = server.Data.GetValueOrDefault("B-U-Map") ?? "`N/A`";
         var playlist = server.Data.GetValueOrDefault("B-U-MapPlaylist") ?? "`N/A`";
 
-        var eb = new EmbedBuilder()
-            .WithTitle($"{serverName} (AO3{gamemode})")
+        var eb = StatusBuilder(server, "Army of Two: 40th Day")
+            .AddField("Name", $"{serverName} - {gamemode}")
             .AddField("Level", level)
-            .AddField("Playlist", playlist)
-            .AddField("Players", GetPlayerCountString(server))
-            .WithTimestamp(server.StartedAt);
+            .AddField("Playlist", playlist);
 
         return (server.GID, eb.Build());
     }
 
     private static (long GID, Embed Embed) BuildMercs2Status(GameServerListing server)
     {
-        var eb = new EmbedBuilder()
-            .WithTitle($"Mercenaries 2")
-            .AddField("Players", GetPlayerCountString(server))
-            .WithTimestamp(server.StartedAt);
+        var eb = StatusBuilder(server, "Mercenaries 2");
 
         if (server.Data.TryGetValue("B-U-FriendlyFire", out var friendlyFire) && friendlyFire == "1")
         {
@@ -419,10 +412,7 @@ public class StatusService(ILogger<StatusService> logger, ConnectionManager shar
             return null;
         }
 
-        var eb = new EmbedBuilder()
-            .WithTitle($"Lord of the Rings: Conquest")
-            .AddField("Players", GetPlayerCountString(server))
-            .WithTimestamp(server.StartedAt);
+        var eb = StatusBuilder(server, "Lord of the Rings: Conquest");
 
         if (server.Data.TryGetValue("B-U-PCDedicated", out var isDedicated) && isDedicated == "1")
         {
@@ -434,13 +424,16 @@ public class StatusService(ILogger<StatusService> logger, ConnectionManager shar
 
     private static (long GID, Embed Embed) BuildMOHStatus(GameServerListing server)
     {
-        var eb = new EmbedBuilder()
-            .WithTitle($"Medal of Honor: Airborne")
-            .AddField("Players", GetPlayerCountString(server))
+        var eb = StatusBuilder(server, "Medal of Honor: Airborne")
             .AddField("Map", server.Data["B-U-Map"])
-            .AddField("Gamemode", server.Data["B-U-GameType"])
-            .WithTimestamp(server.StartedAt);
+            .AddField("Gamemode", server.Data["B-U-GameType"]);
 
         return (server.GID, eb.Build());
     }
+
+    private static EmbedBuilder StatusBuilder(GameServerListing server, string titleName) 
+        => new EmbedBuilder()
+            .WithTitle(titleName)
+            .AddField("Players", GetPlayerCountString(server))
+            .WithTimestamp(server.StartedAt);
 }
