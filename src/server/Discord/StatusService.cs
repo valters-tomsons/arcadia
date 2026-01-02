@@ -365,7 +365,7 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
         var gamemode = server.Data.GetValueOrDefault("B-U-gamemode") ?? "`N/A`";
 
         var eb = StatusBuilder(server, "Battlefield: Bad Company 2")
-            .AddField("Name", $"{serverName} ({gamemode}");
+            .AddField("Name", $"{serverName} ({gamemode})");
 
         var difficulty = server.Data.GetValueOrDefault("B-U-difficulty");
         if (!string.IsNullOrWhiteSpace(difficulty))
