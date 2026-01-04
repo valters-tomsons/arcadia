@@ -241,8 +241,18 @@ public class TheaterHandler
             ["UID"] = $"{player.User.UserId}",
             ["LID"] = $"{server.LID}",
             ["GID"] = $"{gameId}",
-            ["IP"] = player.TheaterConnection.RemoteAddress
+            ["IP"] = player.TheaterConnection.RemoteAddress,
         };
+
+        if (request.DataDict.TryGetValue("R-U-passkey", out var passkey) && !string.IsNullOrWhiteSpace(passkey))
+        {
+            response.Add("R-U-passkey", passkey);
+        }
+
+        if (request.DataDict.TryGetValue("R-U-invited", out var invited) && !string.IsNullOrWhiteSpace(invited))
+        {
+            response.Add("R-U-invited", invited);
+        }
 
         var enterGameRequestPacket = new Packet("EGRQ", TheaterTransmissionType.OkResponse, 0, response);
         await server.TheaterConnection.SendPacket(enterGameRequestPacket);
