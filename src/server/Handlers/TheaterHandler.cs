@@ -514,10 +514,14 @@ public class TheaterHandler
         if (_session is null) throw new NotImplementedException();
         if (_platform is null) throw new Exception("Cannot create game with null platform!");
 
-        // Game defaults to 'hostname' but expects backend to replace it with host's username
         if (_session!.PartitionId.EndsWith("MERCS2") || _session.PartitionId.EndsWith("GODFATHER2"))
         {
             request["NAME"] = _session.User.Username;
+        }
+
+        if (request["RESERVE-HOST"] == "1")
+        {
+            _logger.LogWarning("Client creating game in '{PartitionId}' with RESERVE-HOST=1", _session.PartitionId);
         }
 
         var game = new GameServerListing()
