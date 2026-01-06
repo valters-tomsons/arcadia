@@ -60,6 +60,7 @@ public class FeslHandler
             ["acct/NuPS3Login"] = HandleNuPs3Login,
             ["acct/PS3Login"] = HandlePs3Login,
             ["acct/NuLogin"] = HandleNuLogin,
+            ["acct/Login"] = HandleLogin,
             ["acct/NuGetPersonas"] = HandleNuGetPersonas,
             ["acct/NuLoginPersona"] = HandleNuLoginPersona,
             ["acct/NuGetTos"] = HandleGetTos,
@@ -510,6 +511,21 @@ public class FeslHandler
 
         var packet = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, data);
         await _conn.SendPacket(packet);
+    }
+
+    private async Task HandleLogin(Packet request)
+    {
+        var name = request["name"];
+        if (string.IsNullOrWhiteSpace(name)) throw new("Rejecting empty username!");
+
+        _session = await _sharedCache.CreatePlasmaConnection(_conn, name, clientString, partitionId, "PC", null);
+
+        await _conn.SendPacket(new("acct", FeslTransmissionType.SinglePacketResponse, request.Id, new()
+        {
+            { "TXN", request.TXN },
+            { "name", name },
+            { "lkey", _session.LKEY }
+        }));
     }
 
     private async Task HandleNuLogin(Packet request)
