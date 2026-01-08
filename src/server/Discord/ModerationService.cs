@@ -60,7 +60,7 @@ public class ModerationService(ILogger<ModerationService> logger)
         if (msg.Author.IsBot) return;
         if (msg.Author is not SocketGuildUser usr) return;
 
-        if (DateTimeOffset.UtcNow.AddHours(-2) > usr.JoinedAt) return;
+        if (DateTimeOffset.UtcNow.AddHours(-120) > usr.JoinedAt) return;
 
         var content = msg.Content.Trim();
         if (string.IsNullOrWhiteSpace(content) || content.Length < 8) return;
