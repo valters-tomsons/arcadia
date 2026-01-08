@@ -20,6 +20,8 @@ public class ConnectionManager(ILogger<ConnectionManager> logger, Database db)
     {
         var user = _db.GetOrCreateUser(onlineId, platform, platformId);
 
+        if (_connections.Any(x => x.User.UserId == user.UserId)) throw new("Plasma session already has an ongoing connection!");
+
         PlasmaSession result = new()
         {
             FeslConnection = fesl,
@@ -33,6 +35,7 @@ public class ConnectionManager(ILogger<ConnectionManager> logger, Database db)
 
         try
         {
+
             _connections.Add(result);
         }
         finally
@@ -45,7 +48,7 @@ public class ConnectionManager(ILogger<ConnectionManager> logger, Database db)
 
     public PlasmaSession PairTheaterConnection(IEAConnection theater, string lkey)
     {
-        var plasma = _connections.SingleOrDefault(x => x.LKEY == lkey) ?? throw new Exception("Failed to find a plasma session pair!");
+        var plasma = _connections.SingleOrDefault(x => x.LKEY == lkey) ?? throw new("Failed to find a plasma session pair!");
         plasma.TheaterConnection = theater;
         return plasma;
     }
