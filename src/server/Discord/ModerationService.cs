@@ -16,6 +16,7 @@ public class ModerationService(ILogger<ModerationService> logger)
 
     private readonly string[] stupidPhrases =
     [
+        "does anyone know where to get",
         "what do I need to do to play online",
         "how to play online",
         "how do i play online",
