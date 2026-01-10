@@ -23,8 +23,9 @@ public class DnsHostedService : IHostedService
         _masterFile = new MasterFile();
         _server = new DnsServer(_masterFile, "1.1.1.1", port: options.DnsPort);
 
-        _masterFile.AddIPAddressResourceRecord("messaging.ea.com", hostAddr);
         _masterFile.AddIPAddressResourceRecord("theater.ps3.arcadia", hostAddr);
+
+        _masterFile.AddIPAddressResourceRecord("messaging.ea.com", hostAddr);
         _masterFile.AddIPAddressResourceRecord("easo.ea.com", hostAddr);
 
         _masterFile.AddIPAddressResourceRecord("bfbc2-ps3.fesl.ea.com", hostAddr);
@@ -40,6 +41,7 @@ public class DnsHostedService : IHostedService
         _masterFile.AddIPAddressResourceRecord("nfsmw2-ps3.fesl.ea.com", hostAddr);
         _masterFile.AddIPAddressResourceRecord("hl2-ps3.fesl.ea.com", hostAddr);
         _masterFile.AddIPAddressResourceRecord("lotr-pandemic-ps3.fesl.ea.com", hostAddr);
+        _masterFile.AddIPAddressResourceRecord("cncra3-ps3.fesl.ea.com", hostAddr);
 
         _server.Listening += (sender, args) => _logger.LogInformation($"DNS server listening!");
         _server.Requested += (sender, args) => _logger.LogDebug("DNS request: {Request}", args.Request);
