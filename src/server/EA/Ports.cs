@@ -19,7 +19,8 @@ public enum FeslGamePort : int
     SimpsonsGame = 18550,
     Godfather2 = 18990,
     MoHAirborne = 18260,
-    CNCRA3 = 18290
+    CNCRA3 = 18290,
+    Skate = 18420,
 }
 
 public enum TheaterGamePort : int
