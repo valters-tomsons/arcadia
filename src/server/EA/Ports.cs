@@ -21,6 +21,7 @@ public enum FeslGamePort : int
     MoHAirborne = 18260,
     CNCRA3 = 18290,
     Skate = 18420,
+    Skate2 = 18040,
 }
 
 public enum TheaterGamePort : int

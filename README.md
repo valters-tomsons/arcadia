@@ -80,6 +80,7 @@ Mercenaries 2    | mercs2-ps3
 Godfather 2      | godfather2-ps3
 C&C Red Alert 3  | cncra3-ps3
 Skate            | skate-ps3
+Skate 2          | skate2-ps3
 
 * See [`Ports.cs`](/src/server/EA/Ports.cs) for default fesl client ports
 * Theater address and port in PS3 games is controlled by Fesl's Hello message
