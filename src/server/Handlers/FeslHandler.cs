@@ -340,12 +340,9 @@ public class FeslHandler
         }
 
         var keys = new string[keyCount];
-        var values = new string[keyCount];
-
         for (var i = 0; i < keyCount; i++)
         {
             keys[i] = request.DataDict[$"keys.{i}"];
-            values[i] = string.Empty;
         }
 
         var keyResults = _db.GetStatsBySession(_session, keys);
@@ -377,15 +374,25 @@ public class FeslHandler
 
     private async Task HandleGetRankedStatsForOwners(Packet request)
     {
-        var statCount = int.Parse(request.DataDict.GetValueOrDefault("keys.[]", "0"));
+        if (_session is null) throw new NotImplementedException();
+
+        var keyCount = int.Parse(request.DataDict.GetValueOrDefault("keys.[]", "0"));
         var ownerCount = int.Parse(request.DataDict.GetValueOrDefault("owners.[]", "0"));
 
         var responseData = new Dictionary<string, string>
         {
             { "TXN", request.TXN },
             { "rankedStats.[]", $"{ownerCount}" },
-            { "rankedStats.0.rankedStats.[]", $"{statCount}" }
+            { "rankedStats.0.rankedStats.[]", $"{keyCount}" }
         };
+
+        var keys = new string[keyCount];
+        for (var i = 0; i < keyCount; i++)
+        {
+            keys[i] = request.DataDict[$"keys.{i}"];
+        }
+
+        var ownerResults = _db.GetStatsBySession(_session, keys);
 
         for (var i = 0; i < ownerCount; i++)
         {
@@ -393,10 +400,12 @@ public class FeslHandler
             responseData.Add($"rankedStats.{i}.ownerId", ownerId);
             responseData.Add($"rankedStats.{i}.ownerType", "1");
 
-            for (var j = 0; j < statCount; j++)
+            for (var j = 0; j < keyCount; j++)
             {
                 var statName = request.DataDict[$"keys.{j}"];
                 responseData.Add($"rankedStats.{i}.rankedStats.{j}.key", statName);
+                responseData.Add($"rankedStats.{i}.rankedStats.{j}.value", ownerResults.GetValueOrDefault(keys[j], string.Empty));
+                responseData.Add($"rankedStats.{i}.rankedStats.{j}.rank", "-1");
             }
         }
 
