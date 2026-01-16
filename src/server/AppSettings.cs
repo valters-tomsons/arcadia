@@ -15,6 +15,7 @@ public record ArcadiaSettings
         (int)FeslGamePort.Mercenaries2,
         (int)FeslGamePort.MoHAirborne,
         (int)FeslGamePort.LotrConquest,
+        (int)FeslGamePort.CNCRA3,
     ];
 
     public int MessengerPort { get; init; } = 42069;
