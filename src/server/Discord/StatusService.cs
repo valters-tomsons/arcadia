@@ -303,8 +303,8 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
                     "AO3" => BuildAO3Status(server),
                     "MERCS2" => BuildMercs2Status(server),
                     "LOTR" => BuildLOTRStatus(server),
-                    // "GODFATHER2" =>
                     "MOHAIR" => BuildMOHStatus(server),
+                    "CNCRA3" => BuildRedAlert3Status(server),
                     _ => throw new($"No game status builder for '{server.PartitionId}'")
                 };
 
@@ -446,6 +446,19 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
         var eb = StatusBuilder(server, "Medal of Honor: Airborne")
             .AddField("Map", server.Data["B-U-Map"])
             .AddField("Gamemode", server.Data["B-U-GameType"]);
+
+        return (server.GID, eb.Build());
+    }
+
+    private static (long GID, Embed Embed) BuildRedAlert3Status(GameServerListing server)
+    {
+        var eb = StatusBuilder(server, "Command & Conquest: Red Alert 3");
+
+        if (server.Data.TryGetValue("B-U-_matchMode", out var matchMode))
+        {
+            var mode = matchMode == "private" ? "Campaign" : "Skirmish";
+            eb.AddField("Mode", mode);
+        }
 
         return (server.GID, eb.Build());
     }
