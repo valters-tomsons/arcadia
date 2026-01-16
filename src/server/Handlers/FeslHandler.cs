@@ -152,13 +152,15 @@ public class FeslHandler
         var packetType = packet.Type;
         _handlers.TryGetValue($"{packetType}/{reqTxn}", out var handler);
 
-        if (handler is null)
+        if (handler is not null)
+        {
+            await handler(packet);
+        }
+        else
         {
             _logger.LogWarning("Unknown packet type: {type}, TXN: {txn}", packet.Type, reqTxn);
-            return;
+            await AcknowledgeRequest(packet);
         }
-
-        await handler(packet);
     }
 
     private async Task HandleHello(Packet request)
