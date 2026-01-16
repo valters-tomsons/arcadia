@@ -208,7 +208,7 @@ public class FeslHandler
             { "sessionState", "COMPLETE" },
         };
 
-        var servers = _sharedCache.GetPartitionServers(partitionId).Where(x => x.CanJoin).ToArray();
+        var servers = _sharedCache.GetPartitionServers(partitionId).Where(x => x.CanJoin && x.UID != _session.User.UserId).ToArray();
         if (servers.Length > 0)
         {
             var listGames = request["players.0.props.{sessionType}"] == "listServers";
