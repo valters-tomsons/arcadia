@@ -28,19 +28,27 @@ public class DnsHostedService : IHostedService
         _masterFile.AddIPAddressResourceRecord("messaging.ea.com", hostAddr);
         _masterFile.AddIPAddressResourceRecord("easo.ea.com", hostAddr);
 
+        _masterFile.AddIPAddressResourceRecord("bfbc-ps3.fesl.ea.com", hostAddr);
         _masterFile.AddIPAddressResourceRecord("bfbc2-ps3.fesl.ea.com", hostAddr);
         _masterFile.AddIPAddressResourceRecord("beach-ps3.fesl.ea.com", hostAddr);
-        _masterFile.AddIPAddressResourceRecord("ao3-ps3.fesl.ea.com", hostAddr);
-        _masterFile.AddIPAddressResourceRecord("nfsps2-ps3.fesl.ea.com", hostAddr);
-        _masterFile.AddIPAddressResourceRecord("bfbc-ps3.fesl.ea.com", hostAddr);
-        _masterFile.AddIPAddressResourceRecord("ao2-ps3.fesl.ea.com", hostAddr);
-        _masterFile.AddIPAddressResourceRecord("simpsons-ps3.fesl.ea.com", hostAddr);
         _masterFile.AddIPAddressResourceRecord("mohair-ps3.fesl.ea.com", hostAddr);
-        _masterFile.AddIPAddressResourceRecord("nfsps-ps3.fesl.ea.com", hostAddr);
-        _masterFile.AddIPAddressResourceRecord("nfs-ps3.fesl.ea.com", hostAddr);
-        _masterFile.AddIPAddressResourceRecord("nfsmw2-ps3.fesl.ea.com", hostAddr);
-        _masterFile.AddIPAddressResourceRecord("hl2-ps3.fesl.ea.com", hostAddr);
         _masterFile.AddIPAddressResourceRecord("lotr-pandemic-ps3.fesl.ea.com", hostAddr);
+        _masterFile.AddIPAddressResourceRecord("mercs2-ps3.fesl.ea.com", hostAddr);
+
+        _masterFile.AddIPAddressResourceRecord("ao2-ps3.fesl.ea.com", hostAddr);
+        _masterFile.AddIPAddressResourceRecord("ao3-ps3.fesl.ea.com", hostAddr);
+
+        _masterFile.AddIPAddressResourceRecord("nfs-ps3.fesl.ea.com", hostAddr);
+        _masterFile.AddIPAddressResourceRecord("nfsps-ps3.fesl.ea.com", hostAddr);
+        _masterFile.AddIPAddressResourceRecord("nfsps2-ps3.fesl.ea.com", hostAddr);
+        _masterFile.AddIPAddressResourceRecord("nfsmw2-ps3.fesl.ea.com", hostAddr);
+
+        _masterFile.AddIPAddressResourceRecord("skate-ps3.fesl.ea.com", hostAddr);
+        _masterFile.AddIPAddressResourceRecord("skate2-ps3.fesl.ea.com", hostAddr);
+
+        _masterFile.AddIPAddressResourceRecord("simpsons-ps3.fesl.ea.com", hostAddr);
+        _masterFile.AddIPAddressResourceRecord("hl2-ps3.fesl.ea.com", hostAddr);
+        _masterFile.AddIPAddressResourceRecord("godfather2-ps3.fesl.ea.com", hostAddr);
         _masterFile.AddIPAddressResourceRecord("cncra3-ps3.fesl.ea.com", hostAddr);
 
         _server.Listening += (sender, args) => _logger.LogInformation($"DNS server listening!");
