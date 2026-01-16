@@ -85,22 +85,14 @@ public class FeslHandler
             ["xmsg/GetMessages"] = HandleGetMessages,
             ["acct/GetTelemetryToken"] = HandleGetTelemetryToken,
 
+            // Don't warn for known safe stubs
             ["pres/SetPresenceStatus"] = AcknowledgeRequest,
             ["acct/NuGrantEntitlement"] = AcknowledgeRequest,
             ["xmsg/ModifySettings"] = AcknowledgeRequest,
             ["mtrx/ReportMetrics"] = AcknowledgeRequest,
             ["rank/ReportMetrics"] = AcknowledgeRequest,
             ["pnow/ReportMetrics"] = AcknowledgeRequest,
-            ["pnow/Cancel"] = AcknowledgeRequest,
-            ["achi/GetAchievementGroupDefinitions"] = AcknowledgeRequest,
-            ["achi/GetAchievementDefinitionsByGroup"] = AcknowledgeRequest,
-            ["achi/GetOwnerAchievementsByGroup"] = AcknowledgeRequest,
-            ["achi/SynchAchievements"] = AcknowledgeRequest,
-            ["achi/GetOwnerAchievements"] = AcknowledgeRequest,
-            ["asso/AddAssociations"] = AcknowledgeRequest,
-            ["blob/ListBlobInfo"] = AcknowledgeRequest,
-            ["blob/TopNBlobRatings"] = AcknowledgeRequest,
-            ["subs/GetPricingSelectionsByCode"] = AcknowledgeRequest,
+            ["pnow/Cancel"] = AcknowledgeRequest
         }.ToImmutableDictionary();
     }
 
