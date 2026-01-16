@@ -428,13 +428,18 @@ public class FeslHandler
     {
         if (_session is null) throw new NotImplementedException();
 
+        int queryCount = 0;
+        if (request.DataDict.TryGetValue("userInfo.[]", out var reqCount) && !string.IsNullOrWhiteSpace(reqCount))
+        {
+            queryCount = int.Parse(reqCount);
+        }
+
         var responseData = new Dictionary<string, string>
         {
             { "TXN", request.TXN },
-            { "userInfo.[]", request["userInfo.[]"] }
+            { "userInfo.[]", $"{queryCount}" }
         };
 
-        var queryCount = int.Parse(request["userInfo.[]"]);
         for (var i = 0; i < queryCount; i++)
         {
             var username = request[$"userInfo.{i}.userName"];
