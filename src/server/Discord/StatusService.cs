@@ -454,10 +454,16 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
     {
         var eb = StatusBuilder(server, "Command & Conquest: Red Alert 3");
 
+        // There is `B-U-_gameType` but game always sends `skirmish`
         if (server.Data.TryGetValue("B-U-_matchMode", out var matchMode))
         {
             var mode = matchMode == "private" ? "Campaign" : "Skirmish";
             eb.AddField("Mode", mode);
+        }
+
+        if (server.Data.TryGetValue("B-U-_closed", out var closed) && closed == "1")
+        {
+            eb.AddField("Closed", "Yes");
         }
 
         return (server.GID, eb.Build());
