@@ -85,3 +85,21 @@ Skate 2          | skate2-ps3
 * See [`Ports.cs`](/src/server/EA/Ports.cs) for default fesl client ports
 * Theater address and port in PS3 games is controlled by Fesl's Hello message
 * Arcadia always sends `theater.ps3.arcadia`
+
+## Unsupported Games
+
+Game                          | Notes
+--------------------------    | ---------- 
+Command & Conquer Red Alert 3 | Can host, joining is problematic
+Army of Two                   | Can start lobby, nobody can join
+Army of Two: 40th Day         | Can start lobby, nobody can join
+Godfather 2                   | Can start lobby, nobody can join
+Battlefield Bad Company       | No servers
+Team Fortress 2               | No servers
+Need for Speed: Carbon        | No servers
+Need for Speed: Pro Street    | No servers
+Need for Speed: Shift         | No servers
+Need for Speed: Undercover    | No servers
+Skate 1                       | Crashes
+Skate 2                       | Disconnects after Hello
+The Simpsons Game             | Stats not implemented
