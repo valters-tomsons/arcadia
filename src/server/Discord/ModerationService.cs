@@ -8,6 +8,7 @@ namespace Arcadia.Discord;
 public class ModerationService(ILogger<ModerationService> logger)
 {
     private readonly ILogger<ModerationService> _logger = logger;
+
     private readonly LanguageDetector _detector = LanguageDetectorBuilder.FromLanguages(
         Language.English,
         Language.Spanish,
@@ -90,9 +91,11 @@ public class ModerationService(ILogger<ModerationService> logger)
         }
     }
 
-    private static async Task DeleteNonEnglish(SocketUserMessage msg)
+    private async Task DeleteNonEnglish(SocketUserMessage msg)
     {
         const ulong nonEnglishChannelId = 1450610182995316969;
+
+        _logger.LogInformation("[Moderation] Deleting non-english message: '{Content}'", msg.Content);
 
         try
         {
@@ -102,9 +105,11 @@ public class ModerationService(ILogger<ModerationService> logger)
         catch { }
     }
 
-    private static async Task DeleteIlliterate(SocketUserMessage msg)
+    private async Task DeleteIlliterate(SocketUserMessage msg)
     {
         const ulong infoChannelId = 1256693500901331044;
+
+        _logger.LogInformation("[Moderation] Deleting stupid question: '{Content}'", msg.Content);
 
         try
         {
@@ -114,8 +119,10 @@ public class ModerationService(ILogger<ModerationService> logger)
         catch { }
     }
 
-    private static async Task DeletePiracy(SocketUserMessage msg)
+    private async Task DeletePiracy(SocketUserMessage msg)
     {
+        _logger.LogInformation("[Moderation] Deleting piracy related message: '{Content}'", msg.Content);
+
         try
         {
             await msg.ReplyAsync($"Read Rule #2, no discussion of piracy!");
