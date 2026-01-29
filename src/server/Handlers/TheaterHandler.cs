@@ -146,20 +146,29 @@ public class TheaterHandler
     {
         if (_session is null) throw new NotImplementedException();
 
-        var reqGid = request["GID"];
-        var gid = string.IsNullOrWhiteSpace(reqGid) ? 0 : long.Parse(reqGid);
+        GameServerListing? game = null;
 
-        var game = _sharedCache.GetGameByGid(_session!.PartitionId, gid);
+        if (long.TryParse(request["GID"], out var gid) && gid > 0)
+        {
+            // Join by GameID
+            game = _sharedCache.GetGameByGid(_session!.PartitionId, gid);
+        }
+        else if (request.DataDict.TryGetValue("UID", out var uid) && ulong.TryParse(uid, out var hostUid) && hostUid > 0)
+        {
+            // Join by PlayerID (R-U-invited?)
+            game = _sharedCache.FindGameWithPlayerByUid(_session.PartitionId, hostUid);
+        }
+        else if(request.DataDict.TryGetValue("USER", out var joinPlayerName))
+        {
+            // Join by player Username
+            game = _sharedCache.FindGameWithPlayer(_session!.PartitionId, joinPlayerName);
+        }
+
         if (game is null)
         {
-            var joinPlayerName = request["USER"];
-            game = _sharedCache.FindGameWithPlayer(_session!.PartitionId, joinPlayerName);
-
-            if (game is null)
-            {
-                await SendError(request);
-                return;
-            }
+            _logger.LogError("EGAM resulting with NULL game!");
+            await SendError(request);
+            return;
         }
 
         if (game.UID != _session.User.UserId)
