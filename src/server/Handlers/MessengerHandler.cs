@@ -65,12 +65,14 @@ public class MessengerHandler
             throw new Exception("No plasma session found with requested LKEY");
         }
 
+        var partitionId = plasma.PartitionId[0] == '/' ? plasma.PartitionId : $"/{plasma.PartitionId}";
+
         var response = new Dictionary<string, string>
         {
             ["TTID"] = "0",
             ["TITL"] = "A Game",
             ["ID"] = request["ID"],
-            ["USER"] = $"{request["USER"]}@messaging.ea.com/eagames/{plasma.PartitionId}"
+            ["USER"] = $"{request["USER"]}@messaging.ea.com/eagames{partitionId}"
         };
 
         var packet = new Packet(request.Type, TheaterTransmissionType.OkResponse, 0, response);
