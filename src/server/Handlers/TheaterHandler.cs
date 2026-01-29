@@ -151,14 +151,14 @@ public class TheaterHandler
         if (long.TryParse(request["GID"], out var gid) && gid > 0)
         {
             // Join by GameID
-            game = _sharedCache.GetGameByGid(_session!.PartitionId, gid);
+            game = _sharedCache.GetGameByGid(_session.PartitionId, gid);
         }
         else if (request.DataDict.TryGetValue("UID", out var uid) && ulong.TryParse(uid, out var hostUid) && hostUid > 0)
         {
             // Join by PlayerID (R-U-invited?)
             game = _sharedCache.FindGameWithPlayerByUid(_session.PartitionId, hostUid);
         }
-        else if(request.DataDict.TryGetValue("USER", out var joinPlayerName))
+        else if (request.DataDict.TryGetValue("USER", out var joinPlayerName))
         {
             // Join by player Username
             game = _sharedCache.FindGameWithPlayer(_session!.PartitionId, joinPlayerName);
