@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Discord;
 using Discord.WebSocket;
 using Lingua;
@@ -57,10 +58,29 @@ public class ModerationService(ILogger<ModerationService> logger)
         "how to download game",
     ];
 
+    private ConcurrentDictionary<SocketGuildUser, DateTimeOffset> _lastEmbeds = [];
+    private static readonly TimeSpan _embedTreshhold = TimeSpan.FromMinutes(1);
+
     public async Task OnMessageReceived(SocketUserMessage msg)
     {
         if (msg.Author.IsBot) return;
         if (msg.Author is not SocketGuildUser usr) return;
+
+        if (msg.Embeds.Count > 2)
+        {
+            if (_lastEmbeds.TryGetValue(usr, out var lastPosted))
+            {
+                var embedTimeDiff = DateTimeOffset.UtcNow - lastPosted;
+                if (embedTimeDiff < _embedTreshhold)
+                {
+                    _lastEmbeds.Remove(usr, out _);
+                    await DeleteImageSpam(msg, usr);
+                    return;
+                }
+            }
+
+            _lastEmbeds[usr] = DateTimeOffset.UtcNow;
+        }
 
         var content = msg.Content.Trim();
         if (string.IsNullOrWhiteSpace(content) || content.Length < 8) return;
@@ -125,8 +145,25 @@ public class ModerationService(ILogger<ModerationService> logger)
 
         try
         {
-            await msg.ReplyAsync($"Read Rule #2, no discussion of piracy!");
+            await msg.ReplyAsync("Read Rule #2, no discussion of piracy!");
             await msg.DeleteAsync();
+        }
+        catch { }
+    }
+
+    private async Task DeleteImageSpam(SocketUserMessage msg, SocketGuildUser usr)
+    {
+        _logger.LogInformation("[Moderation] Detected spam from {Username} ({UserId})", msg.Author.Username, msg.Author.Id);
+
+        try
+        {
+            await msg.ReplyAsync("Banned for spam. Have a nice day! 👋");
+        }
+        catch { }
+
+        try
+        {
+            await usr.BanAsync(pruneDays: 2, "Spam");
         }
         catch { }
     }
