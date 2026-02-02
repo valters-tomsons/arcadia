@@ -58,7 +58,7 @@ public class ModerationService(ILogger<ModerationService> logger)
         "how to download game",
     ];
 
-    private ConcurrentDictionary<SocketGuildUser, DateTimeOffset> _lastEmbeds = [];
+    private readonly ConcurrentDictionary<SocketGuildUser, DateTimeOffset> _lastEmbeds = [];
     private static readonly TimeSpan _embedTreshhold = TimeSpan.FromMinutes(1);
 
     public async Task OnMessageReceived(SocketUserMessage msg)
