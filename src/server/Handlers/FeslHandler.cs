@@ -177,6 +177,11 @@ public class FeslHandler
                     { "theaterPort", $"{DefaultTheaterPort}" }
                 };
 
+        if (request["clientString"].StartsWith("skate2"))
+        {
+            serverHelloData.Add("customUrl", (_settings.Value.TheaterAddress ?? hostName) + "/customUrl");
+        }
+
         var helloPacket = new Packet("fsys", FeslTransmissionType.SinglePacketResponse, request.Id, serverHelloData);
         await _conn.SendPacket(helloPacket);
         await SendMemCheck();

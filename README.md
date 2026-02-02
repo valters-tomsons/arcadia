@@ -100,6 +100,6 @@ Need for Speed: Carbon        | No servers
 Need for Speed: Pro Street    | No servers
 Need for Speed: Shift         | No servers
 Need for Speed: Undercover    | No servers
-Skate 1                       | Crashes
-Skate 2                       | Disconnects after Hello
+Skate 1                       | No servers? + crash
+Skate 2                       | No servers
 The Simpsons Game             | Stats not implemented
