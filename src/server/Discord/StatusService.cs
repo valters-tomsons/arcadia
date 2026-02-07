@@ -424,6 +424,32 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
         return (server.GID, eb.Build());
     }
 
+    private static readonly FrozenDictionary<string, string> _lotrModes = new Dictionary<string, string>()
+    {
+        {"1988399932", "Conquest"},
+        {"42885688", "Hero TDM"},
+        {"2015881514", "Team Deathmatch"},
+        {"1503065498", "Capture the Ring"},
+        {"-122228709", "War of the Ring"}
+    }.ToFrozenDictionary();
+
+    private static readonly FrozenDictionary<string, string> _lotrLevels = new Dictionary<string, string>()
+    {
+        {"-1109594032", "The Black Gate"},
+        {"-1789567933", "Helm's Deep"},
+        {"-1342191936", "Isengard"},
+        {"-1040791731", "Minas Morgul"},
+        {"-1988909791", "Minas Tirith"},
+        {"-388473313", "Minas Tirith Top"},
+        {"-1994967355", "Mines of Moria"},
+        {"-262282117", "Mount Doom"},
+        {"-1683102250", "Osgiliath"},
+        {"-2030748778", "Pelennor Fields"},
+        {"-1389475930", "Rivendell"},
+        {"261105074", "The Shire"},
+        {"1680074377", "Weathertop"},
+    }.ToFrozenDictionary();
+
     private static (long GID, Embed Embed)? BuildLOTRStatus(GameServerListing server)
     {
         if (server.Data.TryGetValue("B-U-FriendsOnly", out var friendsOnly) && friendsOnly == "1")
@@ -436,6 +462,16 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
         if (server.Data.TryGetValue("B-U-PCDedicated", out var isDedicated) && isDedicated == "1")
         {
             eb.AddField("Name", server.NAME.Replace("\"", string.Empty));
+        }
+
+        if (server.Data.TryGetValue("B-U-Mode", out var modeKey) && _lotrModes.TryGetValue(modeKey, out var modeName))
+        {
+            eb.AddField("Mode", modeName);
+        }
+
+        if (server.Data.TryGetValue("B-U-LevelName", out var nameKey) && _lotrLevels.TryGetValue(nameKey, out var levelName))
+        {
+            eb.AddField("Level", levelName);
         }
 
         return (server.GID, eb.Build());
