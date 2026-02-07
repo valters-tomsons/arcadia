@@ -435,7 +435,7 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
 
         if (server.Data.TryGetValue("B-U-PCDedicated", out var isDedicated) && isDedicated == "1")
         {
-            eb.AddField("Name", server.NAME);
+            eb.AddField("Name", server.NAME.Replace("\"", string.Empty));
         }
 
         return (server.GID, eb.Build());
