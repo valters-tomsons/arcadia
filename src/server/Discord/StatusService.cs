@@ -430,7 +430,9 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
         {"42885688", "Hero TDM"},
         {"2015881514", "Team Deathmatch"},
         {"1503065498", "Capture the Ring"},
-        {"-122228709", "War of the Ring"}
+        {"-122228709", "War of the Ring"},
+        {"270340015", "War of the Ring (Lobby)"},
+        {"-1028407685", "Instant Action (Lobby)"}
     }.ToFrozenDictionary();
 
     private static readonly FrozenDictionary<string, string> _lotrLevels = new Dictionary<string, string>()
