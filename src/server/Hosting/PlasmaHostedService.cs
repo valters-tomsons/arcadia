@@ -30,6 +30,7 @@ public class PlasmaHostedService : IHostedService
     private readonly List<UdpClient> _udpListeners = [];
 
     private readonly SemaphoreSlim _sslHandshakeSemaphore = new(1, 1);
+    private readonly static TimeSpan _sslHandshakeTimeout = TimeSpan.FromSeconds(15);
 
     public PlasmaHostedService(ILogger<PlasmaHostedService> logger, IOptions<ArcadiaSettings> arcadiaSettings, ProtoSSL certGenerator, IServiceScopeFactory scopeFactory, IOptions<DebugSettings> debugSettings, Database db)
     {
@@ -145,7 +146,11 @@ public class PlasmaHostedService : IHostedService
                 }
                 else
                 {
-                    await _sslHandshakeSemaphore.WaitAsync(cts.Token);
+                    using var handshakeCts = new CancellationTokenSource(_sslHandshakeTimeout);
+                    using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, handshakeCts.Token);
+
+                    await _sslHandshakeSemaphore.WaitAsync(linkedCts.Token);
+
                     TlsServerProtocol serverProtocol;
 
                     try
