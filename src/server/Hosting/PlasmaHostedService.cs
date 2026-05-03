@@ -146,6 +146,8 @@ public class PlasmaHostedService : IHostedService
                 }
                 else
                 {
+                    networkStream.ReadTimeout = (int)_sslHandshakeTimeout.TotalMilliseconds;
+
                     using var handshakeCts = new CancellationTokenSource(_sslHandshakeTimeout);
                     using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, handshakeCts.Token);
 
@@ -164,6 +166,8 @@ public class PlasmaHostedService : IHostedService
                     {
                         _sslHandshakeSemaphore.Release();
                     }
+
+                    networkStream.ReadTimeout = Timeout.Infinite;
 
                     plasma = await clientHandler.HandleClientConnection(serverProtocol.Stream, remoteEndpoint, localEndpoint, cts.Token);
                 }
