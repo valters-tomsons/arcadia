@@ -10,7 +10,7 @@
 # logs and dumps
 **/logs/
 **.log
-**/dumps/priv/*
+dumps/*
 
 # dev settings
 **/dev.appsettings.json
