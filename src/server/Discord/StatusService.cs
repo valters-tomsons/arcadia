@@ -305,6 +305,7 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
                     "LOTR" => BuildLOTRStatus(server),
                     "MOHAIR" => BuildMOHStatus(server),
                     "CNCRA3" => BuildRedAlert3Status(server),
+                    "BEACH" => null,
                     _ => throw new($"No game status builder for '{server.PartitionId}'")
                 };
 
