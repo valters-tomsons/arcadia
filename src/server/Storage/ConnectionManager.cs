@@ -11,7 +11,37 @@ public class ConnectionManager(ILogger<ConnectionManager> logger, Database db)
     private readonly ILogger<ConnectionManager> _logger = logger;
     private readonly Database _db = db;
 
-    private readonly List<GameServerListing> _gameServers = [];
+    private readonly List<GameServerListing> _gameServers = [
+        new(){
+            PartitionId = "/ps3/BEACH",
+            NAME = "HelloWorld",
+            Platform = "ps3",
+            CanJoin = true,
+            GID = 800000,
+            UID = 1000000000000,
+            EKEY = "NOENCYRPTIONKEY",
+            UGID = "NOGUID",
+            SECRET = "NOSECRET",
+            Data = new([
+                new KeyValuePair<string, string>("I", "192.168.8.106"),
+                new KeyValuePair<string, string>("INT-IP", "192.168.8.106"),
+                new KeyValuePair<string, string>("P", "10005"),
+                new KeyValuePair<string, string>("PORT", "10005"),
+                new KeyValuePair<string, string>("INT-PORT", "10005"),
+                new KeyValuePair<string, string>("N", "HelloWorld"),
+                new KeyValuePair<string, string>("B-U-MapName", "wake_island_s"),
+                new KeyValuePair<string, string>("MAX-PLAYERS", "16"),
+                new KeyValuePair<string, string>("TYPE", "G"),
+                new KeyValuePair<string, string>("JOIN", "O"),
+                new KeyValuePair<string, string>("B-version", "0"),
+                new KeyValuePair<string, string>("B-numObservers", "0"),
+                new KeyValuePair<string, string>("B-maxObservers", "0"),
+                new KeyValuePair<string, string>("TICKET", "1500000000"),
+            ]),
+            TheaterConnection = new EAConnection()
+        }
+    ];
+
     private readonly List<PlasmaSession> _connections = [];
 
     private readonly SemaphoreSlim _semaphore = new(1);

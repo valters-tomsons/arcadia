@@ -185,7 +185,12 @@ public class TheaterHandler
 
         game.EnqueuePlayer(_session);
 
-        await SendEGRQ_ToGameHost(request, _session, game);
+        await Task.Delay(500);
+
+        request["PID"] = "1";
+        await FinishPlayerEnterGameRequest(request, game.GID);
+
+        // await SendEGRQ_ToGameHost(request, _session, game);
     }
 
     private async Task SendError(Packet request)
@@ -313,7 +318,7 @@ public class TheaterHandler
         await _conn.SendPacket(packet);
     }
 
-    private async Task FinishPlayerEnterGameRequest(Packet serverResponse, int gid)
+    private async Task FinishPlayerEnterGameRequest(Packet serverResponse, long gid)
     {
         var server = _sharedCache.GetGameByGid(_session!.PartitionId, gid) ?? throw new NotImplementedException();
         if (server.TheaterConnection is null) throw new NotImplementedException();
@@ -327,7 +332,8 @@ public class TheaterHandler
             ["TID"] = $"{player.EGAM_TID}",
             ["LID"] = $"{server.LID}",
             ["GID"] = $"{server.GID}",
-            ["ALLOWED"] = serverResponse["ALLOWED"]
+            // ["ALLOWED"] = serverResponse["ALLOWED"]
+            ["ALLOWED"] = "1"
         };
 
         await player.TheaterConnection.SendPacket(new("EGAM", TheaterTransmissionType.OkResponse, 0, egamResp));
