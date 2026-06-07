@@ -37,6 +37,7 @@ public class ConnectionManager(ILogger<ConnectionManager> logger, Database db)
                 new KeyValuePair<string, string>("B-numObservers", "0"),
                 new KeyValuePair<string, string>("B-maxObservers", "0"),
                 new KeyValuePair<string, string>("TICKET", "1500000000"),
+                new KeyValuePair<string, string>("B-Version", "RETAIL421378"),
             ]),
             TheaterConnection = new EAConnection()
         }

@@ -432,6 +432,12 @@ public class TheaterHandler
         if (game.TheaterConnection is null) return;
         if (_session is null) return;
 
+        var serverIp = game.TheaterConnection.RemoteAddress;
+        if (string.IsNullOrWhiteSpace(serverIp))
+        {
+            serverIp = game.Data["I"];
+        }
+
         var response = new Dictionary<string, string>
         {
             ["TID"] = request["TID"],
@@ -439,7 +445,7 @@ public class TheaterHandler
             ["GID"] = $"{game.GID}",
             ["HU"] = $"{game.UID}",
             ["HN"] = game.NAME,
-            ["I"] = game.TheaterConnection.RemoteAddress,
+            ["I"] = serverIp,
             ["P"] = $"{game.Data["PORT"]}",
             ["N"] = game.NAME.Replace("\"", string.Empty),
             ["AP"] = $"{game.ConnectedPlayers.Count}",
