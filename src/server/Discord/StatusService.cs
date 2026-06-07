@@ -305,7 +305,7 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
                     "LOTR" => BuildLOTRStatus(server),
                     "MOHAIR" => BuildMOHStatus(server),
                     "CNCRA3" => BuildRedAlert3Status(server),
-                    "BEACH" => null,
+                    "BEACH" => Beach(server),
                     _ => throw new($"No game status builder for '{server.PartitionId}'")
                 };
 
@@ -353,6 +353,13 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
         { "Levels/ONS_MP_005", ("Atacama Desert", "BC2_Atacama_Desert.jpg") },
         { "Levels/ONS_MP_008", ("Nelson Bay", "BC2_Nelson_Bay.jpg") },
     }.ToFrozenDictionary();
+
+    private static (long GID, Embed Embed)? Beach(GameServerListing server)
+    {
+        var eb = StatusBuilder(server, "BEACH");
+        return (server.GID, eb.Build());
+    }
+
 
     private static (long GID, Embed Embed)? BuildBFBC2Status(GameServerListing server)
     {
