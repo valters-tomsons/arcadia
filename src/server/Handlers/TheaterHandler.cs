@@ -373,6 +373,11 @@ public class TheaterHandler
             ["GID"] = $"{server.GID}"
         };
 
+        if (_session.BeachMod && server.BeachMod)
+        {
+            egegResp["P"] = "1003";
+        }
+
         await player.TheaterConnection.SendPacket(new("EGEG", TheaterTransmissionType.OkResponse, 0, egegResp));
     }
 
@@ -464,6 +469,11 @@ public class TheaterHandler
             ["F"] = "0",
             ["NF"] = "0",
         };
+
+        if (_session.BeachMod && game.BeachMod)
+        {
+            response["P"] = "1003";
+        }
 
         var subdomain = game.PartitionId.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Last();
         switch (subdomain)
