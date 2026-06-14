@@ -547,6 +547,11 @@ public class TheaterHandler
             _logger.LogWarning("Client creating game in '{PartitionId}' with RESERVE-HOST=1", _session.PartitionId);
         }
 
+        if (_sharedCache.GetServerByHostPlayer(_session.User.UserId) is not null)
+        {
+            throw new("Disconnecting client trying to host two game servers!");
+        }
+
         var game = new GameServerListing()
         {
             PartitionId = _session.PartitionId,
