@@ -593,6 +593,16 @@ public class TheaterHandler
             return;
         }
 
+        if (_session.PartitionId.EndsWith("BEACH"))
+        {
+            // BEACHMOD: Disallow creating games without having the mod
+            if (!_session.BeachMod)
+            {
+                await SendError(request);
+                return;
+            }
+        }
+
         // BEACHMOD: mark as always accepting connections
         if (_session.BeachMod)
         {

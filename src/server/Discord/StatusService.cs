@@ -356,8 +356,15 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
 
     private static (long GID, Embed Embed)? Beach(GameServerListing server)
     {
-        var eb = StatusBuilder(server, "BEACH");
-        return (server.GID, eb.Build());
+        if (server.BeachMod)
+        {
+            var eb = StatusBuilder(server, "Battlefield 1943");
+            eb.Fields.First(x => x.Name == "Players").Value = "?/16";
+            eb.AddField("Host", server.NAME);
+            return (server.GID, eb.Build());
+        }
+
+        return null;
     }
 
 
