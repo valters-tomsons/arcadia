@@ -27,6 +27,7 @@ public class FeslHandler
     private string clientString = string.Empty;
     private string partitionId = string.Empty;
     private string subDomain = string.Empty;
+    private string? beachMod = null;
 
     private readonly static TimeSpan PingPeriod = TimeSpan.FromSeconds(60);
     private readonly static TimeSpan MemCheckPeriod = TimeSpan.FromSeconds(120);
@@ -160,6 +161,14 @@ public class FeslHandler
         clientString = request["clientString"];
         subDomain = clientString.Split('-').First().ToUpperInvariant();
         partitionId = $"/{request["sku"]}/{subDomain}";
+
+        // BEACHMOD
+        var sdkVer = request.DataDict.GetValueOrDefault("SDKVersion");
+        if (sdkVer?.StartsWith("BEACHMOD") == true)
+        {
+            beachMod = sdkVer[9..].Trim();
+            _logger.LogInformation("BeachMod {ModVersion} client detected", beachMod);
+        }
 
         const string hostName = "theater.ps3.arcadia";
 
@@ -662,6 +671,7 @@ public class FeslHandler
 
         var platform = Utils.GetOnlinePlatformName(ticket.SignatureIdentifier) ?? throw new("Cannot create PS3 login without online platform!");
         _session = await _sharedCache.CreatePlasmaConnection(_conn, onlineId, clientString, partitionId, platform, ticket.UserId);
+        _session.BeachMod = beachMod is not null;
 
         _db.RecordLoginMetric(ticket, _session.User.Platform);
 
@@ -707,6 +717,7 @@ public class FeslHandler
 
         var platform = Utils.GetOnlinePlatformName(ticket.SignatureIdentifier) ?? throw new("Cannot create PS3 login without online platform!");
         _session = await _sharedCache.CreatePlasmaConnection(_conn, onlineId, clientString, partitionId, platform, ticket.UserId);
+        _session.BeachMod = beachMod is not null;
 
         _db.RecordLoginMetric(ticket, _session.User.Platform);
 

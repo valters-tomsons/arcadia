@@ -132,9 +132,13 @@ public class TheaterHandler
         var isGid = long.TryParse(request["GID"], out var gid);
         var game = _sharedCache.GetGameByGid(_session!.PartitionId, gid);
 
-        if (game is not null && isGid && _session.User.UserId == game.UID && !game.PartitionId.EndsWith("BEACH"))
+        if (game is not null && isGid && _session.User.UserId == game.UID)
         {
-            await _sharedCache.RemoveGameListing(game);
+            // BEACHMOD: Ignore game deletion to allow registering client as host
+            if (!_session.BeachMod)
+            {
+                await _sharedCache.RemoveGameListing(game);
+            }
         }
 
         var packet = new Packet("ECNL", TheaterTransmissionType.OkResponse, 0, response);
@@ -181,8 +185,10 @@ public class TheaterHandler
             }
         }
 
-        if (game.PartitionId.EndsWith("BEACH") && game.UID != _session.User.UserId)
+        if (game.UID != _session.User.UserId && _session.BeachMod && game.BeachMod)
         {
+            _logger.LogInformation("Spoofing accept response from server, GID={GID}", game.GID);
+
             var spoof = new Packet(request.Type, request.TransmissionType, request.Id);
             spoof["PID"] = "1";
             spoof["ALLOWED"] = "1";
@@ -572,7 +578,8 @@ public class TheaterHandler
                 ["JOIN"] = request["JOIN"],
                 ["RT"] = request["RT"],
                 ["TICKET"] = $"{_sharedCounters.GetNextTicket()}"
-            }
+            },
+            BeachMod = _session.BeachMod
         };
 
         if (string.IsNullOrWhiteSpace(game.NAME))
@@ -581,7 +588,8 @@ public class TheaterHandler
             return;
         }
 
-        if (game.PartitionId.EndsWith("BEACH"))
+        // BEACHMOD: mark as always accepting connections
+        if (_session.BeachMod)
         {
             game.CanJoin = true;
         }
