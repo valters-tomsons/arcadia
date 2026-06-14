@@ -137,6 +137,7 @@ public class TheaterHandler
             // BEACHMOD: Ignore game deletion to allow registering client as host
             if (!_session.BeachMod)
             {
+                game.CanJoin = true;
                 await _sharedCache.RemoveGameListing(game);
             }
         }
@@ -611,12 +612,6 @@ public class TheaterHandler
                 await SendError(request);
                 return;
             }
-        }
-
-        // BEACHMOD: mark as always accepting connections
-        if (_session.BeachMod)
-        {
-            game.CanJoin = true;
         }
 
         await _sharedCache.AddGameListing(game, request.DataDict);
