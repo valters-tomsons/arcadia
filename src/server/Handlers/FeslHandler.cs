@@ -86,6 +86,9 @@ public class FeslHandler
             ["xmsg/GetMessages"] = HandleGetMessages,
             ["acct/GetTelemetryToken"] = HandleGetTelemetryToken,
 
+            // BEACHMOD
+            ["mods/Hello"] = HandleModsHello,
+
             // Don't warn for known safe stubs
             ["pres/SetPresenceStatus"] = AcknowledgeRequest,
             ["acct/NuGrantEntitlement"] = AcknowledgeRequest,
@@ -162,14 +165,6 @@ public class FeslHandler
         subDomain = clientString.Split('-').First().ToUpperInvariant();
         partitionId = $"/{request["sku"]}/{subDomain}";
 
-        // BEACHMOD
-        var sdkVer = request.DataDict.GetValueOrDefault("SDKVersion");
-        if (sdkVer?.StartsWith("BEACHMOD") == true)
-        {
-            beachMod = sdkVer[9..].Trim();
-            _logger.LogInformation("BeachMod {ModVersion} client detected", beachMod);
-        }
-
         const string hostName = "theater.ps3.arcadia";
 
         var currentTime = DateTime.UtcNow.ToString("MMM-dd-yyyy HH:mm:ss 'UTC'", CultureInfo.InvariantCulture);
@@ -194,6 +189,13 @@ public class FeslHandler
         var helloPacket = new Packet("fsys", FeslTransmissionType.SinglePacketResponse, request.Id, serverHelloData);
         await _conn.SendPacket(helloPacket);
         await SendMemCheck();
+    }
+
+    private async Task HandleModsHello(Packet request)
+    {
+        var sdkVer = request.DataDict.GetValueOrDefault("BEACHMOD") ?? throw new("ModHello without version!");
+        beachMod = sdkVer.Trim();
+        _logger.LogInformation("BeachMod {ModVersion} client detected", beachMod);
     }
 
     private async Task HandleGoodbye(Packet request)
