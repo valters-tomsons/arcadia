@@ -90,6 +90,8 @@ public class FeslHandler
             ["mods/Hello"] = HandleModsHello,
             ["mods/LanGame"] = HandleLanGame,
             ["mods/LanStop"] = HandleLanStop,
+            ["mods/LanLeave"] = HandleLanLeave,
+            ["mods/LanJoined"] = HandleLanJoined,
 
             // Don't warn for known safe stubs
             ["pres/SetPresenceStatus"] = AcknowledgeRequest,
@@ -204,9 +206,14 @@ public class FeslHandler
         _logger.LogInformation("Client sent lan game info!");
         if (_session is null) throw new NotImplementedException();
 
-        if (_sharedCache.GetServerByHostPlayer(_session.User.UserId) is not null)
+        var ongoingGame = _sharedCache.GetServerByHostPlayer(_session.User.UserId);
+        if (ongoingGame is not null)
         {
-            // update
+            if (request.DataDict.TryGetValue("B-U-Level", out var level))
+            {
+                ongoingGame.Data["B-U-Level"] = level;
+            }
+
             return;
         }
 
@@ -267,6 +274,29 @@ public class FeslHandler
         }
 
         await _sharedCache.RemoveGameListing(game);
+    }
+
+
+    private async Task HandleLanLeave(Packet request)
+    {
+        if (_session is null) throw new NotImplementedException();
+
+        var game = _sharedCache.FindGameWithPlayerByUid(_session.PartitionId, _session.User.UserId);
+        if (game is null) return;
+
+        game.ConnectedPlayers.TryRemove(_session.User.UserId, out _);
+    }
+
+    private async Task HandleLanJoined(Packet request)
+    {
+        if (_session is null) throw new NotImplementedException();
+
+        if (!long.TryParse(request.DataDict.GetValueOrDefault("GID"), out var gid) || gid < 1) return;
+
+        var game = _sharedCache.GetGameByGid(_session.PartitionId, gid);
+        if (game is null) return;
+
+        game.ConnectedPlayers.TryAdd(_session.User.UserId, _session);
     }
 
     private async Task HandleGoodbye(Packet request)

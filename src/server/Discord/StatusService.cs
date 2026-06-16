@@ -354,13 +354,31 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
         { "Levels/ONS_MP_008", ("Nelson Bay", "BC2_Nelson_Bay.jpg") },
     }.ToFrozenDictionary();
 
+    private static readonly FrozenDictionary<string, (string Display, string Asset)?> _beachAssets = new Dictionary<string, (string Display, string Asset)?>
+    {
+        { "Levels/Coral_sea", ("Coral Sea", "BC1943_Coral_Sea.jpg") },
+        { "Levels/Wake_island_s", ("Wake Island", "BC1943_Wake_Island.jpg") },
+    }.ToFrozenDictionary();
+
     private static (long GID, Embed Embed)? Beach(GameServerListing server)
     {
         if (server.BeachMod)
         {
+            var levelName = server.Data.GetValueOrDefault("B-U-Level");
+
             var eb = StatusBuilder(server, "Battlefield 1943");
-            eb.Fields.First(x => x.Name == "Players").Value = "?/16";
             eb.AddField("Host", server.NAME);
+
+            if (!string.IsNullOrWhiteSpace(levelName))
+            {
+                var mapInfo = _beachAssets.GetValueOrDefault(levelName);
+                if (mapInfo.HasValue)
+                {
+                    eb.AddField("Level", mapInfo?.Display);
+                    eb.WithImageUrl(string.Concat(assetsUrlBase, mapInfo?.Asset));
+                }
+            }
+
             return (server.GID, eb.Build());
         }
 
