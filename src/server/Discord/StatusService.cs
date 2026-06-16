@@ -356,8 +356,10 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
 
     private static readonly FrozenDictionary<string, (string Display, string Asset)?> _beachAssets = new Dictionary<string, (string Display, string Asset)?>
     {
-        { "Levels/Coral_sea", ("Coral Sea", "BC1943_Coral_Sea.jpg") },
-        { "Levels/Wake_island_s", ("Wake Island", "BC1943_Wake_Island.jpg") },
+        { "Levels/Coral_sea", ("Coral Sea", "BF1943_Coral_Sea.jpg") },
+        { "Levels/Wake_island_s", ("Wake Island", "BF1943_Wake_Island.jpg") },
+        { "Levels/Guadalcanal", ("Guadalcanal", "BF1943_Guadalcanal.jpg") },
+        { "Levels/Iwo_jima", ("Iwo Jima", "BF1943_Iwo_Jima.jpg") },
     }.ToFrozenDictionary();
 
     private static (long GID, Embed Embed)? Beach(GameServerListing server)
