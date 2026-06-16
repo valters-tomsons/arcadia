@@ -88,6 +88,8 @@ public class FeslHandler
 
             // BEACHMOD
             ["mods/Hello"] = HandleModsHello,
+            ["mods/LanGame"] = HandleLanGame,
+            ["mods/LanStop"] = HandleLanStop,
 
             // Don't warn for known safe stubs
             ["pres/SetPresenceStatus"] = AcknowledgeRequest,
@@ -193,9 +195,78 @@ public class FeslHandler
 
     private async Task HandleModsHello(Packet request)
     {
-        var sdkVer = request.DataDict.GetValueOrDefault("BEACHMOD") ?? throw new("ModHello without version!");
-        beachMod = sdkVer.Trim();
+        beachMod = request.DataDict.GetValueOrDefault("BEACHMOD")?.Trim() ?? throw new("ModHello without version!");
         _logger.LogInformation("BeachMod {ModVersion} client detected", beachMod);
+    }
+
+    private async Task HandleLanGame(Packet request)
+    {
+        _logger.LogInformation("Client sent lan game info!");
+        if (_session is null) throw new NotImplementedException();
+
+        if (_sharedCache.GetServerByHostPlayer(_session.User.UserId) is not null)
+        {
+            // update
+            return;
+        }
+
+        var game = new GameServerListing()
+        {
+            PartitionId = _session.PartitionId,
+            TheaterConnection = _conn,
+            UID = _session.User.UserId,
+            GID = _sharedCounters.GetNextGameId(),
+            Platform = "PS3",
+            LID = 257,
+            CanJoin = true,
+            BeachMod = true,
+            UGID = "NOGUID",
+            EKEY = "NOENCYRPTIONKEY",
+            SECRET = "NOSECRET",
+            NAME = _session.User.Username,
+            Data = new()
+            {
+                ["TICKET"] = $"{_sharedCounters.GetNextTicket()}",
+                ["NAME"] = _session.User.Username,
+                ["JOIN"] = "O",
+                ["TYPE"] = "G",
+                ["MAX-PLAYERS"] = "16",
+
+                ["I"] = _session.FeslConnection?.RemoteAddress ?? throw new(),
+                ["INT-IP"] = _session.FeslConnection?.RemoteAddress ?? throw new(),
+                ["PORT"] = "1003",
+                ["INT-PORT"] = "1003",
+
+                ["B-maxObservers"] = "0",
+                ["B-numObservers"] = "0",
+                ["B-version"] = "0",
+                ["HXFR"] = "0",
+                ["BEACHMOD"] = _session.BeachMod.ToString()
+            }
+        };
+
+        if (string.IsNullOrWhiteSpace(game.NAME))
+        {
+            return;
+        }
+
+        await _sharedCache.AddGameListing(game, request.DataDict);
+        game.ConnectedPlayers.TryAdd(_session.User.UserId, _session);
+    }
+
+    private async Task HandleLanStop(Packet request)
+    {
+        _logger.LogInformation("Client stopped lan game!");
+        if (_session is null) throw new NotImplementedException();
+
+        var game = _sharedCache.GetServerByHostPlayer(_session.User.UserId);
+        if (game is null)
+        {
+            _logger.LogWarning("player not hosting?!?");
+            return;
+        }
+
+        await _sharedCache.RemoveGameListing(game);
     }
 
     private async Task HandleGoodbye(Packet request)

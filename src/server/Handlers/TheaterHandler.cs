@@ -134,12 +134,7 @@ public class TheaterHandler
 
         if (game is not null && isGid && _session.User.UserId == game.UID)
         {
-            // BEACHMOD: Ignore game deletion to allow registering client as host
-            if (!_session.BeachMod)
-            {
-                game.CanJoin = true;
-                await _sharedCache.RemoveGameListing(game);
-            }
+            await _sharedCache.RemoveGameListing(game);
         }
 
         var packet = new Packet("ECNL", TheaterTransmissionType.OkResponse, 0, response);
@@ -602,16 +597,6 @@ public class TheaterHandler
         {
             await SendError(request);
             return;
-        }
-
-        if (_session.PartitionId.EndsWith("BEACH"))
-        {
-            // BEACHMOD: Disallow creating games without having the mod
-            if (!_session.BeachMod)
-            {
-                await SendError(request);
-                return;
-            }
         }
 
         await _sharedCache.AddGameListing(game, request.DataDict);
