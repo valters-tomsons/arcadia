@@ -358,8 +358,8 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
     {
         { "Levels/Coral_sea", ("Coral Sea", "BF1943_Coral_Sea.jpg") },
         { "Levels/Wake_island_s", ("Wake Island", "BF1943_Wake_Island.jpg") },
-        { "Levels/Guadalcanal", ("Guadalcanal", "BF1943_Guadalcanal.jpg") },
-        { "Levels/Iwo_jima", ("Iwo Jima", "BF1943_Iwo_Jima.jpg") },
+        { "Levels/Guadal_Canal", ("Guadal Canal", "BF1943_Guadalcanal.jpg") },
+        { "Levels/Iwo_Jima_s", ("Iwo Jima", "BF1943_Iwo_Jima.jpg") },
     }.ToFrozenDictionary();
 
     private static (long GID, Embed Embed)? Beach(GameServerListing server)
