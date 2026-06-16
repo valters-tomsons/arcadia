@@ -305,7 +305,7 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
                     "LOTR" => BuildLOTRStatus(server),
                     "MOHAIR" => BuildMOHStatus(server),
                     "CNCRA3" => BuildRedAlert3Status(server),
-                    "BEACH" => null,
+                    "BEACH" => Beach(server),
                     _ => throw new($"No game status builder for '{server.PartitionId}'")
                 };
 
@@ -353,6 +353,40 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
         { "Levels/ONS_MP_005", ("Atacama Desert", "BC2_Atacama_Desert.jpg") },
         { "Levels/ONS_MP_008", ("Nelson Bay", "BC2_Nelson_Bay.jpg") },
     }.ToFrozenDictionary();
+
+    private static readonly FrozenDictionary<string, (string Display, string Asset)?> _beachAssets = new Dictionary<string, (string Display, string Asset)?>
+    {
+        { "Levels/Coral_sea", ("Coral Sea", "BF1943_Coral_Sea.jpg") },
+        { "Levels/Wake_island_s", ("Wake Island", "BF1943_Wake_Island.jpg") },
+        { "Levels/Guadal_Canal", ("Guadal Canal", "BF1943_Guadalcanal.jpg") },
+        { "Levels/Iwo_Jima_s", ("Iwo Jima", "BF1943_Iwo_Jima.jpg") },
+    }.ToFrozenDictionary();
+
+    private static (long GID, Embed Embed)? Beach(GameServerListing server)
+    {
+        if (server.BeachMod)
+        {
+            var levelName = server.Data.GetValueOrDefault("B-U-Level");
+
+            var eb = StatusBuilder(server, "Battlefield 1943");
+            eb.AddField("Host", server.NAME);
+
+            if (!string.IsNullOrWhiteSpace(levelName))
+            {
+                var mapInfo = _beachAssets.GetValueOrDefault(levelName);
+                if (mapInfo.HasValue)
+                {
+                    eb.AddField("Level", mapInfo?.Display);
+                    eb.WithImageUrl(string.Concat(assetsUrlBase, mapInfo?.Asset));
+                }
+            }
+
+            return (server.GID, eb.Build());
+        }
+
+        return null;
+    }
+
 
     private static (long GID, Embed Embed)? BuildBFBC2Status(GameServerListing server)
     {

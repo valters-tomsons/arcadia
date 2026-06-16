@@ -168,6 +168,8 @@ public class ConnectionManager(ILogger<ConnectionManager> logger, Database db)
         return _gameServers.Where(x => x.PartitionId == partitionId).ToImmutableArray();
     }
 
+    public GameServerListing? GetServerByHostPlayer(ulong hostUid) => _gameServers.FirstOrDefault(x => x.UID == hostUid);
+
     public int GetPartitionPlayerCount(string partitionId)
     {
         return _connections.Count(x => x.PartitionId == partitionId);

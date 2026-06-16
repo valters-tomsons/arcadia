@@ -181,10 +181,20 @@ public class TheaterHandler
             }
         }
 
+        if (game.UID != _session.User.UserId && _session.BeachMod && game.BeachMod)
+        {
+            _logger.LogInformation("Spoofing accept response from server, GID={GID}", game.GID);
+
+            var spoof = new Packet(request.Type, request.TransmissionType, request.Id);
+            spoof["PID"] = "1";
+            spoof["ALLOWED"] = "1";
+
+            await FinishPlayerEnterGameRequest(spoof, game.GID);
+            return;
+        }
+
         _session.EGAM_TID = long.Parse(request["TID"]);
-
         game.EnqueuePlayer(_session);
-
         await SendEGRQ_ToGameHost(request, _session, game);
     }
 
@@ -313,7 +323,7 @@ public class TheaterHandler
         await _conn.SendPacket(packet);
     }
 
-    private async Task FinishPlayerEnterGameRequest(Packet serverResponse, int gid)
+    private async Task FinishPlayerEnterGameRequest(Packet serverResponse, long gid)
     {
         var server = _sharedCache.GetGameByGid(_session!.PartitionId, gid) ?? throw new NotImplementedException();
         if (server.TheaterConnection is null) throw new NotImplementedException();
@@ -533,6 +543,11 @@ public class TheaterHandler
             _logger.LogWarning("Client creating game in '{PartitionId}' with RESERVE-HOST=1", _session.PartitionId);
         }
 
+        if (_sharedCache.GetServerByHostPlayer(_session.User.UserId) is not null)
+        {
+            throw new("Disconnecting client trying to host two game servers!");
+        }
+
         var game = new GameServerListing()
         {
             PartitionId = _session.PartitionId,
@@ -547,14 +562,14 @@ public class TheaterHandler
             NAME = request["NAME"],
             Data = new()
             {
-                ["RESERVE-HOST"] = request["RESERVE-HOST"],
+                ["RESERVE-HOST"] = "0",
                 ["NAME"] = request["NAME"],
                 ["PORT"] = request["PORT"],
                 ["HTTYPE"] = request["HTTYPE"],
                 ["TYPE"] = request["TYPE"],
                 ["QLEN"] = request["QLEN"],
                 ["DISABLE-AUTO-DEQUEUE"] = request["DISABLE-AUTO-DEQUEUE"],
-                ["HXFR"] = request["HXFR"],
+                ["HXFR"] = "0",
                 ["INT-PORT"] = request["INT-PORT"],
                 ["INT-IP"] = request["INT-IP"],
                 ["MAX-PLAYERS"] = request["MAX-PLAYERS"],
@@ -586,7 +601,7 @@ public class TheaterHandler
             ["SECRET"] = $"{game.SECRET}",
             ["J"] = $"{game.Data["JOIN"]}",
             ["GID"] = $"{game.GID}",
-            ["HXFR"] = game.Data["HXFR"]
+            ["HXFR"] = "0"
         };
 
         var packet = new Packet("CGAM", TheaterTransmissionType.OkResponse, 0, response);

@@ -16,9 +16,9 @@ Game                       |   Status      | Live status
 -------------------------- | ----------    | ----- 
 Mercenaries 2              | Online        | No leaderboards.
 Medal of Honor Airborne    | Online        | No stats.
-Lord of the Rings Conquest | Online*       | *Requires patch or PC to host public servers. 
+Lord of the Rings Conquest | Online*       | *Requires PC or mod on PS3 to host public servers. 
 Bad Company 2              | COOP Only     | **Requires Onslaught DLC**, only player hosted servers. No servers for regular multiplayer.
-Battlefield 1943           | Tutorial Only | Can connect. No servers.
+Battlefield 1943           | Online**      | No servers. Requires BEACHMOD to join or host player hosted servers.
 
 ## RPCS3 Configuration
 

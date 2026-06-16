@@ -13,4 +13,6 @@ public class PlasmaSession
 
     public long PID { get; set; }
     public long EGAM_TID { get; set; }
+
+    public bool BeachMod { get; set; }
 }
