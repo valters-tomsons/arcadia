@@ -206,7 +206,13 @@ public class FeslHandler
         _logger.LogInformation("Client sent lan game info!");
         if (_session is null) throw new NotImplementedException();
 
+
         if (!request.DataDict.TryGetValue("B-U-Level", out var level) || string.IsNullOrWhiteSpace(level))
+        {
+            return;
+        }
+
+        if (level == "Levels/Wake_island_tutorial")
         {
             return;
         }
@@ -219,12 +225,7 @@ public class FeslHandler
         var ongoingGame = _sharedCache.GetServerByHostPlayer(_session.User.UserId);
         if (ongoingGame is not null)
         {
-            request.DataDict["B-U-Level"] = level;
-            return;
-        }
-
-        if (level == "Levels/Wake_island_tutorial")
-        {
+            ongoingGame.Data["B-U-Level"] = level;
             return;
         }
 
