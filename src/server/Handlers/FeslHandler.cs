@@ -211,6 +211,11 @@ public class FeslHandler
             return;
         }
 
+        if (!request.DataDict.TryGetValue("PORT", out var serverPort) || string.IsNullOrWhiteSpace(serverPort))
+        {
+            return;
+        }
+
         var ongoingGame = _sharedCache.GetServerByHostPlayer(_session.User.UserId);
         if (ongoingGame is not null)
         {
@@ -246,9 +251,10 @@ public class FeslHandler
                 ["MAX-PLAYERS"] = "16",
 
                 ["I"] = _session.FeslConnection?.RemoteAddress ?? throw new(),
+                ["PORT"] = serverPort,
+
                 ["INT-IP"] = _session.FeslConnection?.RemoteAddress ?? throw new(),
-                ["PORT"] = "1003",
-                ["INT-PORT"] = "1003",
+                ["INT-PORT"] = serverPort,
 
                 ["B-maxObservers"] = "0",
                 ["B-numObservers"] = "0",
