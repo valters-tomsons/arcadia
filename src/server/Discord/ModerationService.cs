@@ -58,28 +58,28 @@ public class ModerationService(ILogger<ModerationService> logger)
         "how to download game",
     ];
 
-    private readonly ConcurrentDictionary<SocketGuildUser, DateTimeOffset> _lastEmbeds = [];
-    private static readonly TimeSpan _embedTreshhold = TimeSpan.FromMinutes(1);
+    private readonly ConcurrentDictionary<SocketGuildUser, DateTimeOffset> _lastAttachments = [];
+    private static readonly TimeSpan _attachmentThreshold = TimeSpan.FromMinutes(1);
 
     public async Task OnMessageReceived(SocketUserMessage msg)
     {
         if (msg.Author.IsBot) return;
         if (msg.Author is not SocketGuildUser usr) return;
 
-        if (msg.Embeds.Count > 2)
+        if (msg.Attachments.Count > 2)
         {
-            if (_lastEmbeds.TryGetValue(usr, out var lastPosted))
+            if (_lastAttachments.TryGetValue(usr, out var lastPosted))
             {
-                var embedTimeDiff = DateTimeOffset.UtcNow - lastPosted;
-                if (embedTimeDiff < _embedTreshhold)
+                var attachmentTimeDiff = DateTimeOffset.UtcNow - lastPosted;
+                if (attachmentTimeDiff < _attachmentThreshold)
                 {
-                    _lastEmbeds.Remove(usr, out _);
+                    _lastAttachments.Remove(usr, out _);
                     await DeleteImageSpam(msg, usr);
                     return;
                 }
             }
 
-            _lastEmbeds[usr] = DateTimeOffset.UtcNow;
+            _lastAttachments[usr] = DateTimeOffset.UtcNow;
         }
 
         var content = msg.Content.Trim();
