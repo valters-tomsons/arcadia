@@ -92,6 +92,7 @@ public class FeslHandler
             ["mods/LanStop"] = HandleLanStop,
             ["mods/LanLeave"] = HandleLanLeave,
             ["mods/LanJoined"] = HandleLanJoined,
+            ["mods/LanFailed"] = HandleLanFailed,
 
             // Don't warn for known safe stubs
             ["pres/SetPresenceStatus"] = AcknowledgeRequest,
@@ -311,7 +312,27 @@ public class FeslHandler
         var game = _sharedCache.GetGameByGid(_session.PartitionId, gid);
         if (game is null) return;
 
-        game.ConnectedPlayers.TryAdd(_session.User.UserId, _session);
+        if (game.ConnectedPlayers.TryAdd(_session.User.UserId, _session))
+        {
+            Interlocked.Increment(ref game.ConnectionRatio);
+        }
+    }
+
+    private async Task HandleLanFailed(Packet request)
+    {
+        if (_session is null) throw new NotImplementedException();
+
+        if (!long.TryParse(request.DataDict.GetValueOrDefault("GID"), out var gid) || gid < 1) return;
+
+        var game = _sharedCache.GetGameByGid(_session.PartitionId, gid);
+        if (game is null) return;
+
+        if (game.FailedPlayers.Add(_session.User.UserId))
+        {
+            Interlocked.Decrement(ref game.ConnectionRatio);
+        }
+
+        await _conn.Terminate();
     }
 
     private async Task HandleGoodbye(Packet request)

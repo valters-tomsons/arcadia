@@ -407,11 +407,17 @@ public class TheaterHandler
         var games = _sharedCache
                 .GetPartitionServers(_session.PartitionId)
                 .Where(x => x.CanJoin)
+                .OrderByDescending(x => x.ConnectedPlayers.Count)
                 .ToList();
 
         if (_session.PartitionId.EndsWith("LOTR"))
         {
             games = [.. games.Where(x => x.Data["B-U-FriendsOnly"] == request["FILTER-ATTR-U-FriendsOnly"])];
+        }
+
+        if (_session.BeachMod)
+        {
+            games = [.. games.Where(x => x.BeachMod).OrderByDescending(x => x.ConnectionRatio)];
         }
 
         await _conn.SendPacket(new("GLST", TheaterTransmissionType.OkResponse, 0)

@@ -23,6 +23,9 @@ public class GameServerListing
     public DateTimeOffset StartedAt { get; init; } = DateTimeOffset.Now;
     public bool BeachMod { get; set; }
 
+    public int ConnectionRatio = 0;
+    public HashSet<ulong> FailedPlayers { get; init; } = [];
+
     public ConcurrentDictionary<ulong, PlasmaSession> ConnectedPlayers { get; init; } = [];
 
     private ConcurrentDictionary<long, PlasmaSession> _joinQueue { get; init; } = [];

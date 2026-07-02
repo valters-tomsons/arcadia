@@ -381,6 +381,11 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
                 }
             }
 
+            if (server.ConnectionRatio < 0)
+            {
+                eb.WithFooter("⚠️ Connection issues, matchmaking downgraded");
+            }
+
             return (server.GID, eb.Build());
         }
 

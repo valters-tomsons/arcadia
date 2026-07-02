@@ -77,7 +77,7 @@ public class ConnectionManager(ILogger<ConnectionManager> logger, Database db)
         }
     }
 
-    public async Task AddGameListing(GameServerListing game, Dictionary<string, string> data)
+    public async Task AddGameListing(GameServerListing game, IDictionary<string, string> data)
     {
         foreach (var line in data)
         {
