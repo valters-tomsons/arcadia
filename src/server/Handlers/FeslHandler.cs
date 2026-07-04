@@ -850,7 +850,7 @@ public class FeslHandler
         var existingSession = _sharedCache.FindPartitionSessionByUser(partitionId, onlineId);
         if (existingSession is not null)
         {
-            await SendError(request, 102);
+            await SendError(request, 121);
             return;
         }
 
