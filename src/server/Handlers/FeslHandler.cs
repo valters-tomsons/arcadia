@@ -842,6 +842,13 @@ public class FeslHandler
         //     return;
         // }
 
+        if (beachMod is not null && 0.4M > decimal.Parse(beachMod[1..]))
+        {
+            _logger.LogInformation("Mod version too low");
+            await SendError(request, 120);
+            return;
+        }
+
         var ticketPayload = request["ticket"];
         var ticketBytes = Convert.FromHexString(ticketPayload[1..]);
         var ticket = Ticket.ReadFromBytes(ticketBytes);
