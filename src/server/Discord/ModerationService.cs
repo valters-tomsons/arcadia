@@ -122,7 +122,10 @@ public class ModerationService(ILogger<ModerationService> logger)
             await msg.ReplyAsync($"Read Rule #4, keep it english outside of <#{nonEnglishChannelId}>");
             await msg.DeleteAsync();
         }
-        catch { }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "[Moderation] Exception while deleting non-english message: {Message}", e.Message);
+        }
     }
 
     private async Task DeleteIlliterate(SocketUserMessage msg)
@@ -136,7 +139,10 @@ public class ModerationService(ILogger<ModerationService> logger)
             await msg.ReplyAsync($"Read <#{infoChannelId}> in its entirety, it's already explained!");
             await msg.DeleteAsync();
         }
-        catch { }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "[Moderation] Exception while deleting rule breaker message: {Message}", e.Message);
+        }
     }
 
     private async Task DeletePiracy(SocketUserMessage msg)
@@ -148,7 +154,10 @@ public class ModerationService(ILogger<ModerationService> logger)
             await msg.ReplyAsync("Read Rule #2, no discussion of piracy!");
             await msg.DeleteAsync();
         }
-        catch { }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "[Moderation] Exception while deleting piracy message: {Message}", e.Message);
+        }
     }
 
     private async Task DeleteImageSpam(SocketUserMessage msg, SocketGuildUser usr)
@@ -158,13 +167,11 @@ public class ModerationService(ILogger<ModerationService> logger)
         try
         {
             await msg.ReplyAsync("Banned for spam. Have a nice day! 👋");
-        }
-        catch { }
-
-        try
-        {
             await usr.BanAsync(pruneDays: 2, "Spam");
         }
-        catch { }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "[Moderation] Exception while banning image spammer: {Message}", e.Message);
+        }
     }
 }
