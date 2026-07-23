@@ -83,7 +83,7 @@ public class ModerationService(ILogger<ModerationService> logger)
         }
 
         var content = msg.Content.Trim();
-        if (string.IsNullOrWhiteSpace(content) || content.Length < 8) return;
+        if (string.IsNullOrWhiteSpace(content) || content.Length < 5) return;
         var lang = _detector.DetectLanguageOf(content);
 
         if (lang != Language.English && lang != Language.Unknown)
