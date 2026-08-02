@@ -3,20 +3,13 @@ using Discord;
 using Discord.WebSocket;
 using Lingua;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Arcadia.Discord;
 
-public class ModerationService(ILogger<ModerationService> logger)
+public sealed class ModerationService : IAsyncDisposable
 {
-    private readonly ILogger<ModerationService> _logger = logger;
-
-    private readonly LanguageDetector _detector = LanguageDetectorBuilder.FromLanguages(
-        Language.English,
-        Language.Spanish,
-        Language.Russian
-    ).Build();
-
-    private readonly string[] stupidPhrases =
+    private static readonly string[] StupidPhrases =
     [
         "does anyone know where to get",
         "what do I need to do to play online",
@@ -48,8 +41,8 @@ public class ModerationService(ILogger<ModerationService> logger)
         "which modes work",
         "tutorial only?",
     ];
-    
-    private readonly string[] piracyPhrases =
+
+    private static readonly string[] PiracyPhrases =
     [
         "pkgi",
         "where to find pkg",
@@ -58,120 +51,157 @@ public class ModerationService(ILogger<ModerationService> logger)
         "how to download game",
     ];
 
-    private readonly ConcurrentDictionary<SocketGuildUser, DateTimeOffset> _lastAttachments = [];
-    private static readonly TimeSpan _attachmentThreshold = TimeSpan.FromMinutes(1);
+    private static readonly LanguageDetector LangDetector = LanguageDetectorBuilder.FromLanguages(
+        Language.English,
+        Language.Spanish,
+        Language.Russian
+    ).WithMinimumRelativeDistance(0.2).Build();
 
-    public async Task OnMessageReceived(SocketUserMessage msg)
+    private enum RuleId { NoImageSpam, NoPiracy, ReadTheInfo, EnglishOnly }
+    private enum Penalty { Delete, Ban }
+    private sealed record Rule(RuleId Id, Func<SocketUserMessage, bool> IsViolation, Penalty Penalty, string ReplyText);
+    private readonly Rule[] Rules;
+
+    private readonly ConcurrentQueue<SocketUserMessage> _messageQueue = new();
+    private readonly Task _scanTask;
+    private readonly PeriodicTimer _scanTimer = new(TimeSpan.FromSeconds(5));
+
+    private readonly ILogger<ModerationService> _logger;
+
+    public ModerationService(IOptions<DiscordSettings> options, ILogger<ModerationService> logger)
     {
-        if (msg.Author.IsBot) return;
-        if (msg.Author is not SocketGuildUser usr) return;
+        var config = options.Value;
 
-        if (msg.Attachments.Count > 2)
+        Rules =
+        [
+            new(RuleId.NoImageSpam, IsImageSpam,                                          Penalty.Ban,     "Banned for spam. Have a nice day! 👋"),
+            new(RuleId.NoPiracy,    static m => ContainsAny(m.Content, PiracyPhrases),    Penalty.Delete,  "Read Rule #2, no discussion of piracy!"),
+            new(RuleId.ReadTheInfo, static m => ContainsAny(m.Content, StupidPhrases),    Penalty.Delete, $"Read <#{config.ServerInfoChannel}> in its entirety, it's already explained!"),
+            new(RuleId.EnglishOnly, IsNonEnglish,                                         Penalty.Delete, $"Read Rule #4, keep it english outside of <#{config.NonEnglishChannel}>"),
+        ];
+
+        _logger = logger;
+        _scanTask = Task.Run(ScanTask);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _scanTimer.Dispose();
+        await _scanTask;
+    }
+
+    public void EnqueueMessage(SocketUserMessage msg)
+    {
+        if (msg.Author.IsBot || msg.Author is not SocketGuildUser) return;
+        _messageQueue.Enqueue(msg);
+    }
+
+    private async Task ScanTask()
+    {
+        List<(SocketUserMessage, Rule)> violations = [];
+
+        while (await _scanTimer.WaitForNextTickAsync())
         {
-            if (_lastAttachments.TryGetValue(usr, out var lastPosted))
+            violations.Clear();
+
+            while (_messageQueue.TryDequeue(out var msg))
             {
-                var attachmentTimeDiff = DateTimeOffset.UtcNow - lastPosted;
-                if (attachmentTimeDiff < _attachmentThreshold)
+                foreach (var rule in Rules)
                 {
-                    _lastAttachments.Remove(usr, out _);
-                    await DeleteImageSpam(msg, usr);
-                    return;
+                    if (rule.IsViolation(msg))
+                    {
+                        violations.Add((msg, rule));
+                        break;
+                    }
                 }
             }
 
-            _lastAttachments[usr] = DateTimeOffset.UtcNow;
+            HashSet<ulong>? alreadyBanned = null;
+            foreach (var (msg, rule) in violations)
+            {
+                if (alreadyBanned?.Contains(msg.Author.Id) == true) continue;
+
+                _logger.LogInformation(
+                    "[Moderation] Rule '{Rule}' violated by {Username} ({UserId}), penalty: {Penalty}, content: '{Content}'",
+                    rule.Id, msg.Author.Username, msg.Author.Id, rule.Penalty, msg.Content
+                );
+
+                try
+                {
+                    await msg.ReplyAsync(rule.ReplyText);
+
+                    if (rule.Penalty == Penalty.Ban && msg.Author is SocketGuildUser usr)
+                    {
+                        await usr.BanAsync(pruneDays: 2, "Spam");
+                        (alreadyBanned ??= []).Add(usr.Id);
+                    }
+                    else
+                    {
+                        await msg.DeleteAsync();
+                    }
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, "[Moderation] Exception while enforcing rule '{Rule}': {Message}", rule.Id, e.Message);
+                }
+            }
+
+            var imageCutoff = DateTimeOffset.UtcNow - ImageSpamWindow;
+            foreach (var (userId, window) in ImagePostHistory)
+            {
+                if (window.Start < imageCutoff) ImagePostHistory.Remove(userId, out _);
+            }
         }
+    }
+
+    private static bool ContainsAny(string content, string[] phrases)
+    {
+        foreach (var p in phrases)
+        {
+            if (content.Contains(p, StringComparison.OrdinalIgnoreCase)) return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsNonEnglish(SocketUserMessage msg)
+    {
+        const int MinContentLength = 5;
 
         var content = msg.Content.Trim();
-        if (string.IsNullOrWhiteSpace(content) || content.Length < 5) return;
-        var lang = _detector.DetectLanguageOf(content);
+        if (content.Length < MinContentLength) return false;
 
-        if (lang != Language.English && lang != Language.Unknown)
-        {
-            await DeleteNonEnglish(msg);
-            return;
-        }
-
-        foreach (var phrase in stupidPhrases)
-        {
-            if (content.Contains(phrase, StringComparison.InvariantCultureIgnoreCase))
-            {
-                await DeleteIlliterate(msg);
-                return;
-            }
-        }
-
-        foreach(var phrase in piracyPhrases)
-        {
-            if (content.Contains(phrase, StringComparison.InvariantCultureIgnoreCase))
-            {
-                await DeletePiracy(msg);
-                return;
-            }
-        }
+        var lang = LangDetector.DetectLanguageOf(content);
+        return lang != Language.English && lang != Language.Unknown;
     }
 
-    private async Task DeleteNonEnglish(SocketUserMessage msg)
+    private const int ImageSpamThreshold = 4;
+    private readonly TimeSpan ImageSpamWindow = TimeSpan.FromSeconds(20);
+    private readonly record struct UserImagePosts(DateTimeOffset Start, int Count);
+    private readonly Dictionary<ulong, UserImagePosts> ImagePostHistory = [];
+
+    private bool IsImageSpam(SocketUserMessage msg)
     {
-        const ulong nonEnglishChannelId = 1450610182995316969;
+        var imageCount = msg.Attachments.Count;
+        if (imageCount == 0) return false;
 
-        _logger.LogInformation("[Moderation] Deleting non-english message: '{Content}'", msg.Content);
+        var authorId = msg.Author.Id;
+        var postedAt = msg.Timestamp;
 
-        try
+        if (!ImagePostHistory.TryGetValue(authorId, out var window) || postedAt - window.Start > ImageSpamWindow)
         {
-            await msg.ReplyAsync($"Read Rule #4, keep it english outside of <#{nonEnglishChannelId}>");
-            await msg.DeleteAsync();
+            window = new(postedAt, 0);
         }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "[Moderation] Exception while deleting non-english message: {Message}", e.Message);
-        }
-    }
 
-    private async Task DeleteIlliterate(SocketUserMessage msg)
-    {
-        const ulong infoChannelId = 1256693500901331044;
+        window = window with { Count = window.Count + imageCount };
 
-        _logger.LogInformation("[Moderation] Deleting stupid question: '{Content}'", msg.Content);
+        if (window.Count >= ImageSpamThreshold)
+        {
+            ImagePostHistory.Remove(authorId);
+            return true;
+        }
 
-        try
-        {
-            await msg.ReplyAsync($"Read <#{infoChannelId}> in its entirety, it's already explained!");
-            await msg.DeleteAsync();
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "[Moderation] Exception while deleting rule breaker message: {Message}", e.Message);
-        }
-    }
-
-    private async Task DeletePiracy(SocketUserMessage msg)
-    {
-        _logger.LogInformation("[Moderation] Deleting piracy related message: '{Content}'", msg.Content);
-
-        try
-        {
-            await msg.ReplyAsync("Read Rule #2, no discussion of piracy!");
-            await msg.DeleteAsync();
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "[Moderation] Exception while deleting piracy message: {Message}", e.Message);
-        }
-    }
-
-    private async Task DeleteImageSpam(SocketUserMessage msg, SocketGuildUser usr)
-    {
-        _logger.LogInformation("[Moderation] Detected spam from {Username} ({UserId})", msg.Author.Username, msg.Author.Id);
-
-        try
-        {
-            await msg.ReplyAsync("Banned for spam. Have a nice day! 👋");
-            await usr.BanAsync(pruneDays: 2, "Spam");
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "[Moderation] Exception while banning image spammer: {Message}", e.Message);
-        }
+        ImagePostHistory[authorId] = window;
+        return false;
     }
 }

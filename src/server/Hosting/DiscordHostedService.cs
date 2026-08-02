@@ -52,12 +52,12 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
         {
             _client.MessageReceived += async (msg) =>
             {
-                if (msg is SocketUserMessage usrMsg) await _moderationService.OnMessageReceived(usrMsg);
+                if (msg is SocketUserMessage usrMsg) _moderationService.EnqueueMessage(usrMsg);
             };
 
             _client.MessageUpdated += async (cache, msg, channel) =>
             {
-                if (msg is SocketUserMessage usrMsg) await _moderationService.OnMessageReceived(usrMsg);
+                if (msg is SocketUserMessage usrMsg) _moderationService.EnqueueMessage(usrMsg);
             };
 
             _logger.LogInformation("Discord moderation enabled!");

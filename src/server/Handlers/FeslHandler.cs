@@ -361,6 +361,8 @@ public class FeslHandler
             { "sessionState", "COMPLETE" },
         };
 
+        if (_session is null) throw new();
+
         var servers = _sharedCache.GetPartitionServers(partitionId).Where(x => x.CanJoin && x.UID != _session.User.UserId).ToArray();
         if (servers.Length > 0)
         {
