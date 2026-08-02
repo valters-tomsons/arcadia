@@ -418,6 +418,11 @@ public class TheaterHandler
         if (_session.BeachMod)
         {
             games = [.. games.Where(x => x.BeachMod).OrderByDescending(x => x.ConnectionRatio)];
+
+            if (games.Count > 0 && games[0].ConnectionRatio > 0)
+            {
+                games.RemoveAll(x => x.ConnectionRatio < 0);
+            }
         }
 
         await _conn.SendPacket(new("GLST", TheaterTransmissionType.OkResponse, 0)
