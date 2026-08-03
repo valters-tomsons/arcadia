@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Arcadia.Hosting;
 using Discord;
 using Discord.WebSocket;
 using Lingua;
@@ -128,16 +129,16 @@ public sealed class ModerationService : IAsyncDisposable
 
                 try
                 {
-                    await msg.ReplyAsync(rule.ReplyText);
+                    await msg.ReplyAsync(rule.ReplyText, options: DiscordHostedService.ReqOptions);
 
                     if (rule.Penalty == Penalty.Ban && msg.Author is SocketGuildUser usr)
                     {
-                        await usr.BanAsync(pruneDays: 2, "Spam");
+                        await usr.BanAsync(pruneDays: 2, "Spam", options: DiscordHostedService.ReqOptions);
                         (alreadyBanned ??= []).Add(usr.Id);
                     }
                     else
                     {
-                        await msg.DeleteAsync();
+                        await msg.DeleteAsync(options: DiscordHostedService.ReqOptions);
                     }
                 }
                 catch (Exception e)

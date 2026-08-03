@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 using System.Net;
 using System.Text;
 using Arcadia.EA;
+using Arcadia.Hosting;
 using Arcadia.Storage;
 using Discord;
 using Discord.Net;
@@ -83,7 +84,11 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
             }
 
             var cacheHit = cachedIds.TryGetValue(channel.Id, out var messageId);
-            var statusMsg = cacheHit ? await channel.GetMessageAsync(messageId) : await channel.SendMessageAsync("Initializing status...");
+
+            var statusMsg = cacheHit 
+                ? await channel.GetMessageAsync(messageId, options: DiscordHostedService.ReqOptions) 
+                : await channel.SendMessageAsync("Initializing status...", options: DiscordHostedService.ReqOptions);
+
             if (statusMsg is null)
             {
                 if (cacheHit)
@@ -194,7 +199,7 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
             return;
         }
 
-        await channel.SendMessageAsync("\n", embed: eb.Build());
+        await channel.SendMessageAsync("\n", embed: eb.Build(), options: DiscordHostedService.ReqOptions);
         _logger.LogInformation("New stats batch posted");
     }
 
@@ -213,7 +218,8 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
                             .WithTitle("Arcadia")
                             .WithDescription(content.StatusMessage)
                             .Build();
-                });
+                },
+                options: DiscordHostedService.ReqOptions);
             }
             catch (HttpException e)
             {
@@ -237,7 +243,7 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
                         _logger.LogDebug("Removing game listing, GID:{GID}", postedGame.GID);
 
                         gidsToRemove.Add(postedGame.GID);
-                        await channel.DeleteMessageAsync(postedGame.MessageId);
+                        await channel.DeleteMessageAsync(postedGame.MessageId, options: DiscordHostedService.ReqOptions);
                     }
                     catch (HttpException e)
                     {
@@ -256,7 +262,7 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
                     var postedMsg = gameMessagesInChannel.FirstOrDefault(x => game.GID == x.GID);
                     if (postedMsg == default)
                     {
-                        var gameMessage = await channel.SendMessageAsync("\n", embed: game.Embed);
+                        var gameMessage = await channel.SendMessageAsync("\n", embed: game.Embed, options: DiscordHostedService.ReqOptions);
                         gameMessagesInChannel.Add((game.GID, gameMessage.Id));
                         _logger.LogDebug("Server listing added, GID:{GID}", game.GID);
                     }
@@ -266,7 +272,8 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
                         {
                             x.Content = "\n";
                             x.Embed = game.Embed;
-                        });
+                        },
+                        options: DiscordHostedService.ReqOptions);
 
                         _logger.LogDebug("Server listing updated, GID:{GID}", game.GID);
                     }

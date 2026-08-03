@@ -18,6 +18,11 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
     private readonly StatusService _statusService = statusService;
     private readonly ModerationService _moderationService = moderationService;
 
+    public readonly static RequestOptions ReqOptions = new()
+    {
+        RetryMode = RetryMode.AlwaysRetry
+    };
+
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
         var config = _config.Value;
