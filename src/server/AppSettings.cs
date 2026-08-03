@@ -39,8 +39,8 @@ public record DiscordSettings
 {
     public bool EnableBot { get; init; } = false;
     public string BotToken { get; init; } = string.Empty;
-    public ulong[] Channels { get; init; } = [];
 
+    public ulong OngoingGamesChannel { get; init; }
     public ulong OnslaughtStatsChannel { get; init; }
 
     public bool PerformModeration { get; init; }

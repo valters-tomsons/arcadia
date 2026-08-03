@@ -105,7 +105,7 @@ public sealed class NotificationService(ILogger<NotificationService> logger)
         {
             await component.DeferAsync(ephemeral: true);
 
-            if (!Enum.TryParse<GameRole>(component.Data.CustomId.AsSpan(CustomIdPrefix.Length), out var id)) return;
+            if (!Enum.TryParse<GameId>(component.Data.CustomId.AsSpan(CustomIdPrefix.Length), out var id)) return;
             if (Roles.FirstOrDefault(r => r.Id == id) is not { } row) return;
             if (component.User is not SocketGuildUser user) return;
 

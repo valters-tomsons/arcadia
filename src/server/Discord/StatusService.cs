@@ -1,7 +1,3 @@
-using System.Collections.Frozen;
-using System.Collections.Immutable;
-using System.Net;
-using System.Text;
 using Arcadia.EA;
 using Arcadia.Storage;
 using Discord;
@@ -15,142 +11,116 @@ namespace Arcadia.Discord;
 
 public sealed class StatusService(ILogger<StatusService> logger, ConnectionManager sharedCache, IOptions<DiscordSettings> config, StatsStorage stats) : IDisposable
 {
-    private const string messageIdFile = "./messageId";
-    private const string assetsUrlBase = "https://raw.githubusercontent.com/valters-tomsons/arcadia/refs/heads/main/src/server/static/assets/";
+    private const string MessageIdFile = "./messageId";
+    private const string AssetsUrlBase = "https://raw.githubusercontent.com/valters-tomsons/arcadia/refs/heads/main/src/server/static/assets/";
+    private const int OnslaughtBatchSize = 8;
 
-    private const string geoDatabaseFile = "ip-to-country.mmdb";
+    private sealed record Listing(long GID, Embed Embed, GameId Game);
+    private sealed record StatusChannel(IMessageChannel Channel, ulong StatusMessageId)
+    {
+        public Dictionary<GameId, string> RoleMentions { get; } = [];
+        public Dictionary<long, ulong> GameMessages { get; } = [];
+    }
 
-    // this is not good
-    private static readonly StringBuilder PlayersStringBuilder = new();
-    private static readonly Dictionary<GameRole, string> RoleMentions = [];
+    private StatusChannel? _status;
 
     private readonly ILogger<StatusService> _logger = logger;
     private readonly ConnectionManager _sharedCache = sharedCache;
     private readonly IOptions<DiscordSettings> _config = config;
     private readonly StatsStorage _stats = stats;
+    private readonly GeoFlags _geo = new(logger);
 
-    private readonly List<(IMessageChannel Channel, ulong StatusId)> _channelStatus = [];
-    private readonly Dictionary<ulong, List<(long GID, ulong MessageId)>> _channelsGameMessage = [];
+    public async Task Initialize(DiscordSocketClient client)
+    {
+        _geo.Load();
 
-    private static MaxMind.Db.Reader? _geoDb;
-    private static readonly Dictionary<IPAddress, string> _geoSymbolCache = [];
+        var cachedIds = await LoadMessageCacheFromFile();
+        var cacheDirty = false;
+
+        var channelId = _config.Value.OngoingGamesChannel;
+        var channel = await client.GetChannelAsync(channelId, options: ReqOptions) as IMessageChannel ?? throw new("Failed to get channel");
+
+        var cacheHit = cachedIds.TryGetValue(channelId, out var cachedMessageId);
+        var statusMessage = cacheHit
+            ? await channel.GetMessageAsync(cachedMessageId, options: ReqOptions)
+            : await channel.SendMessageAsync("Initializing status...", options: ReqOptions);
+
+        if (statusMessage is null)
+        {
+            if (cacheHit)
+            {
+                _logger.LogCritical("Cached message no longer exists, must manually remove cache line {ChannelId}:{MessageId}", channelId, cachedMessageId);
+            }
+
+            throw new($"Failed to acquire status message in channel:{channelId}");
+        }
+
+        if (!cacheHit)
+        {
+            cachedIds[channelId] = statusMessage.Id;
+            cacheDirty = true;
+            _logger.LogInformation("New status created, msgId:{MessageId}, chId:{ChannelId}", statusMessage.Id, channelId);
+        }
+
+        await foreach (var batch in channel.GetMessagesAsync())
+        {
+            foreach (var message in batch)
+            {
+                if (message.Id != statusMessage.Id) await message.DeleteAsync();
+            }
+        }
+
+        _status = new StatusChannel(channel, statusMessage.Id);
+
+        if (channel is SocketTextChannel guildChannel)
+        {
+            foreach (var role in Roles)
+            {
+                var guildRole = guildChannel.Guild.Roles.FirstOrDefault(r => r.Name == role.DisplayName);
+                if (guildRole is not null) _status.RoleMentions[role.Id] = guildRole.Mention;
+            }
+        }
+
+        if (cacheDirty)
+        {
+            await File.WriteAllLinesAsync(MessageIdFile, cachedIds.Select(x => $"{x.Key}:{x.Value}"));
+        }
+    }
 
     public async Task Execute(DiscordSocketClient client)
     {
-        await ProcessOnslaughtStats(client);
-        await UpdateGameStatus();
+        await PostOnslaughtStats(client);
+        await UpdateStatus();
     }
 
     public async Task Shutdown()
     {
-        foreach (var (channel, statusId) in _channelStatus)
-        {
-            try
-            {
-                await channel.ModifyMessageAsync(statusId, x =>
-                {
-                    x.Content = "Server offline!";
-                    x.Embeds = null;
-                });
-
-                var gameMessages = _channelsGameMessage.GetValueOrDefault(channel.Id);
-                if (gameMessages is null) continue;
-
-                foreach (var (_, gameMessageId) in gameMessages)
-                {
-                    await channel.DeleteMessageAsync(gameMessageId);
-                }
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "Failed to notify channel about shutdown!");
-            }
-        }
-
-        _channelStatus.Clear();
-        _channelsGameMessage.Clear();
-    }
-
-    public async Task Initialize(DiscordSocketClient client)
-    {
-        var channels = _config.Value.Channels;
-        var cachedIds = await GetCachedStatusMessageIds();
-        var flushCache = false;
-
-        foreach (var channelId in channels)
-        {
-            if (await client.GetChannelAsync(channelId) is not IMessageChannel channel)
-            {
-                _logger.LogError("Failed to open channel: {channelId}", channelId);
-                continue;
-            }
-
-            var cacheHit = cachedIds.TryGetValue(channel.Id, out var messageId);
-
-            var statusMsg = cacheHit 
-                ? await channel.GetMessageAsync(messageId, options: Constants.ReqOptions) 
-                : await channel.SendMessageAsync("Initializing status...", options: Constants.ReqOptions);
-
-            if (statusMsg is null)
-            {
-                if (cacheHit)
-                {
-                    _logger.LogWarning("Cached message no longer exists, must manually remove cache line {channelId}:{messageId}", channelId, messageId);
-                }
-
-                _logger.LogError("Failed to acquire status message in channel:{channelId}. Messages will not be posted here.", channelId);
-                continue;
-            }
-            else if (!cacheHit)
-            {
-                flushCache = true;
-                cachedIds.Add(channelId, statusMsg.Id);
-                _logger.LogInformation("New status created, msgId:{messageId}, chId:{channelId}", statusMsg.Id, channelId);
-            }
-
-            await foreach (var batch in channel.GetMessagesAsync())
-            {
-                foreach (var message in batch)
-                {
-                    if (message.Id != statusMsg.Id) await message.DeleteAsync();
-                }
-            }
-
-            _channelStatus.Add((channel, statusMsg.Id));
-
-            if (channel is SocketTextChannel guildChannel)
-            {
-                foreach (var role in Roles)
-                {
-                    var channelRole = guildChannel.Guild.Roles.FirstOrDefault(r => r.Name == role.DisplayName);
-                    if (channelRole is null) continue;
-                    RoleMentions[role.Id] = channelRole.Mention;
-                }
-            }
-        }
-
-        if (flushCache)
-        {
-            await File.WriteAllLinesAsync(messageIdFile, cachedIds.Select(x => $"{x.Key}:{x.Value}"));
-        }
-
-        if (!File.Exists(geoDatabaseFile) || _geoDb is not null) return;
-        _logger.LogInformation("Loading GeoIP database from: {fileName}", geoDatabaseFile);
+        if (_status is null) return;
 
         try
         {
-            _geoDb = new MaxMind.Db.Reader(geoDatabaseFile);
-            _logger.LogInformation("GeoIP database loaded, build: {buildDate}", _geoDb.Metadata.BuildDate);
+            await _status.Channel.ModifyMessageAsync(_status.StatusMessageId, x =>
+            {
+                x.Content = "Server offline!";
+                x.Embeds = null;
+            });
+
+            foreach (var messageId in _status.GameMessages.Values)
+            {
+                await _status.Channel.DeleteMessageAsync(messageId);
+            }
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Failed to load GeoIP database");
+            _logger.LogError(e, "Failed to notify channel about shutdown!");
         }
+
+        _status = null;
     }
 
-    private async Task<Dictionary<ulong, ulong>> GetCachedStatusMessageIds()
+    private async Task<Dictionary<ulong, ulong>> LoadMessageCacheFromFile()
     {
-        if (!File.Exists(messageIdFile))
+        if (!File.Exists(MessageIdFile))
         {
             _logger.LogWarning("Status messageId Cache file doesn't exist");
             return [];
@@ -158,15 +128,16 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
 
         try
         {
-            var text = await File.ReadAllLinesAsync(messageIdFile);
-            var dict = new Dictionary<ulong, ulong>(text.Length);
-            foreach (var line in text)
+            var lines = await File.ReadAllLinesAsync(MessageIdFile);
+            var cache = new Dictionary<ulong, ulong>(lines.Length);
+
+            foreach (var line in lines)
             {
                 var parts = line.Split(':');
-                dict.Add(ulong.Parse(parts[0]), ulong.Parse(parts[1]));
+                cache[ulong.Parse(parts[0])] = ulong.Parse(parts[1]);
             }
 
-            return dict;
+            return cache;
         }
         catch (Exception e)
         {
@@ -175,163 +146,119 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
         }
     }
 
-    private async Task ProcessOnslaughtStats(DiscordSocketClient client)
+    private async Task UpdateStatus()
     {
-        if (_stats.QueueCount == 0) return;
+        if (_status is null) return;
 
-        var eb = new EmbedBuilder().WithTitle("Onslaught finished!");
+        var listings = BuildListings();
+        var summary = FormatSummary(listings.Length);
+        var liveGids = listings.Select(x => x.GID).ToHashSet();
 
-        const int batchSize = 8;
-        for (var i = 0; i < batchSize; i++)
-        {
-            var msg = _stats.DequeueCompletion();
-            if (msg is null)
-            {
-                if (i == 0) return;
-                _logger.LogInformation("Finished processing {i} stats messages.", i + 1);
-                break;
-            }
-
-            var mapInfo = _onslaughtAssets.GetValueOrDefault($"Levels/ONS_MP_{msg.MapKey}");
-            if (!mapInfo.HasValue)
-            {
-                _logger.LogError("Unknown onslaught map key '{MapKey}', not submitting stat {BatchIdx}!", msg.MapKey, i);
-                continue;
-            }
-
-            var gt = msg.GameTime;
-            var message = $"Finished {mapInfo?.Display} on {msg.Difficulty} in {gt.Hours} hours, {gt.Minutes} minutes and {gt.Seconds} seconds".Replace(" 0 hours, ", " ");
-
-            eb.AddField(msg.PlayerName, message);
-        }
-
-        if (await client.GetChannelAsync(_config.Value.OnslaughtStatsChannel) is not IMessageChannel channel)
-        {
-            _logger.LogError("Failed to open status channel: {channelId}", _config.Value.OnslaughtStatsChannel);
-            return;
-        }
-
-        await channel.SendMessageAsync("\n", embed: eb.Build(), options: Constants.ReqOptions);
-        _logger.LogInformation("New stats batch posted");
+        await UpdateSummary(_status, summary);
+        await RemoveStaleListings(_status, liveGids);
+        await PublishListings(_status, listings);
     }
 
-    private async Task UpdateGameStatus()
+    private async Task UpdateSummary(StatusChannel status, string summary)
     {
-        var content = BuildGameStatusContent();
+        var embed = new EmbedBuilder()
+            .WithTitle("Arcadia")
+            .WithDescription(summary)
+            .Build();
 
-        foreach (var (channel, statusId) in _channelStatus)
+        try
         {
+            await status.Channel.ModifyMessageAsync(status.StatusMessageId, x =>
+            {
+                x.Content = "\n";
+                x.Embed = embed;
+            },
+            options: ReqOptions);
+        }
+        catch (HttpException e)
+        {
+            _logger.LogError(e, "Failed to update channel status message, reason: {Message}", e.Message);
+        }
+    }
+
+    private async Task RemoveStaleListings(StatusChannel status, HashSet<long> liveGids)
+    {
+        List<long>? stale = null;
+
+        foreach (var (gid, messageId) in status.GameMessages)
+        {
+            if (liveGids.Contains(gid)) continue;
+            (stale ??= []).Add(gid);
+
             try
             {
-                await channel.ModifyMessageAsync(statusId, x =>
-                {
-                    x.Content = "\n";
-                    x.Embed = new EmbedBuilder()
-                            .WithTitle("Arcadia")
-                            .WithDescription(content.StatusMessage)
-                            .Build();
-                },
-                options: Constants.ReqOptions);
+                _logger.LogDebug("Removing game listing, GID:{GID}", gid);
+                await status.Channel.DeleteMessageAsync(messageId, options: ReqOptions);
             }
             catch (HttpException e)
             {
-                _logger.LogError(e, "Failed to update channel status message, reason: {message}", e.Message);
+                _logger.LogError(e, "Failed to delete game server message, reason: {Message}", e.Message);
             }
+        }
 
-            var gameMessagesInChannel = _channelsGameMessage.GetValueOrDefault(channel.Id);
-            if (gameMessagesInChannel is null)
-            {
-                gameMessagesInChannel = new(content.Games.Length);
-                _channelsGameMessage.Add(channel.Id, gameMessagesInChannel);
-            }
-            else
-            {
-                var gidsToRemove = new List<long>(3);
-                foreach (var postedGame in gameMessagesInChannel)
-                {
-                    try
-                    {
-                        if (content.Games.Any(x => x.GID == postedGame.GID)) continue;
-                        _logger.LogDebug("Removing game listing, GID:{GID}", postedGame.GID);
+        if (stale is null) return;
+        foreach (var gid in stale) status.GameMessages.Remove(gid);
+    }
 
-                        gidsToRemove.Add(postedGame.GID);
-                        await channel.DeleteMessageAsync(postedGame.MessageId, options: Constants.ReqOptions);
-                    }
-                    catch (HttpException e)
-                    {
-                        _logger.LogError(e, "Failed to delete game server message, reason: {message}", e.Message);
-                    }
-                }
-
-                gameMessagesInChannel.RemoveAll(x => gidsToRemove.Contains(x.GID));
-            }
-
+    private async Task PublishListings(StatusChannel status, Listing[] listings)
+    {
+        foreach (var listing in listings)
+        {
             try
             {
-                for (var i = 0; i < content.Games.Length; i++)
+                if (status.GameMessages.TryGetValue(listing.GID, out var messageId))
                 {
-                    var game = content.Games[i];
-                    var postedMsg = gameMessagesInChannel.FirstOrDefault(x => game.GID == x.GID);
-
-                    if (postedMsg == default)
+                    await status.Channel.ModifyMessageAsync(messageId, x =>
                     {
-                        var roleMention = game.role.HasValue ? RoleMentions.GetValueOrDefault(game.role.Value) : null;
-                        var gameMessage = await channel.SendMessageAsync(roleMention ?? "\n", embed: game.Embed, options: ReqOptions);
-                        gameMessagesInChannel.Add((game.GID, gameMessage.Id));
-                        _logger.LogDebug("Server listing added, GID:{GID}", game.GID);
-                    }
-                    else
-                    {
-                        await channel.ModifyMessageAsync(postedMsg.MessageId, x =>
-                        {
-                            x.Content = "\n";
-                            x.Embed = game.Embed;
-                        },
-                        options: ReqOptions);
+                        x.Content = "\n";
+                        x.Embed = listing.Embed;
+                    },
+                    options: ReqOptions);
 
-                        _logger.LogDebug("Server listing updated, GID:{GID}", game.GID);
-                    }
+                    _logger.LogDebug("Server listing updated, GID:{GID}", listing.GID);
+                }
+                else
+                {
+                    var mention = status.RoleMentions.GetValueOrDefault(listing.Game);
+                    var posted = await status.Channel.SendMessageAsync(mention ?? "\n", embed: listing.Embed, options: ReqOptions);
+
+                    status.GameMessages[listing.GID] = posted.Id;
+                    _logger.LogDebug("Server listing added, GID:{GID}", listing.GID);
                 }
             }
             catch (HttpException e)
             {
-                _logger.LogError(e, "Failed to update game server messages, reason: {message}", e.Message);
+                _logger.LogError(e, "Failed to update game server messages, reason: {Message}", e.Message);
             }
         }
     }
 
-    private (string StatusMessage, (long GID, Embed Embed, GameRole? role)[] Games) BuildGameStatusContent()
+    private Listing[] BuildListings()
     {
-        var hosts = _sharedCache.GetAllServersInternal();
+        var servers = _sharedCache.GetAllServersInternal();
+        var listings = new List<Listing>(servers.Length);
 
-        var embeds = new List<(long GID, Embed Embed, GameRole? role)>(hosts.Length);
-        for (var i = 0; i < hosts.Length; i++)
+        foreach (var server in servers)
         {
-            var server = hosts[i];
-            if (!server.CanJoin)
+            if (!server.CanJoin) continue;
+
+            var partition = server.PartitionId.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).LastOrDefault();
+            if (!Enum.TryParse<GameId>(partition, ignoreCase: true, out var gameId) || !GameCatalog.Games.TryGetValue(gameId, out var game))
             {
+                _logger.LogError("No status builder for '{PartitionId}'", server.PartitionId);
                 continue;
             }
 
+            if (game.Listed is { } listed && !listed(server)) continue;
+
             try
             {
-                var partitionId = server.PartitionId.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).LastOrDefault()?.ToUpperInvariant()
-                    ?? throw new("Cannot find PartitionId");
-
-                var serverEmbed = partitionId switch
-                {
-                    "BFBC2" => BuildBFBC2Status(server),
-                    "AO3" => BuildAO3Status(server),
-                    "MERCS2" => BuildMercs2Status(server),
-                    "LOTR" => BuildLOTRStatus(server),
-                    "MOHAIR" => BuildMOHStatus(server),
-                    "CNCRA3" => BuildRedAlert3Status(server),
-                    "BEACH" => BuildBeachStatus(server),
-                    _ => throw new($"No game status builder for '{server.PartitionId}'")
-                };
-
-                if (serverEmbed is null) continue;
-                embeds.Add(serverEmbed.Value);
+                listings.Add(new(server.GID, BuildEmbed(server, game), gameId));
             }
             catch (Exception e)
             {
@@ -339,290 +266,89 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
             }
         }
 
-        const string statusFormat = "**{0}** ongoing game{1}";
-
-        var statusEnd = embeds.Count == 0 ? "s. 😞" : embeds.Count > 1 ? "s! 🔥" : "! ⭐";
-        var statusMsg = string.Format(statusFormat, embeds.Count, statusEnd);
-
-        return (statusMsg, embeds.ToArray());
+        return [.. listings];
     }
 
-    private static string GetPlayerCountString(GameServerListing server)
+    private Embed BuildEmbed(GameServerListing server, GameInfo game)
     {
-        var maxPlayers = server.Data["MAX-PLAYERS"];
-
-        if (server.ConnectedPlayers.IsEmpty)
-        {
-            return $"0/{maxPlayers}";
-        }
-
-        PlayersStringBuilder.Clear();
-        PlayersStringBuilder
-            .Append(server.ConnectedPlayers.Count)
-            .Append('/')
-            .Append(maxPlayers)
-            .Append(" | ")
-            .AppendJoin(", ", server.ConnectedPlayers.Select(x => x.Value.User.Username));
-
-        return PlayersStringBuilder.ToString();
-    }
-
-    private static readonly FrozenDictionary<string, (string Display, string Asset)?> _onslaughtAssets = new Dictionary<string, (string Display, string Asset)?>
-    {
-        { "Levels/ONS_MP_002", ("Valparaiso", "BC2_Valparaiso.jpg") },
-        { "Levels/ONS_MP_004", ("Isla Inocentes", "BC2_Isla_Inocentes.jpg") },
-        { "Levels/ONS_MP_005", ("Atacama Desert", "BC2_Atacama_Desert.jpg") },
-        { "Levels/ONS_MP_008", ("Nelson Bay", "BC2_Nelson_Bay.jpg") },
-    }.ToFrozenDictionary();
-
-    private static readonly FrozenDictionary<string, (string Display, string Asset)?> _beachAssets = new Dictionary<string, (string Display, string Asset)?>
-    {
-        { "Levels/Coral_sea", ("Coral Sea", "BF1943_Coral_Sea.jpg") },
-        { "Levels/Wake_island_s", ("Wake Island", "BF1943_Wake_Island.jpg") },
-        { "Levels/Guadal_Canal", ("Guadal Canal", "BF1943_Guadalcanal.jpg") },
-        { "Levels/Iwo_Jima_s", ("Iwo Jima", "BF1943_Iwo_Jima.jpg") },
-    }.ToFrozenDictionary();
-
-    private static (long GID, Embed Embed, GameRole? role)? BuildBeachStatus(GameServerListing server)
-    {
-        if (server.BeachMod)
-        {
-            var levelName = server.Data.GetValueOrDefault("B-U-Level");
-
-            var eb = StatusBuilder(server, "Battlefield 1943");
-            eb.AddField("Host", server.NAME);
-
-            if (!string.IsNullOrWhiteSpace(levelName))
-            {
-                var mapInfo = _beachAssets.GetValueOrDefault(levelName);
-                if (mapInfo.HasValue)
-                {
-                    eb.AddField("Level", mapInfo?.Display);
-                    eb.WithImageUrl(string.Concat(assetsUrlBase, mapInfo?.Asset));
-                }
-            }
-
-            if (server.ConnectionRatio < 0)
-            {
-                eb.WithFooter("⚠️ Connection issues, matchmaking downgraded");
-            }
-
-            return (server.GID, eb.Build(), GameRole.BF1943);
-        }
-
-        return null;
-    }
-
-
-    private static (long GID, Embed Embed, GameRole? role)? BuildBFBC2Status(GameServerListing server)
-    {
-        var levelName = server.Data.GetValueOrDefault("B-U-level");
-        if (string.IsNullOrWhiteSpace(levelName))
-        {
-            return null;
-        }
-
-        var serverName = $"**{server.NAME.Replace("P2P-", string.Empty)}**";
-        var gamemode = server.Data.GetValueOrDefault("B-U-gamemode") ?? "`N/A`";
-
-        var eb = StatusBuilder(server, "Battlefield: Bad Company 2")
-            .AddField("Name", $"{serverName} ({gamemode})");
-
-        var difficulty = server.Data.GetValueOrDefault("B-U-difficulty");
-        if (!string.IsNullOrWhiteSpace(difficulty))
-        {
-            eb.AddField("Difficulty", difficulty);
-        }
-
-        if (!string.IsNullOrWhiteSpace(levelName))
-        {
-            var mapInfo = _onslaughtAssets.GetValueOrDefault(levelName);
-            if (mapInfo.HasValue)
-            {
-                eb.AddField("Level", mapInfo?.Display);
-                eb.WithImageUrl(string.Concat(assetsUrlBase, mapInfo?.Asset));
-            }
-        }
-
-        return (server.GID, eb.Build(), GameRole.BFBC2);
-    }
-
-    private static (long GID, Embed Embed, GameRole? role) BuildAO3Status(GameServerListing server)
-    {
-        var serverName = $"**{server.NAME}**";
-        var gamemode = server.Data.GetValueOrDefault("B-U-Mode") ?? string.Empty;
-        var level = server.Data.GetValueOrDefault("B-U-Map") ?? "`N/A`";
-        var playlist = server.Data.GetValueOrDefault("B-U-MapPlaylist") ?? "`N/A`";
-
-        var eb = StatusBuilder(server, "Army of Two: 40th Day")
-            .AddField("Name", $"{serverName} - {gamemode}")
-            .AddField("Level", level)
-            .AddField("Playlist", playlist);
-
-        return (server.GID, eb.Build(), null);
-    }
-
-    private static (long GID, Embed Embed, GameRole? role) BuildMercs2Status(GameServerListing server)
-    {
-        var eb = StatusBuilder(server, "Mercenaries 2");
-
-        if (server.Data.TryGetValue("B-U-FriendlyFire", out var friendlyFire) && friendlyFire == "1")
-        {
-            eb.AddField("Friendly Fire", friendlyFire == "1" ? "Yes" : "No");
-        }
-
-        if (long.TryParse(server.Data["B-U-Money"], out var money) && money > 0)
-        {
-            eb.AddField("Money", $"${money:N0}");
-        }
-
-        var mission = server.Data["B-U-Mission"];
-        if (!string.IsNullOrWhiteSpace(mission))
-        {
-            eb.AddField("Mission", mission);
-        }
-
-        return (server.GID, eb.Build(), GameRole.MERCS2);
-    }
-
-    private static readonly FrozenDictionary<string, string> _lotrModes = new Dictionary<string, string>()
-    {
-        {"1988399932", "Conquest"},
-        {"42885688", "Hero TDM"},
-        {"2015881514", "Team Deathmatch"},
-        {"1503065498", "Capture the Ring"},
-        {"-122228709", "War of the Ring"},
-        {"270340015", "War of the Ring (Lobby)"},
-        {"-1028407685", "Instant Action (Lobby)"}
-    }.ToFrozenDictionary();
-
-    private static readonly FrozenDictionary<string, string> _lotrLevels = new Dictionary<string, string>()
-    {
-        {"-1109594032", "The Black Gate"},
-        {"-1789567933", "Helm's Deep"},
-        {"-1342191936", "Isengard"},
-        {"-1040791731", "Minas Morgul"},
-        {"-1988909791", "Minas Tirith"},
-        {"-388473313", "Minas Tirith Top"},
-        {"-1994967355", "Mines of Moria"},
-        {"-262282117", "Mount Doom"},
-        {"-1683102250", "Osgiliath"},
-        {"-2030748778", "Pelennor Fields"},
-        {"-1389475930", "Rivendell"},
-        {"261105074", "The Shire"},
-        {"1680074377", "Weathertop"},
-    }.ToFrozenDictionary();
-
-    private static (long GID, Embed Embed, GameRole? role)? BuildLOTRStatus(GameServerListing server)
-    {
-        if (server.Data.TryGetValue("B-U-FriendsOnly", out var friendsOnly) && friendsOnly == "1")
-        {
-            return null;
-        }
-
-        var eb = StatusBuilder(server, "Lord of the Rings: Conquest");
-
-        if (server.Data.TryGetValue("B-U-PCDedicated", out var isDedicated) && isDedicated == "1")
-        {
-            eb.AddField("Name", server.NAME.Replace("\"", string.Empty));
-        }
-
-        if (server.Data.TryGetValue("B-U-Mode", out var modeKey) && _lotrModes.TryGetValue(modeKey, out var modeName))
-        {
-            eb.AddField("Mode", modeName);
-        }
-
-        if (server.Data.TryGetValue("B-U-LevelName", out var nameKey) && _lotrLevels.TryGetValue(nameKey, out var levelName))
-        {
-            eb.AddField("Level", levelName);
-        }
-
-        return (server.GID, eb.Build(), GameRole.LOTRQ);
-    }
-
-    private static (long GID, Embed Embed, GameRole? role) BuildMOHStatus(GameServerListing server)
-    {
-        var eb = StatusBuilder(server, "Medal of Honor: Airborne")
-            .AddField("Map", server.Data["B-U-Map"])
-            .AddField("Gamemode", server.Data["B-U-GameType"]);
-
-        return (server.GID, eb.Build(), GameRole.MOHA);
-    }
-
-    private static (long GID, Embed Embed, GameRole? role) BuildRedAlert3Status(GameServerListing server)
-    {
-        var eb = StatusBuilder(server, "Command & Conquest: Red Alert 3");
-
-        // There is `B-U-_gameType` but game always sends `skirmish`
-        if (server.Data.TryGetValue("B-U-_matchMode", out var matchMode))
-        {
-            var mode = matchMode == "private" ? "Campaign" : "Skirmish";
-            eb.AddField("Mode", mode);
-        }
-
-        if (server.Data.TryGetValue("B-U-_closed", out var closed) && closed == "1")
-        {
-            eb.AddField("Closed", "Yes");
-        }
-
-        return (server.GID, eb.Build(), null);
-    }
-
-    private static EmbedBuilder StatusBuilder(GameServerListing server, string titleName)
-    {
-        if (_geoDb is not null && IPAddress.TryParse(server.TheaterConnection?.RemoteAddress, out var address) && address is not null)
-        {
-            if (_geoSymbolCache.TryGetValue(address, out var cResult) && cResult is not null)
-            {
-                titleName += cResult;
-            }
-            else
-            {
-                var result = _geoDb.Find<GeoResult>(address);
-                var flag = " " + GetCountryFlag(result?.CountryCode);
-
-                _geoSymbolCache.Add(address, flag);
-                titleName += flag;
-            }
-        }
-
-        return new EmbedBuilder()
-            .WithTitle(titleName)
-            .AddField("Players", GetPlayerCountString(server))
+        var embed = new EmbedBuilder()
+            .WithTitle(game.Title + _geo.Suffix(server.TheaterConnection?.RemoteAddress))
+            .AddField("Players", FormatPlayers(server))
             .WithTimestamp(server.StartedAt);
+
+        foreach (var field in game.Fields)
+        {
+            var value = field.Value(server);
+            if (!string.IsNullOrWhiteSpace(value)) embed.AddField(field.Name, value);
+        }
+
+        if (game.Level is { } level
+            && server.Data.GetValueOrDefault(level.DataKey) is { } levelKey
+            && level.Levels.TryGetValue(levelKey, out var levelInfo))
+        {
+            embed.AddField("Level", levelInfo.Display);
+            embed.WithImageUrl(string.Concat(AssetsUrlBase, levelInfo.Image));
+        }
+
+        if (game.Footer?.Invoke(server) is { } footer) embed.WithFooter(footer);
+
+        return embed.Build();
     }
 
-    private static readonly HashSet<string> EUCountries = new(StringComparer.Ordinal)
+    private static string FormatPlayers(GameServerListing server)
     {
-        "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR",
-        "DE", "GR", "HU", "IE", "IT", "LV", "LT", "LU", "MT", "NL",
-        "PL", "PT", "RO", "SK", "SI", "ES", "SE"
+        var maxPlayers = server.Data.GetValueOrDefault("MAX-PLAYERS", "?");
+        var players = server.ConnectedPlayers;
+
+        return players.IsEmpty
+            ? $"0/{maxPlayers}"
+            : $"{players.Count}/{maxPlayers} | {string.Join(", ", players.Select(x => x.Value.User.Username))}";
+    }
+
+    private static string FormatSummary(int gameCount) => gameCount switch
+    {
+        0 => "**0** ongoing games. 😞",
+        1 => "**1** ongoing game! ⭐",
+        _ => $"**{gameCount}** ongoing games! 🔥"
     };
 
-    private static string GetCountryFlag(string? countryCode)
+    private async Task PostOnslaughtStats(DiscordSocketClient client)
     {
-        if (string.IsNullOrEmpty(countryCode) || countryCode.Length != 2)
-            return string.Empty;
-        
-        countryCode = countryCode.ToUpper();
+        if (_stats.QueueCount == 0) return;
 
-        if (EUCountries.Contains(countryCode)) return "🇪🇺";
+        var embed = new EmbedBuilder().WithTitle("Onslaught finished!");
+        var posted = 0;
 
-        // Convert each letter to Regional Indicator Symbol
-        int firstLetter = 0x1F1E6 + (countryCode[0] - 'A');
-        int secondLetter = 0x1F1E6 + (countryCode[1] - 'A');
-        
-        return char.ConvertFromUtf32(firstLetter) + char.ConvertFromUtf32(secondLetter);
+        for (var i = 0; i < OnslaughtBatchSize; i++)
+        {
+            var msg = _stats.DequeueCompletion();
+            if (msg is null) break;
+
+            var level = GameCatalog.OnslaughtLevels.GetValueOrDefault($"Levels/ONS_MP_{msg.MapKey}");
+            if (level is null)
+            {
+                _logger.LogError("Unknown onslaught map key '{MapKey}', not submitting stat {BatchIdx}!", msg.MapKey, i);
+                continue;
+            }
+
+            var gt = msg.GameTime;
+            var text = $"Finished {level.Display} on {msg.Difficulty} in {gt.Hours} hours, {gt.Minutes} minutes and {gt.Seconds} seconds".Replace(" 0 hours, ", " ");
+
+            embed.AddField(msg.PlayerName, text);
+            posted++;
+        }
+
+        if (posted == 0) return;
+
+        if (await client.GetChannelAsync(_config.Value.OnslaughtStatsChannel) is not IMessageChannel channel)
+        {
+            _logger.LogError("Failed to open status channel: {ChannelId}", _config.Value.OnslaughtStatsChannel);
+            return;
+        }
+
+        await channel.SendMessageAsync("\n", embed: embed.Build(), options: ReqOptions);
+        _logger.LogInformation("New stats batch posted, {Count} messages", posted);
     }
 
-    public void Dispose()
-    {
-        if (_geoDb is null) return;
-        _geoDb.Dispose();
-    }
-
-    [method: MaxMind.Db.Constructor]
-    public record GeoResult(
-        [MaxMind.Db.Parameter("country_code")] string CountryCode
-    );
+    public void Dispose() => _geo.Dispose();
 }
