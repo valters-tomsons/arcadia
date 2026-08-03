@@ -98,7 +98,7 @@ public sealed class ModerationService : IAsyncDisposable
 
     private async Task ScanTask()
     {
-        List<(SocketUserMessage, Rule)> violations = [];
+        Dictionary<ulong, (SocketUserMessage msg, Rule rule)> violations = [];
 
         while (await _scanTimer.WaitForNextTickAsync())
         {
@@ -110,14 +110,14 @@ public sealed class ModerationService : IAsyncDisposable
                 {
                     if (rule.IsViolation(msg))
                     {
-                        violations.Add((msg, rule));
+                        violations[msg.Id] = (msg, rule);
                         break;
                     }
                 }
             }
 
             HashSet<ulong>? alreadyBanned = null;
-            foreach (var (msg, rule) in violations)
+            foreach (var (msg, rule) in violations.Values)
             {
                 if (alreadyBanned?.Contains(msg.Author.Id) == true) continue;
 
