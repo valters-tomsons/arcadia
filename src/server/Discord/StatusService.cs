@@ -3,13 +3,13 @@ using System.Collections.Immutable;
 using System.Net;
 using System.Text;
 using Arcadia.EA;
-using Arcadia.Hosting;
 using Arcadia.Storage;
 using Discord;
 using Discord.Net;
 using Discord.WebSocket;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using static Arcadia.Discord.Constants;
 
 namespace Arcadia.Discord;
 
@@ -20,7 +20,9 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
 
     private const string geoDatabaseFile = "ip-to-country.mmdb";
 
+    // this is not good
     private static readonly StringBuilder PlayersStringBuilder = new();
+    private static readonly Dictionary<GameRole, string> RoleMentions = [];
 
     private readonly ILogger<StatusService> _logger = logger;
     private readonly ConnectionManager _sharedCache = sharedCache;
@@ -86,8 +88,8 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
             var cacheHit = cachedIds.TryGetValue(channel.Id, out var messageId);
 
             var statusMsg = cacheHit 
-                ? await channel.GetMessageAsync(messageId, options: DiscordHostedService.ReqOptions) 
-                : await channel.SendMessageAsync("Initializing status...", options: DiscordHostedService.ReqOptions);
+                ? await channel.GetMessageAsync(messageId, options: Constants.ReqOptions) 
+                : await channel.SendMessageAsync("Initializing status...", options: Constants.ReqOptions);
 
             if (statusMsg is null)
             {
@@ -115,6 +117,16 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
             }
 
             _channelStatus.Add((channel, statusMsg.Id));
+
+            if (channel is SocketTextChannel guildChannel)
+            {
+                foreach (var role in Roles)
+                {
+                    var channelRole = guildChannel.Guild.Roles.FirstOrDefault(r => r.Name == role.DisplayName);
+                    if (channelRole is null) continue;
+                    RoleMentions[role.Id] = channelRole.Mention;
+                }
+            }
         }
 
         if (flushCache)
@@ -199,7 +211,7 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
             return;
         }
 
-        await channel.SendMessageAsync("\n", embed: eb.Build(), options: DiscordHostedService.ReqOptions);
+        await channel.SendMessageAsync("\n", embed: eb.Build(), options: Constants.ReqOptions);
         _logger.LogInformation("New stats batch posted");
     }
 
@@ -219,7 +231,7 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
                             .WithDescription(content.StatusMessage)
                             .Build();
                 },
-                options: DiscordHostedService.ReqOptions);
+                options: Constants.ReqOptions);
             }
             catch (HttpException e)
             {
@@ -243,7 +255,7 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
                         _logger.LogDebug("Removing game listing, GID:{GID}", postedGame.GID);
 
                         gidsToRemove.Add(postedGame.GID);
-                        await channel.DeleteMessageAsync(postedGame.MessageId, options: DiscordHostedService.ReqOptions);
+                        await channel.DeleteMessageAsync(postedGame.MessageId, options: Constants.ReqOptions);
                     }
                     catch (HttpException e)
                     {
@@ -260,9 +272,11 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
                 {
                     var game = content.Games[i];
                     var postedMsg = gameMessagesInChannel.FirstOrDefault(x => game.GID == x.GID);
+
                     if (postedMsg == default)
                     {
-                        var gameMessage = await channel.SendMessageAsync("\n", embed: game.Embed, options: DiscordHostedService.ReqOptions);
+                        var roleMention = game.role.HasValue ? RoleMentions.GetValueOrDefault(game.role.Value) : null;
+                        var gameMessage = await channel.SendMessageAsync(roleMention ?? "\n", embed: game.Embed, options: ReqOptions);
                         gameMessagesInChannel.Add((game.GID, gameMessage.Id));
                         _logger.LogDebug("Server listing added, GID:{GID}", game.GID);
                     }
@@ -273,7 +287,7 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
                             x.Content = "\n";
                             x.Embed = game.Embed;
                         },
-                        options: DiscordHostedService.ReqOptions);
+                        options: ReqOptions);
 
                         _logger.LogDebug("Server listing updated, GID:{GID}", game.GID);
                     }
@@ -286,11 +300,11 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
         }
     }
 
-    private (string StatusMessage, (long GID, Embed Embed)[] Games) BuildGameStatusContent()
+    private (string StatusMessage, (long GID, Embed Embed, GameRole? role)[] Games) BuildGameStatusContent()
     {
         var hosts = _sharedCache.GetAllServersInternal();
 
-        var embeds = new List<(long GID, Embed Embed)>(hosts.Length);
+        var embeds = new List<(long GID, Embed Embed, GameRole? role)>(hosts.Length);
         for (var i = 0; i < hosts.Length; i++)
         {
             var server = hosts[i];
@@ -312,7 +326,7 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
                     "LOTR" => BuildLOTRStatus(server),
                     "MOHAIR" => BuildMOHStatus(server),
                     "CNCRA3" => BuildRedAlert3Status(server),
-                    "BEACH" => Beach(server),
+                    "BEACH" => BuildBeachStatus(server),
                     _ => throw new($"No game status builder for '{server.PartitionId}'")
                 };
 
@@ -369,7 +383,7 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
         { "Levels/Iwo_Jima_s", ("Iwo Jima", "BF1943_Iwo_Jima.jpg") },
     }.ToFrozenDictionary();
 
-    private static (long GID, Embed Embed)? Beach(GameServerListing server)
+    private static (long GID, Embed Embed, GameRole? role)? BuildBeachStatus(GameServerListing server)
     {
         if (server.BeachMod)
         {
@@ -393,14 +407,14 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
                 eb.WithFooter("⚠️ Connection issues, matchmaking downgraded");
             }
 
-            return (server.GID, eb.Build());
+            return (server.GID, eb.Build(), GameRole.BF1943);
         }
 
         return null;
     }
 
 
-    private static (long GID, Embed Embed)? BuildBFBC2Status(GameServerListing server)
+    private static (long GID, Embed Embed, GameRole? role)? BuildBFBC2Status(GameServerListing server)
     {
         var levelName = server.Data.GetValueOrDefault("B-U-level");
         if (string.IsNullOrWhiteSpace(levelName))
@@ -430,10 +444,10 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
             }
         }
 
-        return (server.GID, eb.Build());
+        return (server.GID, eb.Build(), GameRole.BFBC2);
     }
 
-    private static (long GID, Embed Embed) BuildAO3Status(GameServerListing server)
+    private static (long GID, Embed Embed, GameRole? role) BuildAO3Status(GameServerListing server)
     {
         var serverName = $"**{server.NAME}**";
         var gamemode = server.Data.GetValueOrDefault("B-U-Mode") ?? string.Empty;
@@ -445,10 +459,10 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
             .AddField("Level", level)
             .AddField("Playlist", playlist);
 
-        return (server.GID, eb.Build());
+        return (server.GID, eb.Build(), null);
     }
 
-    private static (long GID, Embed Embed) BuildMercs2Status(GameServerListing server)
+    private static (long GID, Embed Embed, GameRole? role) BuildMercs2Status(GameServerListing server)
     {
         var eb = StatusBuilder(server, "Mercenaries 2");
 
@@ -468,7 +482,7 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
             eb.AddField("Mission", mission);
         }
 
-        return (server.GID, eb.Build());
+        return (server.GID, eb.Build(), GameRole.MERCS2);
     }
 
     private static readonly FrozenDictionary<string, string> _lotrModes = new Dictionary<string, string>()
@@ -499,7 +513,7 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
         {"1680074377", "Weathertop"},
     }.ToFrozenDictionary();
 
-    private static (long GID, Embed Embed)? BuildLOTRStatus(GameServerListing server)
+    private static (long GID, Embed Embed, GameRole? role)? BuildLOTRStatus(GameServerListing server)
     {
         if (server.Data.TryGetValue("B-U-FriendsOnly", out var friendsOnly) && friendsOnly == "1")
         {
@@ -523,19 +537,19 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
             eb.AddField("Level", levelName);
         }
 
-        return (server.GID, eb.Build());
+        return (server.GID, eb.Build(), GameRole.LOTRQ);
     }
 
-    private static (long GID, Embed Embed) BuildMOHStatus(GameServerListing server)
+    private static (long GID, Embed Embed, GameRole? role) BuildMOHStatus(GameServerListing server)
     {
         var eb = StatusBuilder(server, "Medal of Honor: Airborne")
             .AddField("Map", server.Data["B-U-Map"])
             .AddField("Gamemode", server.Data["B-U-GameType"]);
 
-        return (server.GID, eb.Build());
+        return (server.GID, eb.Build(), GameRole.MOHA);
     }
 
-    private static (long GID, Embed Embed) BuildRedAlert3Status(GameServerListing server)
+    private static (long GID, Embed Embed, GameRole? role) BuildRedAlert3Status(GameServerListing server)
     {
         var eb = StatusBuilder(server, "Command & Conquest: Red Alert 3");
 
@@ -551,7 +565,7 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
             eb.AddField("Closed", "Yes");
         }
 
-        return (server.GID, eb.Build());
+        return (server.GID, eb.Build(), null);
     }
 
     private static EmbedBuilder StatusBuilder(GameServerListing server, string titleName)

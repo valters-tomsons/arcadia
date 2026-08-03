@@ -7,7 +7,7 @@ using Microsoft.Extensions.Options;
 
 namespace Arcadia.Hosting;
 
-public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHostedService> logger, IOptions<DiscordSettings> config, StatusService statusService, ModerationService moderationService) : BackgroundService
+public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHostedService> logger, IOptions<DiscordSettings> config, StatusService statusService, ModerationService moderationService, NotificationService notificationService) : BackgroundService
 {
     private static readonly TimeSpan PeriodicUpdateInterval = TimeSpan.FromSeconds(10);
 
@@ -17,11 +17,7 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
 
     private readonly StatusService _statusService = statusService;
     private readonly ModerationService _moderationService = moderationService;
-
-    public readonly static RequestOptions ReqOptions = new()
-    {
-        RetryMode = RetryMode.AlwaysRetry
-    };
+    private readonly NotificationService _notificationService = notificationService;
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -68,6 +64,9 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
             _logger.LogInformation("Discord moderation enabled!");
         }
 
+        _client.SlashCommandExecuted += _notificationService.OnSlashCommandExecuted;
+        _client.ButtonExecuted += _notificationService.OnButtonExecuted;
+
         await _client.LoginAsync(TokenType.Bot, config.BotToken);
         await _client.StartAsync();
 
@@ -90,6 +89,7 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
         }
 
         await _statusService.Initialize(_client);
+        await _notificationService.Initialize(_client);
 
         await Task.Run(async () =>
         {
