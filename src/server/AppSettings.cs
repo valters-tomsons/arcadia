@@ -46,6 +46,7 @@ public record DiscordSettings
     public bool PerformModeration { get; init; }
     public ulong NonEnglishChannel { get; init; }
     public ulong ServerInfoChannel { get; init; }
+    public ulong MediaChannel { get; init; }
 }
 
 public record DebugSettings

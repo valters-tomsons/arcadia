@@ -57,7 +57,7 @@ public sealed class ModerationService : IAsyncDisposable
         Language.Russian
     ).WithMinimumRelativeDistance(0.2).Build();
 
-    private enum RuleId { NoImageSpam, NoPiracy, ReadTheInfo, EnglishOnly }
+    private enum RuleId { NoImageSpam, NoPiracy, ReadTheInfo, MediaOnly, EnglishOnly }
     private enum Penalty { Delete, Ban }
     private sealed record Rule(RuleId Id, Func<SocketUserMessage, bool> IsViolation, Penalty Penalty, string ReplyText);
     private readonly Rule[] Rules;
@@ -74,10 +74,11 @@ public sealed class ModerationService : IAsyncDisposable
 
         Rules =
         [
-            new(RuleId.NoImageSpam, IsImageSpam,                                          Penalty.Ban,     "Banned for spam. Have a nice day! 👋"),
-            new(RuleId.NoPiracy,    static m => ContainsAny(m.Content, PiracyPhrases),    Penalty.Delete,  "Read Rule #2, no discussion of piracy!"),
-            new(RuleId.ReadTheInfo, static m => ContainsAny(m.Content, StupidPhrases),    Penalty.Delete, $"Read <#{config.ServerInfoChannel}> in its entirety, it's already explained!"),
-            new(RuleId.EnglishOnly, IsNonEnglish,                                         Penalty.Delete, $"Read Rule #4, keep it english outside of <#{config.NonEnglishChannel}>"),
+            new(RuleId.NoImageSpam, m => m.Channel.Id != config.MediaChannel && IsImageSpam(m),  Penalty.Ban,     "Banned for spam. Have a nice day! 👋"),
+            new(RuleId.NoPiracy,    static m => ContainsAny(m.Content, PiracyPhrases),           Penalty.Delete,  "Read Rule #2, no discussion of piracy!"),
+            new(RuleId.ReadTheInfo, static m => ContainsAny(m.Content, StupidPhrases),           Penalty.Delete, $"Read <#{config.ServerInfoChannel}> in its entirety, it's already explained!"),
+            new(RuleId.MediaOnly,   m => m.Channel.Id == config.MediaChannel && !HasMedia(m),    Penalty.Delete,  string.Empty),
+            new(RuleId.EnglishOnly, IsNonEnglish,                                                Penalty.Delete, $"Read Rule #4, keep it english outside of <#{config.NonEnglishChannel}>"),
         ];
 
         _logger = logger;
@@ -128,7 +129,10 @@ public sealed class ModerationService : IAsyncDisposable
 
                 try
                 {
-                    await msg.ReplyAsync(rule.ReplyText, options: Constants.ReqOptions);
+                    if (rule.ReplyText.Length > 0)
+                    {
+                        await msg.ReplyAsync(rule.ReplyText, options: Constants.ReqOptions);
+                    }
 
                     if (rule.Penalty == Penalty.Ban && msg.Author is SocketGuildUser usr)
                     {
@@ -162,6 +166,14 @@ public sealed class ModerationService : IAsyncDisposable
         }
 
         return false;
+    }
+
+    private static bool HasMedia(SocketUserMessage msg)
+    {
+        return msg.Attachments.Count > 0
+            || msg.Embeds.Count > 0
+            || msg.Content.Contains("http://", StringComparison.OrdinalIgnoreCase)
+            || msg.Content.Contains("https://", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsNonEnglish(SocketUserMessage msg)
