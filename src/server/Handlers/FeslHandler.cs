@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+using System.Collections.Frozen;
 using System.Globalization;
 using System.Text;
 using Arcadia.EA;
@@ -13,7 +13,7 @@ namespace Arcadia.Handlers;
 
 public class FeslHandler
 {
-    private readonly ImmutableDictionary<string, Func<Packet, Task>> _handlers;
+    private readonly FrozenDictionary<string, Func<Packet, Task>> _handlers;
 
     private readonly ILogger<FeslHandler> _logger;
     private readonly IOptions<ArcadiaSettings> _settings;
@@ -102,7 +102,7 @@ public class FeslHandler
             ["rank/ReportMetrics"] = AcknowledgeRequest,
             ["pnow/ReportMetrics"] = AcknowledgeRequest,
             ["pnow/Cancel"] = AcknowledgeRequest
-        }.ToImmutableDictionary();
+        }.ToFrozenDictionary();
     }
 
     public async Task<PlasmaSession> HandleClientConnection(Stream network, string clientEndpoint, string serverEndpoint, CancellationToken ct)

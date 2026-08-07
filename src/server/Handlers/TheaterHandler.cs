@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+using System.Collections.Frozen;
 using System.Diagnostics;
 using System.Net.Sockets;
 using Arcadia.EA;
@@ -17,7 +17,7 @@ public class TheaterHandler
     private readonly IEAConnection _conn;
     private readonly DebugSettings _dbgSettings;
 
-    private readonly ImmutableDictionary<string, Func<Packet, Task>> _handlers;
+    private readonly FrozenDictionary<string, Func<Packet, Task>> _handlers;
 
     private PlasmaSession? _session;
     private string? _platform;
@@ -51,7 +51,7 @@ public class TheaterHandler
             ["PING"] = HandlePING,
             ["PCNT"] = HandlePCNT,
             ["UPLA"] = HandleUPLA,
-        }.ToImmutableDictionary();
+        }.ToFrozenDictionary();
     }
 
     public async Task HandleClientConnection(NetworkStream network, string clientEndpoint, string serverEndpoint, CancellationToken ct)

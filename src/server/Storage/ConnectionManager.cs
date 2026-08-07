@@ -1,4 +1,3 @@
-using System.Collections.Immutable;
 using Arcadia.EA;
 using Microsoft.Extensions.Logging;
 
@@ -6,7 +5,7 @@ namespace Arcadia.Storage;
 
 public class ConnectionManager(ILogger<ConnectionManager> logger, Database db)
 {
-    private static readonly ImmutableArray<string> DataKeyBlacklist = ["TID", "PID"];
+    private static readonly string[] DataKeyBlacklist = ["TID", "PID"];
 
     private readonly ILogger<ConnectionManager> _logger = logger;
     private readonly Database _db = db;
@@ -163,9 +162,9 @@ public class ConnectionManager(ILogger<ConnectionManager> logger, Database db)
         return _gameServers.SingleOrDefault(x => x.PartitionId == partitionId && x.GID == serverGid);
     }
 
-    public ImmutableArray<GameServerListing> GetPartitionServers(string partitionId)
+    public GameServerListing[] GetPartitionServers(string partitionId)
     {
-        return _gameServers.Where(x => x.PartitionId == partitionId).ToImmutableArray();
+        return [.. _gameServers.Where(x => x.PartitionId == partitionId)];
     }
 
     public GameServerListing? GetServerByHostPlayer(ulong hostUid) => _gameServers.FirstOrDefault(x => x.UID == hostUid);
@@ -175,7 +174,7 @@ public class ConnectionManager(ILogger<ConnectionManager> logger, Database db)
         return _connections.Count(x => x.PartitionId == partitionId);
     }
 
-    public ImmutableArray<GameServerListing> GetAllServersInternal()
+    public GameServerListing[] GetAllServersInternal()
     {
         return [.. _gameServers];
     }

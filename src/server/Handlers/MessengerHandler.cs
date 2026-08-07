@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+using System.Collections.Frozen;
 using System.Net.Sockets;
 using Arcadia.EA;
 using Arcadia.EA.Constants;
@@ -13,7 +13,7 @@ public class MessengerHandler
     private readonly IEAConnection _conn;
     private readonly ConnectionManager _storage;
 
-    private readonly ImmutableDictionary<string, Func<Packet, Task>> _handlers;
+    private readonly FrozenDictionary<string, Func<Packet, Task>> _handlers;
 
     public MessengerHandler(IEAConnection conn, ILogger<MessengerHandler> logger, ConnectionManager storage)
     {
@@ -29,7 +29,7 @@ public class MessengerHandler
             ["PSET"] = AcknowledgeRequest,
             ["PADD"] = AcknowledgeRequest,
             ["RADD"] = AcknowledgeRequest,
-        }.ToImmutableDictionary();
+        }.ToFrozenDictionary();
     }
 
     public async Task HandleClientConnection(NetworkStream network, string clientEndpoint, string serverEndpoint, CancellationToken ct)

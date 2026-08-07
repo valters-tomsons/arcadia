@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+using System.Collections.Frozen;
 using System.Data;
 using Arcadia.EA;
 using Dapper;
@@ -175,16 +175,16 @@ public sealed class Database
         }
     }
 
-    public ImmutableDictionary<string, string> GetStatsBySession(PlasmaSession session, string[] keys)
+    public IReadOnlyDictionary<string, string> GetStatsBySession(PlasmaSession session, string[] keys)
     {
         if (!_initialized ||
             keys.Length == 0 ||
             string.IsNullOrWhiteSpace(session.User.Username) ||
             string.IsNullOrWhiteSpace(session.User.Platform)
-        ) return ImmutableDictionary<string, string>.Empty;
+        ) return FrozenDictionary<string, string>.Empty;
 
         var subdomain = session.PartitionId.Split('/').LastOrDefault();
-        if (string.IsNullOrWhiteSpace(subdomain)) return ImmutableDictionary<string, string>.Empty;
+        if (string.IsNullOrWhiteSpace(subdomain)) return FrozenDictionary<string, string>.Empty;
 
         try
         {
@@ -202,8 +202,8 @@ public sealed class Database
             """,
             new
             {
-                Username = session.User.Username,
-                Platform = session.User.Platform,
+                session.User.Username,
+                session.User.Platform,
                 Subdomain = subdomain,
                 Keys = keys
             })?.ToDictionary(
@@ -211,12 +211,12 @@ public sealed class Database
                 row => (string)row.Value!
             );
 
-            return results?.ToImmutableDictionary() ?? throw new("Database query returned null");
+            return results ?? [];
         }
         catch (Exception e)
         {
             _logger.LogError(e, "Failed to get stats: {Message}", e.Message);
-            return ImmutableDictionary<string, string>.Empty;
+            return FrozenDictionary<string, string>.Empty;
         }
     }
 
@@ -235,8 +235,8 @@ public sealed class Database
         {
             var updates = stats.Select(x => new
             {
-                Username = session.User.Username,
-                Platform = session.User.Platform,
+                session.User.Username,
+                session.User.Platform,
                 Subdomain = subdomain,
                 x.Key,
                 x.Value
