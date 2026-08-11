@@ -27,7 +27,9 @@ public class FeslHandler
     private string clientString = string.Empty;
     private string partitionId = string.Empty;
     private string subDomain = string.Empty;
+
     private string? beachMod = null;
+    private const decimal MinModVersion = 0.4M;
 
     private readonly static TimeSpan PingPeriod = TimeSpan.FromSeconds(60);
     private readonly static TimeSpan MemCheckPeriod = TimeSpan.FromSeconds(120);
@@ -663,8 +665,27 @@ public class FeslHandler
 
     private async Task HandleGetTos(Packet request)
     {
-        // TODO Same as with stats, usually sent as multi-packed response
-        const string tos = "Welcome to Arcadia!\nBeware, here be dragons!";
+        var tos = "Welcome to Arcadia!\nBeware, here be dragons!";
+
+        if (partitionId.EndsWith("BEACH", StringComparison.InvariantCultureIgnoreCase))
+        {
+            if (beachMod is null)
+            {
+                tos = """
+                NOTICE!
+
+                Beachmod is not installed, you won't be able to play online!
+                """;
+            }
+            else if (beachMod is not null && MinModVersion > decimal.Parse(beachMod[1..]))
+            {
+                tos = """
+                NOTICE!
+
+                Your currently installed Beachmod version is too low, you won't be able to play online!
+                """;
+            }
+        }
 
         var data = new Dictionary<string, string>
         {
@@ -831,24 +852,20 @@ public class FeslHandler
     // BC2, 1943
     private async Task HandleNuPs3Login(Packet request)
     {
-        // if (false)
-        // {
-        //     await SendError(request, 122, "The password the user specified is incorrect");
-        //     return;
-        // }
-
-        // var tosAccepted = request.DataDict.TryGetValue("tosVersion", out var tosAcceptedValue);
-        // if (!tosAccepted || string.IsNullOrEmpty(tosAcceptedValue as string))
-        // {
-        //     await SendError(request, 101, "The user was not found");
-        //     return;
-        // }
-
-        if (beachMod is not null && 0.4M > decimal.Parse(beachMod[1..]))
+        if (partitionId.EndsWith("BEACH", StringComparison.InvariantCultureIgnoreCase))
         {
-            _logger.LogInformation("Mod version too low");
-            await SendError(request, 120);
-            return;
+            if (beachMod is null)
+            {
+                _logger.LogInformation("Beachmod is not loaded");
+                await SendError(request, 101);
+                return;
+            }
+            else if (beachMod is not null && MinModVersion > decimal.Parse(beachMod[1..]))
+            {
+                _logger.LogInformation("Beachmod version too low");
+                await SendError(request, 101);
+                return;
+            }
         }
 
         var ticketPayload = request["ticket"];
@@ -910,12 +927,6 @@ public class FeslHandler
         {
             {"TXN", "NuPS3AddAccount"}
         };
-
-        var email = request.DataDict["nuid"];
-        var pass = request.DataDict["password"];
-
-        // TODO: maybe stop logging this eventually
-        _logger.LogDebug("Trying to register user {email} with password {pass}", email, pass);
 
         var resultPacket = new Packet("acct", FeslTransmissionType.SinglePacketResponse, request.Id, data);
         await _conn.SendPacket(resultPacket);
