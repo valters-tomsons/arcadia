@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
 using Discord;
 using Discord.WebSocket;
 using Lingua;
@@ -7,7 +8,7 @@ using Microsoft.Extensions.Options;
 
 namespace Arcadia.Discord;
 
-public sealed class ModerationService : IAsyncDisposable
+public sealed partial class ModerationService : IAsyncDisposable
 {
     private static readonly string[] StupidPhrases =
     [
@@ -18,8 +19,6 @@ public sealed class ModerationService : IAsyncDisposable
         "how can i play online",
         "can we play online",
 
-        "does it work",
-        "does this work",
         "does online work",
         "does multiplayer work",
         "does coop work",
@@ -33,10 +32,6 @@ public sealed class ModerationService : IAsyncDisposable
         "is coop playable",
         "playable online",
         "playable multiplayer",
-
-        "can i play",
-        "can we play",
-        "are we able to play",
 
         "which modes work",
         "tutorial only?",
@@ -55,7 +50,7 @@ public sealed class ModerationService : IAsyncDisposable
         Language.English,
         Language.Spanish,
         Language.Russian
-    ).WithMinimumRelativeDistance(0.2).Build();
+    ).WithMinimumRelativeDistance(0.35).Build();
 
     private enum RuleId { NoImageSpam, NoPiracy, ReadTheInfo, MediaOnly, EnglishOnly }
     private enum Penalty { Delete, Ban }
@@ -67,18 +62,20 @@ public sealed class ModerationService : IAsyncDisposable
     private readonly PeriodicTimer _scanTimer = new(TimeSpan.FromSeconds(5));
 
     private readonly ILogger<ModerationService> _logger;
+    private readonly bool _dryRun;
 
     public ModerationService(IOptions<DiscordSettings> options, ILogger<ModerationService> logger)
     {
         var config = options.Value;
+        _dryRun = config.ModerationDryRun;
 
         Rules =
         [
-            new(RuleId.NoImageSpam, m => m.Channel.Id != config.MediaChannel && IsImageSpam(m),  Penalty.Ban,     "Banned for spam. Have a nice day! 👋"),
+            new(RuleId.NoImageSpam, IsImageSpam,                                                 Penalty.Ban,     "Banned for spam. Have a nice day! 👋"),
             new(RuleId.NoPiracy,    static m => ContainsAny(m.Content, PiracyPhrases),           Penalty.Delete,  "Read Rule #2, no discussion of piracy!"),
-            new(RuleId.ReadTheInfo, static m => ContainsAny(m.Content, StupidPhrases),           Penalty.Delete, $"Read <#{config.ServerInfoChannel}> in its entirety, it's already explained!"),
+            new(RuleId.ReadTheInfo, static m => IsAnsweredQuestion(m.Content),                   Penalty.Delete, $"Read <#{config.ServerInfoChannel}> in its entirety, it's already explained!"),
             new(RuleId.MediaOnly,   m => m.Channel.Id == config.MediaChannel && !HasMedia(m),    Penalty.Delete,  string.Empty),
-            new(RuleId.EnglishOnly, IsNonEnglish,                                                Penalty.Delete, $"Read Rule #4, keep it english outside of <#{config.NonEnglishChannel}>"),
+            new(RuleId.EnglishOnly, m => m.Channel.Id != config.NonEnglishChannel && IsNonEnglish(m), Penalty.Delete, $"Read Rule #4, keep it english outside of <#{config.NonEnglishChannel}>"),
         ];
 
         _logger = logger;
@@ -93,7 +90,8 @@ public sealed class ModerationService : IAsyncDisposable
 
     public void EnqueueMessage(SocketUserMessage msg)
     {
-        if (msg.Author.IsBot || msg.Author is not SocketGuildUser) return;
+        if (msg.Author.IsBot || msg.Author is not SocketGuildUser usr) return;
+        if (usr.GuildPermissions.ManageMessages) return;
         _messageQueue.Enqueue(msg);
     }
 
@@ -107,13 +105,20 @@ public sealed class ModerationService : IAsyncDisposable
 
             while (_messageQueue.TryDequeue(out var msg))
             {
-                foreach (var rule in Rules)
+                try
                 {
-                    if (rule.IsViolation(msg))
+                    foreach (var rule in Rules)
                     {
-                        violations[msg.Id] = (msg, rule);
-                        break;
+                        if (rule.IsViolation(msg))
+                        {
+                            violations[msg.Id] = (msg, rule);
+                            break;
+                        }
                     }
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, "[Moderation] Exception while scanning message {MessageId}: {Message}", msg.Id, e.Message);
                 }
             }
 
@@ -123,17 +128,26 @@ public sealed class ModerationService : IAsyncDisposable
                 if (alreadyBanned?.Contains(msg.Author.Id) == true) continue;
 
                 _logger.LogInformation(
-                    "[Moderation] Rule '{Rule}' violated by {Username} ({UserId}), penalty: {Penalty}, content: '{Content}'",
-                    rule.Id, msg.Author.Username, msg.Author.Id, rule.Penalty, msg.Content
+                    "[Moderation] {DryRun}Rule '{Rule}' violated by {Username} ({UserId}), penalty: {Penalty}, content: '{Content}'",
+                    _dryRun ? "(dry run) " : string.Empty, rule.Id, msg.Author.Username, msg.Author.Id, rule.Penalty, msg.Content
                 );
 
-                try
+                if (_dryRun) continue;
+
+                if (rule.ReplyText.Length > 0)
                 {
-                    if (rule.ReplyText.Length > 0)
+                    try
                     {
                         await msg.ReplyAsync(rule.ReplyText, options: Constants.ReqOptions);
                     }
+                    catch (Exception e)
+                    {
+                        _logger.LogWarning(e, "[Moderation] Failed to reply for rule '{Rule}': {Message}", rule.Id, e.Message);
+                    }
+                }
 
+                try
+                {
                     if (rule.Penalty == Penalty.Ban && msg.Author is SocketGuildUser usr)
                     {
                         await usr.BanAsync(pruneDays: 2, "Spam", options: Constants.ReqOptions);
@@ -176,44 +190,79 @@ public sealed class ModerationService : IAsyncDisposable
             || msg.Content.Contains("https://", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool IsNonEnglish(SocketUserMessage msg)
+    // Only short questions, longer messages are usually specific and worth answering
+    internal static bool IsAnsweredQuestion(string content)
+    {
+        const int MaxWordCount = 15;
+
+        content = content.Trim();
+        if (WordCount(content) > MaxWordCount) return false;
+
+        foreach (var p in StupidPhrases)
+        {
+            var idx = content.IndexOf(p, StringComparison.OrdinalIgnoreCase);
+            if (idx == 0 || (idx > 0 && content.Contains('?'))) return true;
+        }
+
+        return false;
+    }
+
+    private static int WordCount(string content) => content.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+
+    private static bool IsNonEnglish(SocketUserMessage msg) => IsNonEnglish(msg.Content);
+
+    internal static bool IsNonEnglish(string content)
     {
         const int MinContentLength = 5;
+        const int MinWordCount = 2;
 
-        var content = msg.Content.Trim();
+        content = UrlRegex().Replace(content, string.Empty).Trim();
         if (content.Length < MinContentLength) return false;
+        if (WordCount(content) < MinWordCount) return false;
 
         var lang = LangDetector.DetectLanguageOf(content);
         return lang != Language.English && lang != Language.Unknown;
     }
 
-    private const int ImageSpamThreshold = 4;
+    [GeneratedRegex(@"https?://\S+", RegexOptions.IgnoreCase)]
+    private static partial Regex UrlRegex();
+
+    // Spam bots post attachments to several channels at once, real users post a few screenshots in one channel
+    private const int ImageSpamMessageThreshold = 3;
+    private const int ImageSpamChannelThreshold = 2;
     private readonly TimeSpan ImageSpamWindow = TimeSpan.FromSeconds(20);
-    private readonly record struct UserImagePosts(DateTimeOffset Start, int Count);
+    private sealed record UserImagePosts(DateTimeOffset Start, HashSet<ulong> Channels)
+    {
+        public int Count { get; set; }
+    }
     private readonly Dictionary<ulong, UserImagePosts> ImagePostHistory = [];
 
     private bool IsImageSpam(SocketUserMessage msg)
     {
-        var imageCount = msg.Attachments.Count;
-        if (imageCount == 0) return false;
+        // Edits re-deliver the same attachments, don't count them twice
+        if (msg.EditedTimestamp is not null) return false;
+        if (msg.Attachments.Count == 0) return false;
 
-        var authorId = msg.Author.Id;
-        var postedAt = msg.Timestamp;
+        return TrackImagePost(msg.Author.Id, msg.Channel.Id, msg.Timestamp);
+    }
 
+    internal bool TrackImagePost(ulong authorId, ulong channelId, DateTimeOffset postedAt)
+    {
         if (!ImagePostHistory.TryGetValue(authorId, out var window) || postedAt - window.Start > ImageSpamWindow)
         {
-            window = new(postedAt, 0);
+            window = new(postedAt, []);
+            ImagePostHistory[authorId] = window;
         }
 
-        window = window with { Count = window.Count + imageCount };
+        window.Count++;
+        window.Channels.Add(channelId);
 
-        if (window.Count >= ImageSpamThreshold)
+        if (window.Count >= ImageSpamMessageThreshold && window.Channels.Count >= ImageSpamChannelThreshold)
         {
             ImagePostHistory.Remove(authorId);
             return true;
         }
 
-        ImagePostHistory[authorId] = window;
         return false;
     }
 }

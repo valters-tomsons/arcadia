@@ -44,6 +44,7 @@ public record DiscordSettings
     public ulong OnslaughtStatsChannel { get; init; }
 
     public bool PerformModeration { get; init; }
+    public bool ModerationDryRun { get; init; } = true;
     public ulong NonEnglishChannel { get; init; }
     public ulong ServerInfoChannel { get; init; }
     public ulong MediaChannel { get; init; }
