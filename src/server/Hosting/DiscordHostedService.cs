@@ -34,8 +34,8 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
             return;
         }
 
-            _client.Log += x =>
-            {
+        _client.Log += x =>
+        {
             var level = x.Severity switch
             {
                 LogSeverity.Critical => LogLevel.Critical,
@@ -46,8 +46,8 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
             };
 
             _logger.Log(level, "Discord.NET: {msg}", x.ToString());
-                return Task.CompletedTask;
-            };
+            return Task.CompletedTask;
+        };
 
         _client.Ready += () =>
         {
@@ -64,7 +64,7 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
 
             _client.MessageUpdated += async (cache, msg, channel) =>
             {
-                if (msg is SocketUserMessage usrMsg) _moderationService.EnqueueMessage(usrMsg);
+                if (msg is SocketUserMessage usrMsg && usrMsg.EditedTimestamp is not null) _moderationService.EnqueueMessage(usrMsg);
             };
 
             _logger.LogInformation("Discord moderation enabled!");
