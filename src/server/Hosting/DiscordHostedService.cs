@@ -34,14 +34,20 @@ public class DiscordHostedService(DiscordSocketClient client, ILogger<DiscordHos
             return;
         }
 
-        if (_logger.IsEnabled(LogLevel.Debug))
-        {
             _client.Log += x =>
             {
-                _logger.LogDebug("Discord.NET: {msg}", x.ToString());
+            var level = x.Severity switch
+            {
+                LogSeverity.Critical => LogLevel.Critical,
+                LogSeverity.Error => LogLevel.Error,
+                LogSeverity.Warning => LogLevel.Warning,
+                LogSeverity.Info => LogLevel.Information,
+                _ => LogLevel.Debug
+            };
+
+            _logger.Log(level, "Discord.NET: {msg}", x.ToString());
                 return Task.CompletedTask;
             };
-        }
 
         _client.Ready += () =>
         {
