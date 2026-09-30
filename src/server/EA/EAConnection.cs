@@ -1,4 +1,5 @@
 using System.Buffers;
+using System.Buffers.Binary;
 using System.Text;
 using Arcadia.EA.Constants;
 using Microsoft.Extensions.Logging;
@@ -62,13 +63,16 @@ public sealed class EAConnection : IEAConnection
         uint requestedMultiPacketSize = 0;
         long bufferedMultiPacketSize = 0;
 
+        // Bytes of an incomplete packet carried over from the previous read (TCP doesn't preserve packet boundaries).
+        var buffered = 0;
+
         while (NetworkStream.CanRead == true && !_cts.IsCancellationRequested)
         {
             int read;
 
             try
             {
-                read = await NetworkStream.ReadAtLeastAsync(readBuffer, Packet.HEADER_SIZE, throwOnEndOfStream: true, _cts.Token);
+                read = await NetworkStream.ReadAtLeastAsync(readBuffer[buffered..], 1, throwOnEndOfStream: true, _cts.Token);
             }
             catch (ObjectDisposedException) { break; }
             catch (TaskCanceledException) { break; }
@@ -85,32 +89,25 @@ public sealed class EAConnection : IEAConnection
                 continue;
             }
 
-            if (read > readBuffer.Length)
-            {
-                _logger?.LogCritical("Client sent a packet exceeding read buffer size!");
-                break;
-            }
+            buffered += read;
 
             var dataProcessed = 0;
-            while (dataProcessed < read && !_cts.IsCancellationRequested)
+            while (buffered - dataProcessed >= Packet.HEADER_SIZE && !_cts.IsCancellationRequested)
             {
-                var endRange = dataProcessed + read;
-                var buffer = readBuffer[dataProcessed..endRange];
-
-                if (buffer.Length <= Packet.HEADER_SIZE)
+                var packetLength = (int)BinaryPrimitives.ReadUInt32BigEndian(readBuffer.Span[(dataProcessed + 8)..]);
+                if (packetLength <= Packet.HEADER_SIZE || packetLength > readBuffer.Length)
                 {
-                    _logger?.LogCritical("Unexpected incoming message length");
-                    throw new NotImplementedException();
+                    _logger?.LogCritical("Unexpected packet length {length}, closing connection", packetLength);
+                    yield break;
                 }
 
-                var packet = new Packet(buffer.ToArray());
-                dataProcessed += (int)packet.Length;
-
-                if (packet.Length == 0)
+                if (buffered - dataProcessed < packetLength)
                 {
-                    _logger?.LogCritical("Unexpected packet length");
-                    throw new NotImplementedException();
+                    break; // rest of the packet hasn't arrived yet
                 }
+
+                var packet = new Packet(readBuffer[dataProcessed..(dataProcessed + packetLength)].ToArray());
+                dataProcessed += packetLength;
 
                 if (packet.TransmissionType == FeslTransmissionType.MultiPacketResponse || packet.TransmissionType == FeslTransmissionType.MultiPacketRequest)
                 {
@@ -162,6 +159,9 @@ public sealed class EAConnection : IEAConnection
 
                 yield return packet;
             }
+
+            readBuffer[dataProcessed..buffered].CopyTo(readBuffer);
+            buffered -= dataProcessed;
         }
 
         _logger?.LogTrace("Connection has been closed: {endpoint}", RemoteEndpoint);
