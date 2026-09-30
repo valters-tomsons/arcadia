@@ -68,9 +68,7 @@ public static class GameCatalog
         [GameId.BEACH] = new()
         {
             Title = "Battlefield 1943",
-            Listed = static s => s.BeachMod,
-            Level = new("B-U-Level", BeachLevels),
-            Footer = static s => s.ConnectionRatio < 0 ? "⚠️ Connection issues, matchmaking downgraded" : null,
+            Level = new("B-U-level", BeachLevels),
             Fields =
             [
                 new("Host", static s => s.NAME),

@@ -181,18 +181,6 @@ public class TheaterHandler
             }
         }
 
-        if (game.UID != _session.User.UserId && _session.BeachMod && game.BeachMod)
-        {
-            _logger.LogInformation("Spoofing accept response from server, GID={GID}", game.GID);
-
-            var spoof = new Packet(request.Type, request.TransmissionType, request.Id);
-            spoof["PID"] = "1";
-            spoof["ALLOWED"] = "1";
-
-            await FinishPlayerEnterGameRequest(spoof, game.GID);
-            return;
-        }
-
         _session.EGAM_TID = long.Parse(request["TID"]);
         game.EnqueuePlayer(_session);
         await SendEGRQ_ToGameHost(request, _session, game);
@@ -415,16 +403,6 @@ public class TheaterHandler
             games = [.. games.Where(x => x.Data["B-U-FriendsOnly"] == request["FILTER-ATTR-U-FriendsOnly"])];
         }
 
-        if (_session.BeachMod)
-        {
-            games = [.. games.Where(x => x.BeachMod).OrderByDescending(x => x.ConnectionRatio)];
-
-            if (games.Count > 0 && games[0].ConnectionRatio > 0)
-            {
-                games.RemoveAll(x => x.ConnectionRatio < 0);
-            }
-        }
-
         await _conn.SendPacket(new("GLST", TheaterTransmissionType.OkResponse, 0)
         {
             ["TID"] = request["TID"],
@@ -531,6 +509,12 @@ public class TheaterHandler
                 response.Add("B-U-RBHost", game.Data["B-U-RBHost"]);
                 response.Add("B-U-RBState", game.Data["B-U-RBState"]);
                 response.Add("B-U-ping_site", game.Data["B-U-ping_site"]);
+                break;
+            case "BEACH":
+                foreach (var (key, value) in game.Data)
+                {
+                    if (key.StartsWith("B-U-") && value is not null) response[key] = value;
+                }
                 break;
         }
 

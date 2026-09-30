@@ -21,9 +21,7 @@ public class GameServerListing
 
     public bool CanJoin { get; set; }
     public DateTimeOffset StartedAt { get; init; } = DateTimeOffset.Now;
-    public bool BeachMod { get; set; }
 
-    public int ConnectionRatio = 0;
     public HashSet<ulong> FailedPlayers { get; init; } = [];
 
     public ConcurrentDictionary<ulong, PlasmaSession> ConnectedPlayers { get; init; } = [];
