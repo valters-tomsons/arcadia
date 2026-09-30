@@ -28,8 +28,8 @@ public class FeslHandler
     private string partitionId = string.Empty;
     private string subDomain = string.Empty;
 
-    private string? beachMod = null;
-    private const decimal MinModVersion = 0.4M;
+    private decimal? beachModVersion = null;
+    private const decimal MinBeachModVersion = 0.4M;
 
     private readonly static TimeSpan PingPeriod = TimeSpan.FromSeconds(60);
     private readonly static TimeSpan MemCheckPeriod = TimeSpan.FromSeconds(120);
@@ -55,6 +55,7 @@ public class FeslHandler
         _handlers = new Dictionary<string, Func<Packet, Task>>()
         {
             ["fsys/Hello"] = HandleHello,
+            ["mods/Hello"] = HandleModsHello,
             ["fsys/MemCheck"] = HandleMemCheck,
             ["fsys/Ping"] = HandlePing,
             ["fsys/GetPingSites"] = HandleGetPingSites,
@@ -87,14 +88,6 @@ public class FeslHandler
             ["rank/UpdateStats"] = HandleUpdateStats,
             ["xmsg/GetMessages"] = HandleGetMessages,
             ["acct/GetTelemetryToken"] = HandleGetTelemetryToken,
-
-            // BEACHMOD
-            ["mods/Hello"] = HandleModsHello,
-            ["mods/LanGame"] = HandleLanGame,
-            ["mods/LanStop"] = HandleLanStop,
-            ["mods/LanLeave"] = HandleLanLeave,
-            ["mods/LanJoined"] = HandleLanJoined,
-            ["mods/LanFailed"] = HandleLanFailed,
 
             // Don't warn for known safe stubs
             ["pres/SetPresenceStatus"] = AcknowledgeRequest,
@@ -198,143 +191,13 @@ public class FeslHandler
         await SendMemCheck();
     }
 
-    private async Task HandleModsHello(Packet request)
+    private Task HandleModsHello(Packet request)
     {
-        beachMod = request.DataDict.GetValueOrDefault("BEACHMOD")?.Trim() ?? throw new("ModHello without version!");
-        _logger.LogInformation("BeachMod {ModVersion} client detected", beachMod);
-    }
+        var identifier = request.DataDict.GetValueOrDefault("BEACHMOD")?.Trim() ?? string.Empty;
+        beachModVersion = decimal.Parse(identifier.TrimStart('v'), CultureInfo.InvariantCulture);
 
-    private async Task HandleLanGame(Packet request)
-    {
-        _logger.LogInformation("Client sent lan game info!");
-        if (_session is null) throw new NotImplementedException();
-
-
-        if (!request.DataDict.TryGetValue("B-U-Level", out var level) || string.IsNullOrWhiteSpace(level))
-        {
-            return;
-        }
-
-        if (level == "Levels/Wake_island_tutorial")
-        {
-            return;
-        }
-
-        if (!request.DataDict.TryGetValue("PORT", out var serverPort) || string.IsNullOrWhiteSpace(serverPort))
-        {
-            return;
-        }
-
-        var ongoingGame = _sharedCache.GetServerByHostPlayer(_session.User.UserId);
-        if (ongoingGame is not null)
-        {
-            ongoingGame.Data["B-U-Level"] = level;
-            return;
-        }
-
-        var game = new GameServerListing()
-        {
-            PartitionId = _session.PartitionId,
-            TheaterConnection = _conn,
-            UID = _session.User.UserId,
-            GID = _sharedCounters.GetNextGameId(),
-            Platform = "PS3",
-            LID = 257,
-            CanJoin = true,
-            BeachMod = true,
-            UGID = "NOGUID",
-            EKEY = "NOENCYRPTIONKEY",
-            SECRET = "NOSECRET",
-            NAME = _session.User.Username,
-            Data = new()
-            {
-                ["TICKET"] = $"{_sharedCounters.GetNextTicket()}",
-                ["NAME"] = _session.User.Username,
-                ["JOIN"] = "O",
-                ["TYPE"] = "G",
-                ["MAX-PLAYERS"] = "16",
-
-                ["I"] = _session.FeslConnection?.RemoteAddress ?? throw new(),
-                ["PORT"] = serverPort,
-
-                ["INT-IP"] = _session.FeslConnection?.RemoteAddress ?? throw new(),
-                ["INT-PORT"] = serverPort,
-
-                ["B-maxObservers"] = "0",
-                ["B-numObservers"] = "0",
-                ["B-version"] = "0",
-                ["HXFR"] = "0",
-
-                ["BEACHMOD"] = _session.BeachMod.ToString(),
-                ["B-U-Level"] = level
-            }
-        };
-
-        if (string.IsNullOrWhiteSpace(game.NAME))
-        {
-            return;
-        }
-
-        await _sharedCache.AddGameListing(game, request.DataDict);
-        game.ConnectedPlayers.TryAdd(_session.User.UserId, _session);
-    }
-
-    private async Task HandleLanStop(Packet request)
-    {
-        _logger.LogInformation("Client stopped lan game!");
-        if (_session is null) throw new NotImplementedException();
-
-        var game = _sharedCache.GetServerByHostPlayer(_session.User.UserId);
-        if (game is null)
-        {
-            _logger.LogWarning("player not hosting?!?");
-            return;
-        }
-
-        await _sharedCache.RemoveGameListing(game);
-    }
-
-
-    private async Task HandleLanLeave(Packet request)
-    {
-        if (_session is null) throw new NotImplementedException();
-
-        var game = _sharedCache.FindGameWithPlayerByUid(_session.PartitionId, _session.User.UserId);
-        if (game is null) return;
-
-        game.ConnectedPlayers.TryRemove(_session.User.UserId, out _);
-    }
-
-    private async Task HandleLanJoined(Packet request)
-    {
-        if (_session is null) throw new NotImplementedException();
-
-        if (!long.TryParse(request.DataDict.GetValueOrDefault("GID"), out var gid) || gid < 1) return;
-
-        var game = _sharedCache.GetGameByGid(_session.PartitionId, gid);
-        if (game is null) return;
-
-        if (game.ConnectedPlayers.TryAdd(_session.User.UserId, _session))
-        {
-            Interlocked.Increment(ref game.ConnectionRatio);
-        }
-    }
-
-    private async Task HandleLanFailed(Packet request)
-    {
-        if (_session is null) throw new NotImplementedException();
-
-        if (!long.TryParse(request.DataDict.GetValueOrDefault("GID"), out var gid) || gid < 1) return;
-
-        var game = _sharedCache.GetGameByGid(_session.PartitionId, gid);
-        if (game is null) return;
-
-        if (game.FailedPlayers.Add(_session.User.UserId))
-        {
-            Interlocked.Decrement(ref game.ConnectionRatio);
-        }
-
-        await _conn.Terminate();
+        _logger.LogInformation("BeachMod {ModVersion} client detected", beachModVersion);
+        return Task.CompletedTask;
     }
 
     private async Task HandleGoodbye(Packet request)
@@ -667,24 +530,14 @@ public class FeslHandler
     {
         var tos = "Welcome to Arcadia!\nBeware, here be dragons!";
 
-        if (partitionId.EndsWith("BEACH", StringComparison.InvariantCultureIgnoreCase))
+        if (beachModVersion is not null && beachModVersion < MinBeachModVersion)
         {
-            if (beachMod is null)
-            {
-                tos = """
-                NOTICE!
+            tos = """
+            NOTICE!
 
-                Beachmod is not installed, you won't be able to play online!
-                """;
-            }
-            else if (beachMod is not null && MinModVersion > decimal.Parse(beachMod[1..]))
-            {
-                tos = """
-                NOTICE!
-
-                Your currently installed Beachmod version is too low, you won't be able to play online!
-                """;
-            }
+            Your Beachmod version is outdated, you won't be able to play online!
+            Update Beachmod or uninstall it.
+            """;
         }
 
         var data = new Dictionary<string, string>
@@ -833,7 +686,6 @@ public class FeslHandler
 
         var platform = Utils.GetOnlinePlatformName(ticket.SignatureIdentifier) ?? throw new("Cannot create PS3 login without online platform!");
         _session = await _sharedCache.CreatePlasmaConnection(_conn, onlineId, clientString, partitionId, platform, ticket.UserId);
-        _session.BeachMod = beachMod is not null;
 
         _db.RecordLoginMetric(ticket, _session.User.Platform);
 
@@ -852,20 +704,11 @@ public class FeslHandler
     // BC2, 1943
     private async Task HandleNuPs3Login(Packet request)
     {
-        if (partitionId.EndsWith("BEACH", StringComparison.InvariantCultureIgnoreCase))
+        if (beachModVersion is not null && beachModVersion < MinBeachModVersion)
         {
-            if (beachMod is null)
-            {
-                _logger.LogInformation("Beachmod is not loaded");
-                await SendError(request, 101);
-                return;
-            }
-            else if (beachMod is not null && MinModVersion > decimal.Parse(beachMod[1..]))
-            {
-                _logger.LogInformation("Beachmod version too low");
-                await SendError(request, 101);
-                return;
-            }
+            _logger.LogInformation("Refusing outdated Beachmod {ModVersion}", beachModVersion);
+            await SendError(request, 101);
+            return;
         }
 
         var ticketPayload = request["ticket"];
@@ -882,7 +725,6 @@ public class FeslHandler
 
         var platform = Utils.GetOnlinePlatformName(ticket.SignatureIdentifier) ?? throw new("Cannot create PS3 login without online platform!");
         _session = await _sharedCache.CreatePlasmaConnection(_conn, onlineId, clientString, partitionId, platform, ticket.UserId);
-        _session.BeachMod = beachMod is not null;
 
         _db.RecordLoginMetric(ticket, _session.User.Platform);
 
