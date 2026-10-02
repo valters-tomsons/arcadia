@@ -146,9 +146,10 @@ public class ConnectionManager(ILogger<ConnectionManager> logger, Database db)
         }
     }
 
-    public GameServerListing? FindGameWithPlayer(string partitionId, string playerName)
+    public GameServerListing? FindGameWithPlayer(string partitionId, string playerName, string type)
     {
-        return _gameServers.FirstOrDefault(x => x.ConnectedPlayers.Values.Any(y => y.PartitionId == partitionId && y.User.Username.Equals(playerName)));
+        return _gameServers.FirstOrDefault(x => (type.Length == 0 || x.Data.GetValueOrDefault("TYPE") == type)
+            && x.ConnectedPlayers.Values.Any(y => y.PartitionId == partitionId && y.User.Username.Equals(playerName)));
     }
 
     public GameServerListing? FindGameWithPlayerByUid(string partitionId, ulong uid)

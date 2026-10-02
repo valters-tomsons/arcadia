@@ -160,14 +160,17 @@ public class TheaterHandler
         }
         else if (request.DataDict.TryGetValue("USER", out var joinPlayerName))
         {
-            // Join by player Username
-            game = _sharedCache.FindGameWithPlayer(_session!.PartitionId, joinPlayerName);
+            // Join by player Username; BF1943 squad invites ask for the inviter's playgroup (TYPE=P), not their game
+            game = _sharedCache.FindGameWithPlayer(_session!.PartitionId, joinPlayerName, request["TYPE"]);
         }
 
         if (game is null)
         {
             _logger.LogError("EGAM resulting with NULL game!");
-            await SendError(request);
+
+            // BF1943 waits forever on an OK response; on 'ngam' a squad invite falls back to GDAT USER=<inviter>
+            if (_session.PartitionId.EndsWith("/BEACH")) await _conn.SendPacket(TheaterError(request.Type, request["TID"], "ngam"));
+            else await SendError(request);
             return;
         }
 
@@ -267,6 +270,33 @@ public class TheaterHandler
 
     private async Task HandleGDAT(Packet request)
     {
+        if (!string.IsNullOrEmpty(request["USER"]))
+        {
+            // Game a friend is in (BF1943 squad invite fallback); the lookup only completes after GDAT, GDET and one PDAT per player
+            var friendGame = _sharedCache.FindGameWithPlayer(_session!.PartitionId, request["USER"], request["TYPE"]);
+            if (friendGame is null || friendGame.TheaterConnection is null || !friendGame.CanJoin)
+            {
+                await _conn.SendPacket(TheaterError(request.Type, request["TID"], "ngam"));
+                return;
+            }
+
+            await SendGameData(request, friendGame);
+            await SendGDET(request, friendGame);
+            foreach (var player in friendGame.ConnectedPlayers.Values)
+            {
+                await _conn.SendPacket(new("PDAT", TheaterTransmissionType.OkResponse, 0)
+                {
+                    ["TID"] = request["TID"],
+                    ["LID"] = $"{friendGame.LID}",
+                    ["GID"] = $"{friendGame.GID}",
+                    ["PID"] = $"{player.PID}",
+                    ["NAME"] = player.User.Username,
+                    ["UID"] = $"{player.User.UserId}",
+                });
+            }
+            return;
+        }
+
         if (!long.TryParse(request["GID"], out var serverGid))
         {
             if (request["TYPE"] == "G")
@@ -428,7 +458,7 @@ public class TheaterHandler
         var response = new Dictionary<string, string>
         {
             ["TID"] = request["TID"],
-            ["LID"] = request["LID"],
+            ["LID"] = string.IsNullOrEmpty(request["LID"]) ? $"{game.LID}" : request["LID"],
             ["GID"] = $"{game.GID}",
             ["HU"] = $"{game.UID}",
             ["HN"] = game.NAME,
