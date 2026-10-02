@@ -228,7 +228,8 @@ public class FeslHandler
 
         if (_session is null) throw new();
 
-        var servers = _sharedCache.GetPartitionServers(partitionId).Where(x => x.CanJoin && x.UID != _session.User.UserId).ToArray();
+        // Playgroups (TYPE=P, e.g. BF1943 squads) are lobbies, not games to play in
+        var servers = _sharedCache.GetPartitionServers(partitionId).Where(x => x.CanJoin && x.UID != _session.User.UserId && x.Data.GetValueOrDefault("TYPE") != "P").ToArray();
         if (servers.Length > 0)
         {
             var listGames = request["players.0.props.{sessionType}"] == "listServers";
