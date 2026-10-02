@@ -538,6 +538,13 @@ public class TheaterHandler
             _logger.LogWarning("Client creating game in '{PartitionId}' with RESERVE-HOST=1", _session.PartitionId);
         }
 
+        // BF1943 "create private match" playgroups rely on host migration, which isn't supported; squads have 4 players
+        if (_session.PartitionId.EndsWith("/BEACH") && request["TYPE"] == "P" && int.TryParse(request["MAX-PLAYERS"], out var maxPlayers) && maxPlayers > 4)
+        {
+            await _conn.SendPacket(TheaterError(request.Type, request["TID"], "ngam"));
+            return;
+        }
+
         if (_sharedCache.GetServerByHostPlayer(_session.User.UserId) is not null)
         {
             throw new("Disconnecting client trying to host two game servers!");
@@ -752,5 +759,11 @@ public class TheaterHandler
     private Task HandlePING(Packet _)
     {
         return Task.CompletedTask;
+    }
+
+    private static Packet TheaterError(string type, string tid, string code)
+    {
+        var id = ((uint)code[1] << 16) | ((uint)code[2] << 8) | code[3];
+        return new(type, code[0], id, new() { ["TID"] = tid });
     }
 }
