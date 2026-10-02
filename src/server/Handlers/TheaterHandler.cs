@@ -350,23 +350,30 @@ public class TheaterHandler
         var player = server.DequeuePlayer(pid);
         if (player?.TheaterConnection is null) return;
 
+        if (serverResponse["ALLOWED"] != "1")
+        {
+            _logger.LogWarning("Host refused join from player '{Name}'", player.User.Username);
+
+            // player is likely banned by the host, fail the EGAM
+            if (server.PartitionId.EndsWith("/BEACH"))
+            {
+                await player.TheaterConnection.SendPacket(TheaterError("EGAM", $"{player.EGAM_TID}", "jden"));
+                return;
+            }
+
+            // For other games, send it anyway...
+        }
+
         var egamResp = new Dictionary<string, string>
         {
             ["TID"] = $"{player.EGAM_TID}",
             ["LID"] = $"{server.LID}",
             ["GID"] = $"{server.GID}",
-            ["ALLOWED"] = serverResponse["ALLOWED"]
+            ["ALLOWED"] = serverResponse["ALLOWED"],
         };
 
+        if (serverResponse["ALLOWED"] != "1") egamResp.Add("REASON", serverResponse["REASON"]);
         await player.TheaterConnection.SendPacket(new("EGAM", TheaterTransmissionType.OkResponse, 0, egamResp));
-
-        if (serverResponse["ALLOWED"] != "1")
-        {
-            _logger.LogWarning("Host disallowed player join!");
-            egamResp.Add("REASON", serverResponse["REASON"]);
-
-            // Send it anyway...
-        }
 
         server.ConnectedPlayers.TryAdd(player.User.UserId, player);
 
