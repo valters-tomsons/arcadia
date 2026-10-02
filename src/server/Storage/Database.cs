@@ -175,15 +175,15 @@ public sealed class Database
         }
     }
 
-    public IReadOnlyDictionary<string, string> GetStatsBySession(PlasmaSession session, string[] keys)
+    public IReadOnlyDictionary<string, string> GetStatsByUser(PlasmaUser user, string partitionId, string[] keys)
     {
         if (!_initialized ||
             keys.Length == 0 ||
-            string.IsNullOrWhiteSpace(session.User.Username) ||
-            string.IsNullOrWhiteSpace(session.User.Platform)
+            string.IsNullOrWhiteSpace(user.Username) ||
+            string.IsNullOrWhiteSpace(user.Platform)
         ) return FrozenDictionary<string, string>.Empty;
 
-        var subdomain = session.PartitionId.Split('/').LastOrDefault();
+        var subdomain = partitionId.Split('/').LastOrDefault();
         if (string.IsNullOrWhiteSpace(subdomain)) return FrozenDictionary<string, string>.Empty;
 
         try
@@ -202,8 +202,8 @@ public sealed class Database
             """,
             new
             {
-                session.User.Username,
-                session.User.Platform,
+                user.Username,
+                user.Platform,
                 Subdomain = subdomain,
                 Keys = keys
             })?.ToDictionary(
@@ -220,25 +220,29 @@ public sealed class Database
         }
     }
 
-    public void SetStatsBySession(PlasmaSession session, IDictionary<string, string> stats)
+    /// <summary>
+    /// Applies rank UpdateStats updates. Type (ut) is 0 set, 1 high, 2 low, 3 increment, 4 decrement. Games send values
+    /// as offsets from their own defaults, so a missing value counts as 0.
+    /// </summary>
+    public void UpdateStatsByUser(PlasmaUser user, string partitionId, IEnumerable<(string Key, int Type, double Value)> stats)
     {
         if (!_initialized ||
-            stats.Count == 0 ||
-            string.IsNullOrWhiteSpace(session.User.Username) ||
-            string.IsNullOrWhiteSpace(session.User.Platform)
+            string.IsNullOrWhiteSpace(user.Username) ||
+            string.IsNullOrWhiteSpace(user.Platform)
         ) return;
 
-        var subdomain = session.PartitionId.Split('/').LastOrDefault();
+        var subdomain = partitionId.Split('/').LastOrDefault();
         if (string.IsNullOrWhiteSpace(subdomain)) return;
 
         try
         {
             var updates = stats.Select(x => new
             {
-                session.User.Username,
-                session.User.Platform,
+                user.Username,
+                user.Platform,
                 Subdomain = subdomain,
                 x.Key,
+                x.Type,
                 x.Value
             });
 
@@ -246,13 +250,34 @@ public sealed class Database
 
             conn.Execute(
             """
-            INSERT OR REPLACE INTO stats (Username, Platform, Subdomain, Key, Value) VALUES (@Username, @Platform, @Subdomain, @Key, @Value)
-            """, 
+            INSERT OR REPLACE INTO stats (Username, Platform, Subdomain, Key, Value)
+            SELECT @Username, @Platform, @Subdomain, @Key,
+                CASE @Type WHEN 1 THEN MAX(Current, @Value) WHEN 2 THEN MIN(Current, @Value) WHEN 3 THEN Current + @Value WHEN 4 THEN Current - @Value ELSE @Value END
+            FROM (SELECT COALESCE((SELECT CAST(Value AS REAL) FROM stats WHERE Username = @Username AND Platform = @Platform AND Subdomain = @Subdomain AND Key = @Key), 0) AS Current)
+            """,
             updates);
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Failed to get stats: {Message}", e.Message);
+            _logger.LogError(e, "Failed to update stats: {Message}", e.Message);
+        }
+    }
+
+    public double SumStats(string partitionId, string key)
+    {
+        if (!_initialized) return 0;
+
+        var subdomain = partitionId.Split('/').LastOrDefault();
+
+        try
+        {
+            using var conn = _serviceProvider.GetRequiredService<IDbConnection>();
+            return conn.ExecuteScalar<double?>("SELECT SUM(CAST(Value AS REAL)) FROM stats WHERE Subdomain = @Subdomain AND Key = @Key", new { Subdomain = subdomain, Key = key }) ?? 0;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Failed to sum stats: {Message}", e.Message);
+            return 0;
         }
     }
 

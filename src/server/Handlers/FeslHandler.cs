@@ -320,7 +320,18 @@ public class FeslHandler
             values[i] = string.Empty;
         }
 
-        var keyResults = _db.GetStatsBySession(_session, keys);
+        IReadOnlyDictionary<string, string> keyResults;
+        if (request["ownerType"] == "11")
+        {
+            // Game-wide values: BF1943 unlocks Coral Sea once global_kills (everyone's kills) reaches 1,000,000
+            keyResults = new Dictionary<string, string> { ["global_kills"] = _db.SumStats(_session.PartitionId, "kills").ToString(CultureInfo.InvariantCulture) };
+        }
+        else
+        {
+            var owner = FindStatsOwner(request["owner"]);
+            keyResults = owner is null ? new Dictionary<string, string>() : _db.GetStatsByUser(owner, _session.PartitionId, keys);
+        }
+
         for (var i = 0; i < keyCount; i++)
         {
             var key = keys[i];
@@ -360,7 +371,7 @@ public class FeslHandler
             keys[i] = request.DataDict[$"keys.{i}"];
         }
 
-        var keyResults = _db.GetStatsBySession(_session, keys);
+        var keyResults = _db.GetStatsByUser(_session.User, _session.PartitionId, keys);
         for (var i = 0; i < keyCount; i++)
         {
             var key = keys[i];
@@ -407,11 +418,11 @@ public class FeslHandler
             keys[i] = request.DataDict[$"keys.{i}"];
         }
 
-        var ownerResults = _db.GetStatsBySession(_session, keys);
-
         for (var i = 0; i < ownerCount; i++)
         {
             var ownerId = request.DataDict[$"owners.{i}.ownerId"];
+            var owner = FindStatsOwner(ownerId);
+            var ownerResults = owner is null ? new Dictionary<string, string>() : _db.GetStatsByUser(owner, _session.PartitionId, keys);
             responseData.Add($"rankedStats.{i}.ownerId", ownerId);
             responseData.Add($"rankedStats.{i}.ownerType", "1");
 
@@ -787,50 +798,64 @@ public class FeslHandler
         await _conn.SendPacket(packet);
     }
 
+    // No owner (or ourselves) is the sender; anyone may write anyone's stats, game hosts write their players'
+    private PlasmaUser? FindStatsOwner(string ownerId)
+    {
+        if (!ulong.TryParse(ownerId, out var uid) || uid == 0 || uid == _session!.User.UserId) return _session!.User;
+        return _db.FindUserById(uid);
+    }
+
     private async Task HandleUpdateStats(Packet request)
     {
         if (_session is null) throw new NotImplementedException();
 
-        if (!int.TryParse(request["u.0.s.[]"], out var statsCount) || statsCount < 1)
-        {
-            await AcknowledgeRequest(request);
-            return;
-        }
+        if (!int.TryParse(request["u.[]"], out var ownerCount)) ownerCount = 1;
 
-        _logger.LogTrace("Client submitting {statsCount} stats!", statsCount);
-
-        var stats = new Dictionary<string, string>();
         List<OnslaughtLevelCompleteMessage>? onslaughtStats = null;
 
-        for (var i = 0; i < statsCount; i++)
+        for (var o = 0; o < ownerCount; o++)
         {
-            var key = request.DataDict[$"u.0.s.{i}.k"];
-            var value = request.DataDict[$"u.0.s.{i}.v"];
-            stats.Add(key, value);
+            if (!int.TryParse(request[$"u.{o}.s.[]"], out var statsCount) || statsCount < 1) continue;
 
-            // Discord notification for BFBC2 Onslaught map completions
-            if (key.StartsWith("time_mp") && key.EndsWith("_c") && clientString.Equals("BFBC2-PS3", StringComparison.InvariantCultureIgnoreCase))
+            var owner = FindStatsOwner(request[$"u.{o}.o"]);
+            if (owner is null)
             {
-                onslaughtStats ??= [];
-
-                var uid = ulong.Parse(request["u.0.o"]);
-                var player = _sharedCache.FindSessionByUID(uid) ?? throw new Exception("Player not online?");
-                var server = _sharedCache.FindGameWithPlayerByUid(partitionId, uid) ?? throw new Exception("Player not in server?");
-                var playtime = Math.Abs(double.Parse(request[$"u.0.s.{i}.v"]));
-                var onslaughtMessage = new OnslaughtLevelCompleteMessage
-                {
-                    PlayerName = player.User.Username,
-                    MapKey = key.Replace("time_mp", string.Empty).Replace("_c", string.Empty),
-                    Difficulty = server.Data["B-U-difficulty"],
-                    GameTime = TimeSpan.FromSeconds(playtime)
-                };
-
-                _logger.LogTrace("Posting Onslaught stats message: {Message}", onslaughtMessage);
-                onslaughtStats.Add(onslaughtMessage);
+                _logger.LogWarning("Ignoring stats of unknown owner {Owner}", request[$"u.{o}.o"]);
+                continue;
             }
-        }
 
-        _db.SetStatsBySession(_session, stats);
+            _logger.LogTrace("Client submitting {statsCount} stats for {Owner}!", statsCount, owner.Username);
+
+            var stats = new List<(string Key, int Type, double Value)>();
+
+            for (var i = 0; i < statsCount; i++)
+            {
+                var key = request.DataDict[$"u.{o}.s.{i}.k"];
+                if (!double.TryParse(request[$"u.{o}.s.{i}.v"], NumberStyles.Float, CultureInfo.InvariantCulture, out var value)) continue;
+                _ = int.TryParse(request[$"u.{o}.s.{i}.ut"], out var updateType);
+                stats.Add((key, updateType, value));
+
+                // Discord notification for BFBC2 Onslaught map completions
+                if (key.StartsWith("time_mp") && key.EndsWith("_c") && clientString.Equals("BFBC2-PS3", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    onslaughtStats ??= [];
+
+                    var server = _sharedCache.FindGameWithPlayerByUid(partitionId, owner.UserId) ?? throw new Exception("Player not in server?");
+                    var onslaughtMessage = new OnslaughtLevelCompleteMessage
+                    {
+                        PlayerName = owner.Username,
+                        MapKey = key.Replace("time_mp", string.Empty).Replace("_c", string.Empty),
+                        Difficulty = server.Data["B-U-difficulty"],
+                        GameTime = TimeSpan.FromSeconds(Math.Abs(value))
+                    };
+
+                    _logger.LogTrace("Posting Onslaught stats message: {Message}", onslaughtMessage);
+                    onslaughtStats.Add(onslaughtMessage);
+                }
+            }
+
+            _db.UpdateStatsByUser(owner, _session.PartitionId, stats);
+        }
 
         if (onslaughtStats is not null)
         {
