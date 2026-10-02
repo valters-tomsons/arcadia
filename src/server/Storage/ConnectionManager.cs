@@ -1,4 +1,5 @@
 using Arcadia.EA;
+using Arcadia.EA.Constants;
 using Microsoft.Extensions.Logging;
 
 namespace Arcadia.Storage;
@@ -59,10 +60,12 @@ public class ConnectionManager(ILogger<ConnectionManager> logger, Database db)
             return;
         }
 
+        GameServerListing[] hostedGames;
         await _semaphore.WaitAsync();
 
         try
         {
+            hostedGames = [.. _gameServers.Where(x => x.UID == session.User.UserId && x.PartitionId == session.PartitionId)];
             _gameServers.RemoveAll(x => x.UID == session.User.UserId && x.PartitionId == session.PartitionId);
 
             var sessionInGame = FindGameWithPlayerByUid(session.PartitionId, session.User.UserId);
@@ -73,6 +76,16 @@ public class ConnectionManager(ILogger<ConnectionManager> logger, Database db)
         finally
         {
             _semaphore.Release();
+        }
+
+        foreach (var game in hostedGames)
+        {
+            foreach (var player in game.ConnectedPlayers.Values.Where(x => x.User.UserId != game.UID))
+            {
+                // game host is gone, notify its players
+                if (player.TheaterConnection is null) continue;
+                await player.TheaterConnection.SendPacket(new("GREM", TheaterTransmissionType.OkResponse, 0) { ["LID"] = $"{game.LID}", ["GID"] = $"{game.GID}" });
+            }
         }
     }
 
