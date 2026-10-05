@@ -431,7 +431,7 @@ public class TheaterHandler
 
         var games = _sharedCache
                 .GetPartitionServers(_session.PartitionId)
-                .Where(x => x.CanJoin)
+                .Where(x => x.CanJoin && x.Data.GetValueOrDefault("TYPE") != "P")
                 .OrderByDescending(x => x.ConnectedPlayers.Count)
                 .ToList();
 
