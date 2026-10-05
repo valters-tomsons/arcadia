@@ -330,6 +330,17 @@ public class FeslHandler
         {
             var owner = FindStatsOwner(request["owner"]);
             keyResults = owner is null ? new Dictionary<string, string>() : _db.GetStatsByUser(owner, _session.PartitionId, keys);
+
+            // BF1943 score is derived (template formula), the game only uploads its parts
+            if (owner is not null && _session.PartitionId.EndsWith("/BEACH") && keys.Contains("score"))
+            {
+                var parts = _db.GetStatsByUser(owner, _session.PartitionId, ["sc_general", "sc_team", "sc_bonus", "sc_squad", "sc_objective"]);
+                if (parts.Count > 0)
+                {
+                    var score = parts.Values.Sum(x => double.Parse(x, CultureInfo.InvariantCulture));
+                    keyResults = new Dictionary<string, string>(keyResults) { ["score"] = score.ToString(CultureInfo.InvariantCulture) };
+                }
+            }
         }
 
         for (var i = 0; i < keyCount; i++)
