@@ -266,9 +266,15 @@ public sealed class EAConnection : IEAConnection
             return false;
         }
     }
+    private int _disposed;
 
     public async ValueTask DisposeAsync()
     {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        {
+            return;
+        }
+
         _bufferPool.Return(_readBufferArray, clearArray: true);
         await _multiPacketBuffer.DisposeAsync();
         _cts.Dispose();
