@@ -17,7 +17,7 @@ public static class PacketUtils
     {
         var typeBytes = Encoding.ASCII.GetBytes(type);
 
-        uint maskedTransmissionType = (transmissionType << 24) & 0xFF000000; // ensure it only occupies the high-order byte
+        uint maskedTransmissionType = transmissionType & 0xFF000000; // ensure it only occupies the high-order byte
         uint maskedPacketId = packetId & 0x00FFFFFF; // make sure it fits in the lower 3 bytes
         var transmissionTypePacketIdBytes = UintToBytes(maskedTransmissionType | maskedPacketId);
 
