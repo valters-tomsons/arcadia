@@ -220,7 +220,10 @@ public sealed class EAConnection : IEAConnection
             var chunkData = new Dictionary<string, string>
             {
                 ["data"] = base64Chunk,
-                ["size"] = totalBase64Size.ToString()
+                ["size"] = totalBase64Size.ToString(),
+
+                // BC1 (Fesl SDK 3.5) sizes its reassembly buffer from decodedSize
+                ["decodedSize"] = dataPortion.Length.ToString()
             };
             
             var chunkPacket = new Packet(
