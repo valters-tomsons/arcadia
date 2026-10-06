@@ -24,6 +24,9 @@ public class FeslHandler
     private readonly Database _db;
 
     private PlasmaSession? _session;
+
+    private const string MissingStatValue = "0.0";
+
     private string clientString = string.Empty;
     private string partitionId = string.Empty;
     private string subDomain = string.Empty;
@@ -348,7 +351,7 @@ public class FeslHandler
             var key = keys[i];
 
             responseData.Add($"stats.{i}.key", key);
-            responseData.Add($"stats.{i}.value", keyResults.GetValueOrDefault(key) ?? string.Empty);
+            responseData.Add($"stats.{i}.value", keyResults.GetValueOrDefault(key) ?? MissingStatValue);
         }
 
         var packet = new Packet("rank", FeslTransmissionType.SinglePacketResponse, request.Id, responseData);
@@ -388,7 +391,7 @@ public class FeslHandler
             var key = keys[i];
 
             responseData.Add($"stats.{i}.key", key);
-            responseData.Add($"stats.{i}.value", keyResults.GetValueOrDefault(key) ?? string.Empty);
+            responseData.Add($"stats.{i}.value", keyResults.GetValueOrDefault(key) ?? MissingStatValue);
             responseData.Add($"stats.{i}.rank", "-1");
         }
 
@@ -441,7 +444,7 @@ public class FeslHandler
             {
                 var statName = request.DataDict[$"keys.{j}"];
                 responseData.Add($"rankedStats.{i}.rankedStats.{j}.key", statName);
-                responseData.Add($"rankedStats.{i}.rankedStats.{j}.value", ownerResults.GetValueOrDefault(keys[j], string.Empty));
+                responseData.Add($"rankedStats.{i}.rankedStats.{j}.value", ownerResults.GetValueOrDefault(keys[j], MissingStatValue));
                 responseData.Add($"rankedStats.{i}.rankedStats.{j}.rank", "-1");
             }
         }
