@@ -245,7 +245,7 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
 
         foreach (var server in servers)
         {
-            if (!server.CanJoin) continue;
+            if (!server.CanJoin || server.Data.GetValueOrDefault("TYPE") == "P") continue;
 
             var partition = server.PartitionId.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).LastOrDefault();
             if (!Enum.TryParse<GameId>(partition, ignoreCase: true, out var gameId) || !GameCatalog.Games.TryGetValue(gameId, out var game))
