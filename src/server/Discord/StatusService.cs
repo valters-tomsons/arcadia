@@ -9,7 +9,7 @@ using static Arcadia.Discord.Constants;
 
 namespace Arcadia.Discord;
 
-public sealed class StatusService(ILogger<StatusService> logger, ConnectionManager sharedCache, IOptions<DiscordSettings> config, StatsStorage stats) : IDisposable
+public sealed class StatusService(ILogger<StatusService> logger, ConnectionManager sharedCache, IOptions<DiscordSettings> config, StatsStorage stats, NatService nat) : IDisposable
 {
     private const string MessageIdFile = "./messageId";
     private const string AssetsUrlBase = "https://raw.githubusercontent.com/valters-tomsons/arcadia/refs/heads/main/src/server/static/assets/";
@@ -282,6 +282,8 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
             if (!string.IsNullOrWhiteSpace(value)) embed.AddField(field.Name, value);
         }
 
+        if (FormatNat(server) is { } natText) embed.AddField("NAT", natText);
+
         if (game.Level is { } level
             && server.Data.GetValueOrDefault(level.DataKey) is { } levelKey
             && level.Levels.TryGetValue(levelKey, out var levelInfo))
@@ -293,6 +295,17 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
         if (game.Footer?.Invoke(server) is { } footer) embed.WithFooter(footer);
 
         return embed.Build();
+    }
+
+    private string? FormatNat(GameServerListing server)
+    {
+        _ = int.TryParse(server.Data.GetValueOrDefault("INT-PORT"), out var internalPort);
+        return nat.GetNatType(server.UID, internalPort) switch
+        {
+            NatType.Moderate => "Moderate (players with strict NAT join through a relay)",
+            NatType.Strict => "Strict (all players join through a relay)",
+            _ => null
+        };
     }
 
     private static string FormatPlayers(GameServerListing server)
