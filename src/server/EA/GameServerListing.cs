@@ -22,8 +22,6 @@ public class GameServerListing
     public bool CanJoin { get; set; }
     public DateTimeOffset StartedAt { get; init; } = DateTimeOffset.Now;
 
-    public HashSet<ulong> FailedPlayers { get; init; } = [];
-
     public ConcurrentDictionary<ulong, PlasmaSession> ConnectedPlayers { get; init; } = [];
 
     private ConcurrentDictionary<long, PlasmaSession> _joinQueue { get; init; } = [];
