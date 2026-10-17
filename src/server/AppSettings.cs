@@ -16,6 +16,7 @@ public record ArcadiaSettings
         (int)FeslGamePort.MoHAirborne,
         (int)FeslGamePort.LotrConquest,
         (int)FeslGamePort.CNCRA3,
+        (int)FeslGamePort.BadCompanyPS3
     ];
 
     public int MessengerPort { get; init; } = 42069;
