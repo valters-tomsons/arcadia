@@ -65,6 +65,8 @@ jobs:
           chmod +x ./release-linux-arm64/Arcadia
 
           scp -i ~/.ssh/id_rsa ./release-linux-arm64/Arcadia ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/${{ secrets.SSH_USER }}/server/Arcadia.new
+          ssh -i ~/.ssh/id_rsa ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} 'mkdir -p ~/server/Lingua/LanguageModels'
+          scp -r -i ~/.ssh/id_rsa ./release-linux-arm64/Lingua/LanguageModels/{en,es,ru} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/${{ secrets.SSH_USER }}/server/Lingua/LanguageModels/
           ssh -i ~/.ssh/id_rsa ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
             if tmux has-session -t arcadia_server 2>/dev/null; then
               tmux send-keys -t arcadia_server C-c
