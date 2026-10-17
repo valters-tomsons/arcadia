@@ -38,6 +38,7 @@ var host = Host.CreateDefaultBuilder()
             .AddSingleton<ProtoSSL>()
             .AddSingleton<SharedCounters>()
             .AddSingleton<ConnectionManager>()
+            .AddSingleton<NatService>()
             .AddSingleton<StatsStorage>()
 
             .AddSingleton<DiscordSocketConfig>(x => new()

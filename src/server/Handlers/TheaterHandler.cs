@@ -16,6 +16,7 @@ public class TheaterHandler
     private readonly ConnectionManager _sharedCache;
     private readonly IEAConnection _conn;
     private readonly DebugSettings _dbgSettings;
+    private readonly NatService _nat;
 
     private readonly FrozenDictionary<string, Func<Packet, Task>> _handlers;
 
@@ -23,8 +24,9 @@ public class TheaterHandler
     private string? _platform;
     private long? _UBRA_TID = null;
 
-    public TheaterHandler(IEAConnection conn, ILogger<TheaterHandler> logger, SharedCounters sharedCounters, ConnectionManager sharedCache, IOptions<DebugSettings> dbgOptions)
+    public TheaterHandler(IEAConnection conn, ILogger<TheaterHandler> logger, SharedCounters sharedCounters, ConnectionManager sharedCache, IOptions<DebugSettings> dbgOptions, NatService nat)
     {
+        _nat = nat;
         _logger = logger;
         _sharedCounters = sharedCounters;
         _sharedCache = sharedCache;
@@ -186,7 +188,14 @@ public class TheaterHandler
 
         _session.EGAM_TID = long.Parse(request["TID"]);
         game.EnqueuePlayer(_session);
-        await SendEGRQ_ToGameHost(request, _session, game);
+
+        if (!int.TryParse(request.DataDict.GetValueOrDefault("R-INT-PORT"), out var clientInternalPort))
+        {
+            _logger.LogWarning("R-INT-PORT is not a number");
+        }
+
+        var route = _nat.Enabled && game.UID != _session.User.UserId ? _nat.Route(game, _session, clientInternalPort) : null;
+        await SendEGRQ_ToGameHost(request, _session, game, route);
     }
 
     private async Task SendError(Packet request)
@@ -233,7 +242,7 @@ public class TheaterHandler
         return true;
     }
 
-    private static async Task SendEGRQ_ToGameHost(Packet request, PlasmaSession player, GameServerListing server)
+    private static async Task SendEGRQ_ToGameHost(Packet request, PlasmaSession player, GameServerListing server, NatRoute? route)
     {
         if (player.TheaterConnection is null) throw new NotImplementedException();
         if (server.TheaterConnection is null) throw new NotImplementedException();
@@ -253,6 +262,18 @@ public class TheaterHandler
             ["GID"] = $"{gameId}",
             ["IP"] = player.TheaterConnection.RemoteAddress,
         };
+
+        if (route is not null)
+        {
+            response["IP"] = route.ForHost.Address.ToString();
+            response["PORT"] = $"{route.ForHost.Port}";
+
+            if (route.Relayed)
+            {
+                response["R-INT-IP"] = response["IP"];
+                response["R-INT-PORT"] = response["PORT"];
+            }
+        }
 
         if (request.DataDict.TryGetValue("R-U-passkey", out var passkey) && !string.IsNullOrWhiteSpace(passkey))
         {
@@ -393,6 +414,18 @@ public class TheaterHandler
             ["LID"] = $"{server.LID}",
             ["GID"] = $"{server.GID}"
         };
+
+        if (_nat.RouteFor(player.User.UserId, server.GID) is { } route)
+        {
+            egegResp["I"] = route.ForClient.Address.ToString();
+            egegResp["P"] = $"{route.ForClient.Port}";
+
+            if (route.Relayed)
+            {
+                egegResp["INT-IP"] = egegResp["I"];
+                egegResp["INT-PORT"] = egegResp["P"];
+            }
+        }
 
         await player.TheaterConnection.SendPacket(new("EGEG", TheaterTransmissionType.OkResponse, 0, egegResp));
     }
@@ -654,6 +687,14 @@ public class TheaterHandler
             ["TID"] = request["TID"],
             ["PID"] = request["PID"]
         };
+
+        if (long.TryParse(request["GID"], out var gid) &&
+            int.TryParse(request["PID"], out var pid) &&
+            _sharedCache.GetGameByGid(_session!.PartitionId, gid) is { } game &&
+            game.ConnectedPlayers.Values.FirstOrDefault(x => x.PID == pid) is { } player)
+        {
+            _nat.Joined(player.User.UserId, gid);
+        }
 
         var packet = new Packet("PENT", TheaterTransmissionType.OkResponse, 0, response);
         await _conn.SendPacket(packet);

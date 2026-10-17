@@ -20,6 +20,7 @@ public record ArcadiaSettings
     ];
 
     public int MessengerPort { get; init; } = 42069;
+    public int NatPort { get; init; } = 42070;
 }
 
 public record FileServerSettings

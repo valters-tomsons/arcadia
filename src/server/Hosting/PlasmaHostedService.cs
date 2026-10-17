@@ -25,6 +25,7 @@ public class PlasmaHostedService : IHostedService
     private readonly AsymmetricKeyParameter _feslCertKey;
     private readonly Certificate _feslPubCert;
     private readonly Database _db;
+    private readonly NatService _nat;
 
     private readonly List<TcpListener> _tcpListeners = [];
     private readonly List<UdpClient> _udpListeners = [];
@@ -32,8 +33,9 @@ public class PlasmaHostedService : IHostedService
     private readonly SemaphoreSlim _sslHandshakeSemaphore = new(1, 1);
     private readonly static TimeSpan _sslHandshakeTimeout = TimeSpan.FromSeconds(15);
 
-    public PlasmaHostedService(ILogger<PlasmaHostedService> logger, IOptions<ArcadiaSettings> arcadiaSettings, ProtoSSL certGenerator, IServiceScopeFactory scopeFactory, IOptions<DebugSettings> debugSettings, Database db)
+    public PlasmaHostedService(ILogger<PlasmaHostedService> logger, IOptions<ArcadiaSettings> arcadiaSettings, ProtoSSL certGenerator, IServiceScopeFactory scopeFactory, IOptions<DebugSettings> debugSettings, Database db, NatService nat)
     {
+        _nat = nat;
         _logger = logger;
         _scopeFactory = scopeFactory;
         _db = db;
@@ -215,25 +217,31 @@ public class PlasmaHostedService : IHostedService
                     {
                         var udpResult = await udpListener.ReceiveAsync();
                         var request = new Packet(udpResult.Buffer);
-                        if (request.Type == "ECHO")
-                        {
-                            Dictionary<string, string> data = new()
-                            {
-                                    { "TXN", "ECHO" },
-                                    { "IP", udpResult.RemoteEndPoint.Address.ToString() },
-                                    { "PORT", udpResult.RemoteEndPoint.Port.ToString() },
-                                    { "ERR", "0" },
-                                    { "TYPE", "1" },
-                                    { "TID", request["TID"] }
-                            };
 
-                            var response = await new Packet(request.Type, TheaterTransmissionType.OkResponse, 0, data).Serialize();
-                            await udpListener.SendAsync(response, udpResult.RemoteEndPoint, processCt);
-                        }
-                        else
+                        if (request.Type != "ECHO")
                         {
                             _logger.LogError("Unknown UDP request type: {type}", request.Type);
+                            continue;
                         }
+
+                        if (_nat.Enabled)
+                        {
+                            await _nat.HandleEcho(udpListener, udpResult, request, processCt);
+                            continue;
+                        }
+
+                        Dictionary<string, string> data = new()
+                        {
+                            { "TXN", "ECHO" },
+                            { "IP", udpResult.RemoteEndPoint.Address.ToString() },
+                            { "PORT", udpResult.RemoteEndPoint.Port.ToString() },
+                            { "ERR", "0" },
+                            { "TYPE", "1" },
+                            { "TID", request["TID"] }
+                        };
+
+                        var response = await new Packet(request.Type, TheaterTransmissionType.OkResponse, 0, data).Serialize();
+                        await udpListener.SendAsync(response, udpResult.RemoteEndPoint, processCt);
                     }
                     catch (Exception e)
                     {
