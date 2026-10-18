@@ -99,7 +99,7 @@ public static class GameCatalog
             Level = new("B-U-level", BeachLevels),
             Fields =
             [
-                new("Host", static s => s.NAME),
+                new("Name", static s => s.NAME),
             ]
         },
 
@@ -109,7 +109,8 @@ public static class GameCatalog
             Level = new("B-U-level", BadCompanyLevels),
             Fields =
             [
-                new("Name", static s => $"**{s.NAME}** ({Lookup(BadCompanyModes, s, "B-U-gamemode") ?? "`N/A`"})"),
+                new("Name", static s => s.NAME),
+                new("Gamemode", static s => Lookup(BadCompanyModes, s, "B-U-gamemode") ?? "`N/A`")
             ]
         },
 
@@ -120,7 +121,8 @@ public static class GameCatalog
             Level = new("B-U-level", OnslaughtLevels),
             Fields =
             [
-                new("Name",       static s => $"**{s.NAME.Replace("P2P-", string.Empty)}** ({Data(s, "B-U-gamemode") ?? "`N/A`"})"),
+                new("Name",       static s => $"{s.NAME.Replace("P2P-", string.Empty)}"),
+                new("Gamemode",   static s => Data(s, "B-U-gamemode") ?? "`N/A`"),
                 new("Difficulty", static s => Data(s, "B-U-difficulty")),
             ]
         },
@@ -130,7 +132,8 @@ public static class GameCatalog
             Title = "Army of Two: 40th Day",
             Fields =
             [
-                new("Name",     static s => $"**{s.NAME}** - {Data(s, "B-U-Mode")}"),
+                new("Name",     static s => s.NAME),
+                new("Gamemode", static s => Data(s, "B-U-Mode") ?? "`N/A`"),
                 new("Level",    static s => Data(s, "B-U-Map") ?? "`N/A`"),
                 new("Playlist", static s => Data(s, "B-U-MapPlaylist") ?? "`N/A`"),
             ]
