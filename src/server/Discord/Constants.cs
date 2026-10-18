@@ -10,7 +10,7 @@ public static class Constants
     };
 
     // Names must match the last segment of a server's PartitionId
-    public enum GameId { BEACH, BFBC2, AO3, MERCS2, LOTR, MOHAIR, CNCRA3 }
+    public enum GameId { BEACH, BFBC2, AO3, MERCS2, LOTR, MOHAIR, CNCRA3, BFBC }
 
     public sealed record NotificationRole(GameId Id, string DisplayName, string? Emote);
 

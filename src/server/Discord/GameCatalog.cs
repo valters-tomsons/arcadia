@@ -35,6 +35,34 @@ public static class GameCatalog
         { "Levels/Iwo_Jima_s",    new("Iwo Jima",      "BF1943_Iwo_Jima.jpg") },
     }.ToFrozenDictionary();
 
+    // Gold Rush levels are CamelCase, Conquest (title update 1.20) levels are lowercase
+    private static readonly FrozenDictionary<string, LevelInfo> BadCompanyLevels = new Dictionary<string, LevelInfo>
+    {
+        { "Levels/MP_BeachHead_Day1",  new("Harvest Day",        "BC1_Harvest_Day.jpg") },
+        { "Levels/MP_BeachHead_Day2",  new("Over and Out",       "BC1_Over_and_Out.jpg") },
+        { "Levels/MP_Harbour_Day1",    new("Valley Run",         "BC1_Valley_Run.jpg") },
+        { "Levels/MP_Harbour_Day2",    new("Deconstruction",     "BC1_Deconstruction.jpg") },
+        { "Levels/MP_Ignition_Day1",   new("Oasis",              "BC1_Oasis.jpg") },
+        { "Levels/MP_Ignition_Day2",   new("Final Ignition",     "BC1_Final_Ignition.jpg") },
+        { "Levels/MP_Monastery_Day1",  new("End of the Line",    "BC1_End_of_the_Line.jpg") },
+        { "Levels/MP_Monastery_Day2",  new("Ascension",          "BC1_Ascension.jpg") },
+
+        { "Levels/mp_golfcourse_cq",   new("Par for the Course", "BC1_Par_for_the_Course.jpg") },
+        { "Levels/mp_ghost_town_cq",   new("Ghost Town",         "BC1_Ghost_Town.jpg") },
+        { "Levels/mp_harvest_day_cq",  new("Harvest Day",        "BC1_Harvest_Day.jpg") },
+        { "Levels/mp_crossroads_cq",   new("Crossing Over",      "BC1_Crossing_Over.jpg") },
+        { "Levels/mp_oasis_cq",        new("Oasis",              "BC1_Oasis.jpg") },
+        { "Levels/mp_zabograd_cq",     new("Acta Non Verba",     "BC1_Acta_Non_Verba.jpg") },
+        { "Levels/mp_eotl_cq",         new("End of the Line",    "BC1_End_of_the_Line.jpg") },
+        { "Levels/mp_ascension_cq",    new("Ascension",          "BC1_Ascension.jpg") },
+    }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
+
+    private static readonly FrozenDictionary<string, string> BadCompanyModes = new Dictionary<string, string>
+    {
+        { "GOLDRUSH", "Gold Rush" },
+        { "CONQUEST", "Conquest" },
+    }.ToFrozenDictionary();
+
     private static readonly FrozenDictionary<string, string> LotrModes = new Dictionary<string, string>
     {
         { "1988399932",  "Conquest" },
@@ -72,6 +100,16 @@ public static class GameCatalog
             Fields =
             [
                 new("Host", static s => s.NAME),
+            ]
+        },
+
+        [GameId.BFBC] = new()
+        {
+            Title = "Battlefield: Bad Company",
+            Level = new("B-U-level", BadCompanyLevels),
+            Fields =
+            [
+                new("Name", static s => $"**{s.NAME}** ({Lookup(BadCompanyModes, s, "B-U-gamemode") ?? "`N/A`"})"),
             ]
         },
 
