@@ -16,9 +16,10 @@ Game                       |   Status      | Live status
 -------------------------- | ----------    | ----- 
 Mercenaries 2              | Online        | No leaderboards.
 Medal of Honor Airborne    | Online        | No stats.
-Lord of the Rings Conquest | Online*       | *Requires PC or mod on PS3 to host public servers. 
-Bad Company 2              | COOP Only     | **Requires Onslaught DLC**, only player hosted servers. No servers for regular multiplayer.
-Battlefield 1943           | Online**      | No servers. Requires BEACHMOD to join or host player hosted servers.
+Lord of the Rings Conquest | Online        | Requires PC or mod on PS3 to host public servers. 
+Battlefield Bad Company 2  | COOP Only     | **Requires Onslaught DLC**. No servers for regular multiplayer.
+Battlefield 1943           | Online        | Requires [Beachmod](https://beachmod.net/) to host servers.
+Battlefield Bad Company    | Online        | Requires [Beachmod](https://beachmod.net/) to host servers.
 
 ## RPCS3 Configuration
 
@@ -94,7 +95,6 @@ Command & Conquer Red Alert 3 | Can host, joining is problematic
 Army of Two                   | Can start lobby, nobody can join
 Army of Two: 40th Day         | Can start lobby, nobody can join
 Godfather 2                   | Can start lobby, nobody can join
-Battlefield Bad Company       | No servers
 Team Fortress 2               | No servers
 Need for Speed: Carbon        | No servers
 Need for Speed: Pro Street    | No servers
