@@ -302,8 +302,8 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
         _ = int.TryParse(server.Data.GetValueOrDefault("INT-PORT"), out var internalPort);
         return nat.GetNatType(server.UID, internalPort) switch
         {
-            NatType.Moderate => "Moderate (players with strict NAT join through a relay)",
-            NatType.Strict => "Strict (all players join through a relay)",
+            NatType.Moderate => "Moderate",
+            NatType.Strict => "Strict",
             _ => null
         };
     }
