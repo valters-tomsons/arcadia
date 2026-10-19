@@ -827,6 +827,6 @@ public class TheaterHandler
     private static Packet TheaterError(string type, string tid, string code)
     {
         var id = ((uint)code[1] << 16) | ((uint)code[2] << 8) | code[3];
-        return new(type, code[0], id, new() { ["TID"] = tid });
+        return new(type, (uint)code[0] << 24, id, new() { ["TID"] = tid });
     }
 }
