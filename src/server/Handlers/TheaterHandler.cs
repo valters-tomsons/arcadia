@@ -1,5 +1,4 @@
 using System.Collections.Frozen;
-using System.Diagnostics;
 using System.Net.Sockets;
 using Arcadia.EA;
 using Arcadia.EA.Constants;
@@ -173,9 +172,8 @@ public class TheaterHandler
         {
             _logger.LogError("EGAM resulting with NULL game!");
 
-            // BF1943 waits forever on an OK response; on 'ngam' a squad invite falls back to GDAT USER=<inviter>
-            if (_session.PartitionId.EndsWith("/BEACH")) await _conn.SendPacket(TheaterError(request.Type, request["TID"], "ngam"));
-            else await SendError(request);
+            // BF1943 squad invites fall back to GDAT USER=<inviter> on 'ngam'
+            await _conn.SendPacket(TheaterError(request.Type, request["TID"], "ngam"));
             return;
         }
 
@@ -184,7 +182,7 @@ public class TheaterHandler
             var canJoin = await AwaitOpenGame(game);
             if (!canJoin)
             {
-                await SendError(request);
+                await _conn.SendPacket(TheaterError(request.Type, request["TID"], "jden"));
                 return;
             }
         }
@@ -199,22 +197,6 @@ public class TheaterHandler
 
         var route = _nat.Enabled && game.UID != _session.User.UserId ? _nat.Route(game, _session, clientInternalPort) : null;
         await SendEGRQ_ToGameHost(request, _session, game, route);
-    }
-
-    private async Task SendError(Packet request)
-    {
-        Debugger.Break();
-
-        var response = new Dictionary<string, string>
-        {
-            ["TID"] = $"{request["TID"]}",
-            ["localizedMessage"] = "Generic error",
-            ["errorContainer"] = "0",
-            ["errorCode"] = "100"
-        };
-
-        var clientPacket = new Packet(request.Type, TheaterTransmissionType.OkResponse, 0, response);
-        await _conn.SendPacket(clientPacket);
     }
 
     private async Task<bool> AwaitOpenGame(GameServerListing game)
@@ -334,7 +316,7 @@ public class TheaterHandler
 
         if (game is null || game.TheaterConnection is null)
         {
-            await SendError(request);
+            await _conn.SendPacket(TheaterError(request.Type, request["TID"], "ngam"));
             return;
         }
 
@@ -659,7 +641,7 @@ public class TheaterHandler
 
         if (string.IsNullOrWhiteSpace(game.NAME))
         {
-            await SendError(request);
+            await _conn.SendPacket(TheaterError(request.Type, request["TID"], "bpar"));
             return;
         }
 
