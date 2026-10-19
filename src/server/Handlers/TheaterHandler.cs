@@ -18,6 +18,9 @@ public class TheaterHandler
     private readonly DebugSettings _dbgSettings;
     private readonly NatService _nat;
 
+    // All games are created in a single lobby
+    private const int LobbyId = 257;
+
     private readonly FrozenDictionary<string, Func<Packet, Task>> _handlers;
 
     private PlasmaSession? _session;
@@ -445,7 +448,7 @@ public class TheaterHandler
         var lobbyData = new Dictionary<string, string>
         {
             ["TID"] = $"{request["TID"]}",
-            ["LID"] = $"{request["LID"]}",
+            ["LID"] = $"{LobbyId}",
             ["PASSING"] = $"{1}",
             ["NAME"] = _session.PartitionId.Split('/', StringSplitOptions.TrimEntries).LastOrDefault()?.ToLower() ?? "arcadia",
             ["LOCALE"] = $"{"en_US"}",
@@ -627,7 +630,7 @@ public class TheaterHandler
             UID = _session.User.UserId,
             GID = _sharedCounters.GetNextGameId(),
             Platform = _platform,
-            LID = 257,
+            LID = LobbyId,
             UGID = "NOGUID",
             EKEY = "NOENCYRPTIONKEY",
             SECRET = "NOSECRET",
