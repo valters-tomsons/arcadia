@@ -205,6 +205,8 @@ public class FeslHandler
 
     private async Task HandleGoodbye(Packet request)
     {
+        var response = new Dictionary<string, string> { { "TXN", request.TXN } };
+        await _conn.SendPacket(new Packet(request.Type, FeslTransmissionType.SinglePacketResponse, request.Id, response));
         await _conn.Terminate();
     }
 
