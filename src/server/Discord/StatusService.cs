@@ -315,7 +315,7 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
 
         return players.IsEmpty
             ? $"0/{maxPlayers}"
-            : $"{players.Count}/{maxPlayers} | {string.Join(", ", players.Select(x => x.Value.User.Username))}";
+            : $"{players.Count}/{maxPlayers} | {string.Join(", ", players.Select(x => Format.Sanitize(x.Value.User.Username)))}";
     }
 
     private static string FormatSummary(int gameCount) => gameCount switch
@@ -345,9 +345,9 @@ public sealed class StatusService(ILogger<StatusService> logger, ConnectionManag
             }
 
             var gt = msg.GameTime;
-            var text = $"Finished {level.Display} on {msg.Difficulty} in {gt.Hours} hours, {gt.Minutes} minutes and {gt.Seconds} seconds".Replace(" 0 hours, ", " ");
+            var text = $"Finished {level.Display} on {Format.Sanitize(msg.Difficulty)} in {gt.Hours} hours, {gt.Minutes} minutes and {gt.Seconds} seconds".Replace(" 0 hours, ", " ");
 
-            embed.AddField(msg.PlayerName, text);
+            embed.AddField(Format.Sanitize(msg.PlayerName), text);
             posted++;
         }
 

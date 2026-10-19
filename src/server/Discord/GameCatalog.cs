@@ -1,4 +1,5 @@
 using System.Collections.Frozen;
+using Discord;
 using Arcadia.EA;
 using static Arcadia.Discord.Constants;
 
@@ -99,7 +100,7 @@ public static class GameCatalog
             Level = new("B-U-level", BeachLevels),
             Fields =
             [
-                new("Name", static s => s.NAME),
+                new("Name", static s => Format.Sanitize(s.NAME)),
             ]
         },
 
@@ -109,7 +110,7 @@ public static class GameCatalog
             Level = new("B-U-level", BadCompanyLevels),
             Fields =
             [
-                new("Name", static s => s.NAME),
+                new("Name", static s => Format.Sanitize(s.NAME)),
                 new("Gamemode", static s => Lookup(BadCompanyModes, s, "B-U-gamemode") ?? "`N/A`")
             ]
         },
@@ -121,9 +122,9 @@ public static class GameCatalog
             Level = new("B-U-level", OnslaughtLevels),
             Fields =
             [
-                new("Name",       static s => $"{s.NAME.Replace("P2P-", string.Empty)}"),
-                new("Gamemode",   static s => Data(s, "B-U-gamemode") ?? "`N/A`"),
-                new("Difficulty", static s => Data(s, "B-U-difficulty")),
+                new("Name",       static s => Format.Sanitize(s.NAME.Replace("P2P-", string.Empty))),
+                new("Gamemode",   static s => Text(s, "B-U-gamemode") ?? "`N/A`"),
+                new("Difficulty", static s => Text(s, "B-U-difficulty")),
             ]
         },
 
@@ -132,10 +133,10 @@ public static class GameCatalog
             Title = "Army of Two: 40th Day",
             Fields =
             [
-                new("Name",     static s => s.NAME),
-                new("Gamemode", static s => Data(s, "B-U-Mode") ?? "`N/A`"),
-                new("Level",    static s => Data(s, "B-U-Map") ?? "`N/A`"),
-                new("Playlist", static s => Data(s, "B-U-MapPlaylist") ?? "`N/A`"),
+                new("Name",     static s => Format.Sanitize(s.NAME)),
+                new("Gamemode", static s => Text(s, "B-U-Mode") ?? "`N/A`"),
+                new("Level",    static s => Text(s, "B-U-Map") ?? "`N/A`"),
+                new("Playlist", static s => Text(s, "B-U-MapPlaylist") ?? "`N/A`"),
             ]
         },
 
@@ -146,7 +147,7 @@ public static class GameCatalog
             [
                 new("Friendly Fire", static s => Enabled(s, "B-U-FriendlyFire") ? "Yes" : null),
                 new("Money",         static s => long.TryParse(Data(s, "B-U-Money"), out var money) && money > 0 ? $"${money:N0}" : null),
-                new("Mission",       static s => Data(s, "B-U-Mission")),
+                new("Mission",       static s => Text(s, "B-U-Mission")),
             ]
         },
 
@@ -156,7 +157,7 @@ public static class GameCatalog
             Listed = static s => !Enabled(s, "B-U-FriendsOnly"),
             Fields =
             [
-                new("Name",  static s => Enabled(s, "B-U-PCDedicated") ? s.NAME.Replace("\"", string.Empty) : null),
+                new("Name",  static s => Enabled(s, "B-U-PCDedicated") ? Format.Sanitize(s.NAME.Replace("\"", string.Empty)) : null),
                 new("Mode",  static s => Lookup(LotrModes, s, "B-U-Mode")),
                 new("Level", static s => Lookup(LotrLevels, s, "B-U-LevelName")),
             ]
@@ -167,8 +168,8 @@ public static class GameCatalog
             Title = "Medal of Honor: Airborne",
             Fields =
             [
-                new("Map",      static s => Data(s, "B-U-Map")),
-                new("Gamemode", static s => Data(s, "B-U-GameType")),
+                new("Map",      static s => Text(s, "B-U-Map")),
+                new("Gamemode", static s => Text(s, "B-U-GameType")),
             ]
         },
 
@@ -186,6 +187,10 @@ public static class GameCatalog
 
     private static string? Data(GameServerListing server, string key)
         => server.Data.GetValueOrDefault(key);
+
+    // Values sent by game clients, escaped for display in Discord markdown
+    private static string? Text(GameServerListing server, string key)
+        => Data(server, key) is { } value ? Format.Sanitize(value) : null;
 
     private static bool Enabled(GameServerListing server, string key)
         => Data(server, key) == "1";
