@@ -17,6 +17,7 @@ public static class Constants
     public static readonly NotificationRole[] Roles =
     [
         new(GameId.BEACH,    "Battlefield 1943",   "🏖️"),
+        new(GameId.BFBC,     "Bad Company",        "💰"),
         new(GameId.BFBC2,    "Bad Company 2",      "🪖"),
         new(GameId.MERCS2,   "Mercenaries 2",      "💵"),
         new(GameId.MOHAIR,   "Medal of Honor",     "🎖️"),
