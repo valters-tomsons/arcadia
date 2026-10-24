@@ -32,7 +32,7 @@ public class FeslHandler
     private string subDomain = string.Empty;
 
     private decimal? beachModVersion = null;
-    private const decimal MinBeachModVersion = 0.5M;
+    private const decimal MinBeachModVersion = 0.6M;
 
     private readonly static TimeSpan PingPeriod = TimeSpan.FromSeconds(60);
     private readonly static TimeSpan MemCheckPeriod = TimeSpan.FromSeconds(120);
